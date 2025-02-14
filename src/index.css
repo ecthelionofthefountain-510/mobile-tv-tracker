@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🌍 Anpassa sidan för mobil */
+body {
+  @apply bg-gray-900 text-gray-300 font-lotr;
+  background-image: url('/img/background.avif');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  max-width: 100vw;
+  overflow-x: hidden; /* Förhindra horisontell scroll */
+}
+
+/* 📱 Säkra textstorlek för mobil */
+h1 {
+  @apply text-2xl md:text-4xl font-bold text-yellow-400;
+}
+
+h2 {
+  @apply text-xl md:text-3xl font-semibold text-yellow-300;
+}
+
+p {
+  @apply text-sm md:text-base;
+}
+
+/* 🏹 Filmkort */
+li {
+  @apply p-3 rounded-lg shadow-lg flex flex-col items-center;
+  background: rgba(40, 40, 40, 0.8);
+  transition: transform 0.3s ease-in-out;
+  width: 90%; /* Gör listan mer mobilvänlig */
+  margin: auto;
+}
+
+li:hover {
+  transform: scale(1.05);
+}
+
+/* 📸 Filmaffischer */
+img {
+  @apply rounded-md shadow-lg w-32 md:w-40;
+  border: 2px solid rgba(255, 215, 0, 0.5);
+}
+
+/* 🔥 Responsiv navbar */
+nav {
+  @apply fixed bottom-0 w-full bg-gray-900 text-white flex justify-around py-3 border-t-4 border-red-600 shadow-lg;
+  padding: 10px 0;
+}
+
+/* 🛡️ Länkar i navbaren */
+nav a {
+  @apply text-yellow-400 hover:text-yellow-500 transition-colors duration-300 text-sm md:text-base;
+}
+
+/* 🏠 Layout för att ha navbaren fast men lämna plats för innehåll */
+.main-content {
+  padding-bottom: 70px; /* Så att navbaren inte täcker innehållet */
+}
