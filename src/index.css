@@ -60,3 +60,62 @@ nav a {
 .main-content {
   padding-bottom: 70px; /* Så att navbaren inte täcker innehållet */
 }
+
+/* I index.css, uppdatera/lägg till dessa stilar */
+
+/* 🔥 Responsiv navbar */
+nav {
+  @apply fixed bottom-0 w-full text-white;
+  background: linear-gradient(to top, rgb(17, 24, 39, 0.95), rgb(17, 24, 39, 0.85));
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+/* 🛡️ Navbar länkar */
+.nav-link {
+  @apply flex flex-col items-center relative py-2 px-4 transition-all duration-300;
+}
+
+.nav-icon {
+  @apply text-2xl mb-1 transition-transform duration-300;
+}
+
+.nav-text {
+  @apply text-xs tracking-wide font-medium opacity-90;
+  font-family: 'Cinzel', serif; /* LOTR-inspirerad font */
+}
+
+/* Aktiv länk effekter */
+.nav-link-active {
+  .nav-icon {
+    @apply transform scale-110;
+  }
+  
+  .nav-text {
+    @apply font-semibold;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+  }
+  
+  /* Dekorativ border-top */
+  &::before {
+    content: '';
+    @apply absolute top-0 left-1/2 transform -translate-x-1/2;
+    width: 70%;
+    height: 2px;
+    background: linear-gradient(90deg, 
+      transparent 0%, 
+      rgba(255, 215, 0, 0.4) 30%,
+      rgba(255, 215, 0, 0.6) 50%,
+      rgba(255, 215, 0, 0.4) 70%,
+      transparent 100%
+    );
+  }
+}
+
+/* Hover effekter */
+.nav-link:hover .nav-icon {
+  @apply transform scale-105;
+}
+
+/* Lägg till i head-taggen i index.html */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&display=swap');
