@@ -56,6 +56,18 @@ const Navbar = () => {
             <div className="nav-icon">👤</div>
             <span className="nav-text">Profile</span>
           </Link>
+
+          <Link 
+            to="/favorites" 
+            className={`nav-link ${
+              location.pathname === '/favorites' 
+                ? 'text-yellow-400 nav-link-active' 
+                : 'text-gray-400 hover:text-yellow-500'
+            }`}
+          >
+            <div className="nav-icon">⭐</div>
+            <span className="nav-text">Favorites</span>
+          </Link>
         </div>
       </div>
     </nav>

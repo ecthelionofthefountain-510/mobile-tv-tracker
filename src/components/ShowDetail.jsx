@@ -86,6 +86,8 @@ const toggleAllEpisodesInSeason = (seasonNumber, episodes) => {
     }
   };
 
+  
+
   setSeasons(updatedSeasons);
 
   // Uppdatera localStorage
@@ -101,6 +103,8 @@ const toggleAllEpisodesInSeason = (seasonNumber, episodes) => {
   });
   localStorage.setItem("watched", JSON.stringify(updatedWatched));
 };
+  
+  
 
   return (
     <div className="p-4 min-h-screen pb-20 bg-gray-900">

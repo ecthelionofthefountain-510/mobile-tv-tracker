@@ -5,6 +5,7 @@ const SearchPage = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [watched, setWatched] = useState(() => JSON.parse(localStorage.getItem("watched")) || []);
+  const [favorites, setFavorites] = useState(() => JSON.parse(localStorage.getItem("favorites")) || []);
   const [searchType, setSearchType] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -94,6 +95,20 @@ const SearchPage = () => {
     }
   };
 
+  const toggleFavorite = (item) => {
+    const isFavorited = favorites.some(fav => fav.id === item.id);
+    let updatedFavorites;
+    
+    if (isFavorited) {
+      updatedFavorites = favorites.filter(fav => fav.id !== item.id);
+    } else {
+      updatedFavorites = [...favorites, item];
+    }
+    
+    setFavorites(updatedFavorites);
+    localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+  };
+
   return (
     <div className="p-4">
       <div className="space-y-2">
@@ -147,6 +162,7 @@ const SearchPage = () => {
       <ul className="mt-4 space-y-4">
         {results.map((item) => {
           const isWatched = watched.some((watchedItem) => watchedItem.id === item.id);
+          const isFavorited = favorites.some(fav => fav.id === item.id);
 
           return (
             <li key={item.id} className="mb-2 flex items-center space-x-4 bg-gray-800 p-3 rounded-lg">
@@ -169,12 +185,22 @@ const SearchPage = () => {
                 )}
               </div>
 
-              <button
-                onClick={() => addToWatched(item)}
-                className={`p-1 text-white rounded ${isWatched ? "bg-green-700" : "bg-green-600"}`}
-              >
-                {isWatched ? "Watched" : "Add to Watched"}
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => toggleFavorite(item)}
+                  className={`p-1 text-white rounded ${
+                    isFavorited ? "bg-yellow-600" : "bg-gray-600"
+                  }`}
+                >
+                  {isFavorited ? "★" : "☆"}
+                </button>
+                <button
+                  onClick={() => addToWatched(item)}
+                  className={`p-1 text-white rounded ${isWatched ? "bg-green-700" : "bg-green-600"}`}
+                >
+                  {isWatched ? "Watched" : "Add to Watched"}
+                </button>
+              </div>
             </li>
           );
         })}
