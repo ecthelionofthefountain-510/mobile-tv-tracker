@@ -118,6 +118,11 @@ const SearchPage = () => {
             placeholder="Search for movies or TV shows..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                searchContent();
+              }
+            }}
             className="w-full p-2 border border-yellow-500 rounded-md bg-gray-800 text-white placeholder-gray-400"
           />
           <button
