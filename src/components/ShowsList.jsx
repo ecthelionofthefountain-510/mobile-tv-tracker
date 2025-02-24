@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { IMAGE_BASE_URL } from "../config";
+import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
+import ShowDetailModal from "./ShowDetailModal";
 
 const ShowsList = () => {
   const [watchedShows, setWatchedShows] = useState([]);
   const [filteredShows, setFilteredShows] = useState([]);
   const [selectedShow, setSelectedShow] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showForModal, setShowForModal] = useState(null);
+  const [showDetails, setShowDetails] = useState(null);
 
   useEffect(() => {
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
@@ -36,6 +39,31 @@ const ShowsList = () => {
     }
   };
 
+  // Fetch detailed show information
+  const fetchShowDetails = async (showId) => {
+    try {
+      const response = await fetch(
+        `${TMDB_BASE_URL}/tv/${showId}?api_key=${API_KEY}`
+      );
+      const data = await response.json();
+      setShowDetails(data);
+    } catch (error) {
+      console.error("Error fetching show details:", error);
+    }
+  };
+
+  // Handle selecting a show for modal view
+  const handleShowModalSelect = (show) => {
+    setShowForModal(show);
+    fetchShowDetails(show.id);
+  };
+
+  // Close the show detail modal
+  const closeShowModal = () => {
+    setShowForModal(null);
+    setShowDetails(null);
+  };
+
   const removeShow = (id) => {
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
     const updatedWatched = allWatched.filter(item => item.id !== id);
@@ -48,6 +76,11 @@ const ShowsList = () => {
     setFilteredShows(updatedShows.filter(show => 
       show.title.toLowerCase().includes(searchTerm.toLowerCase())
     ));
+    
+    // Close modal if the removed show is currently selected
+    if (showForModal && showForModal.id === id) {
+      closeShowModal();
+    }
     
     setSelectedShow(null);
   };
@@ -125,7 +158,11 @@ const ShowsList = () => {
               <img
                 src={`${IMAGE_BASE_URL}${show.poster_path}`}
                 alt={show.title}
-                className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleShowModalSelect(show);
+                }}
+                className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
               />
               <div className="flex-grow ml-4">
                 <h3 className="text-2xl font-semibold text-yellow-400">
@@ -151,6 +188,14 @@ const ShowsList = () => {
           </div>
         );
       })}
+      
+      {/* Show Detail Modal */}
+      {showForModal && showDetails && (
+        <ShowDetailModal 
+          show={showDetails} 
+          onClose={closeShowModal}
+        />
+      )}
       
       {filteredShows.length === 0 && (
         <div className="text-center py-10">

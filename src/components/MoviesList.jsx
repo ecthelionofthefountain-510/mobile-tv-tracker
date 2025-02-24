@@ -1,11 +1,14 @@
 // MoviesList.jsx with alphabetical sorting and search
 import React, { useState, useEffect } from "react";
-import { IMAGE_BASE_URL } from "../config";
+import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
+import MovieDetailModal from "./MovieDetailModal";
 
 const MoviesList = () => {
   const [watchedMovies, setWatchedMovies] = useState([]);
   const [filteredMovies, setFilteredMovies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [movieDetails, setMovieDetails] = useState(null);
 
   useEffect(() => {
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
@@ -35,6 +38,31 @@ const MoviesList = () => {
     }
   };
 
+  // Fetch detailed movie information
+  const fetchMovieDetails = async (movieId) => {
+    try {
+      const response = await fetch(
+        `${TMDB_BASE_URL}/movie/${movieId}?api_key=${API_KEY}`
+      );
+      const data = await response.json();
+      setMovieDetails(data);
+    } catch (error) {
+      console.error("Error fetching movie details:", error);
+    }
+  };
+
+  // Handle selecting a movie for detailed view
+  const handleMovieSelect = (movie) => {
+    setSelectedMovie(movie);
+    fetchMovieDetails(movie.id);
+  };
+
+  // Close the movie detail modal
+  const closeMovieModal = () => {
+    setSelectedMovie(null);
+    setMovieDetails(null);
+  };
+
   const removeMovie = (id) => {
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
     const updatedWatched = allWatched.filter(item => item.id !== id);
@@ -47,6 +75,11 @@ const MoviesList = () => {
     setFilteredMovies(updatedMovies.filter(movie => 
       movie.title.toLowerCase().includes(searchTerm.toLowerCase())
     ));
+    
+    // Close modal if the removed movie is currently selected
+    if (selectedMovie && selectedMovie.id === id) {
+      closeMovieModal();
+    }
   };
 
   return (
@@ -106,7 +139,8 @@ const MoviesList = () => {
             <img
               src={`${IMAGE_BASE_URL}${movie.poster_path}`}
               alt={movie.title}
-              className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30"
+              onClick={() => handleMovieSelect(movie)}
+              className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
             />
             <div className="flex-grow ml-4">
               <h3 className="text-2xl font-semibold text-yellow-400">
@@ -130,6 +164,14 @@ const MoviesList = () => {
           </div>
         </div>
       ))}
+      
+      {/* Movie Detail Modal */}
+      {selectedMovie && movieDetails && (
+        <MovieDetailModal 
+          movie={movieDetails} 
+          onClose={closeMovieModal}
+        />
+      )}
       
       {filteredMovies.length === 0 && (
         <div className="text-center py-10">
