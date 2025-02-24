@@ -44,7 +44,7 @@ const ProfilePage = () => {
           placeholder="Enter new user name"
           value={newUser}
           onChange={(e) => setNewUser(e.target.value)}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border border-yellow-500 rounded-md bg-gray-800 text-white placeholder-gray-400"
         />
         <button onClick={addUser} className="mt-2 p-2 bg-green-600 text-white rounded">Add User</button>
       </div>

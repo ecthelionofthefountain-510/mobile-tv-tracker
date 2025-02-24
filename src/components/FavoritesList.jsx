@@ -6,7 +6,13 @@ const FavoritesList = () => {
 
   useEffect(() => {
     const storedFavorites = JSON.parse(localStorage.getItem("favorites")) || [];
-    setFavorites(storedFavorites);
+    
+    // Sort favorites alphabetically by title
+    const sortedFavorites = storedFavorites.sort((a, b) => 
+      a.title.toLowerCase().localeCompare(b.title.toLowerCase())
+    );
+    
+    setFavorites(sortedFavorites);
   }, []);
 
   const removeFromFavorites = (id) => {
