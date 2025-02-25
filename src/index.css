@@ -51,6 +51,7 @@ nav {
   background: linear-gradient(to top, rgb(17, 24, 39, 0.95), rgb(17, 24, 39, 0.85));
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(8px);
+  padding-top: 7px;
 }
 
 /* 🛡️ Navbar länkar med förbättrad responsivitet */
