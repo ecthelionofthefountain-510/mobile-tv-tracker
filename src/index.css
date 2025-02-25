@@ -47,74 +47,64 @@ img {
 
 /* 🔥 Responsiv navbar */
 nav {
-  @apply fixed bottom-0 w-full bg-gray-900 text-white flex justify-around py-3 border-t-4 border-red-600 shadow-lg;
-  padding: 10px 0;
-}
-
-/* 🛡️ Länkar i navbaren */
-nav a {
-  @apply text-yellow-400 hover:text-yellow-500 transition-colors duration-300 text-sm md:text-base;
-}
-
-/* 🏠 Layout för att ha navbaren fast men lämna plats för innehåll */
-.main-content {
-  padding-bottom: 70px; /* Så att navbaren inte täcker innehållet */
-}
-
-/* I index.css, uppdatera/lägg till dessa stilar */
-
-/* 🔥 Responsiv navbar */
-nav {
   @apply fixed bottom-0 w-full text-white;
   background: linear-gradient(to top, rgb(17, 24, 39, 0.95), rgb(17, 24, 39, 0.85));
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(8px);
 }
 
-/* 🛡️ Navbar länkar */
+/* 🛡️ Navbar länkar med förbättrad responsivitet */
 .nav-link {
-  @apply flex flex-col items-center relative py-2 px-4 transition-all duration-300;
+  @apply flex flex-col items-center relative py-1 transition-all duration-300;
+  /* Dynamisk bredd som anpassar sig efter skärmstorlek */
+  width: 20%; /* 5 objekt = 20% var */
+  min-width: 48px; /* Minsta bredd för att säkerställa att ikonen syns */
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .nav-icon {
-  @apply text-2xl mb-1 transition-transform duration-300;
+  @apply text-xl sm:text-2xl mb-0 sm:mb-1 transition-transform duration-300;
 }
 
 .nav-text {
-  @apply text-xs tracking-wide font-medium opacity-90;
+  @apply text-[10px] sm:text-xs tracking-wide font-medium opacity-90;
   font-family: 'Cinzel', serif; /* LOTR-inspirerad font */
 }
 
 /* Aktiv länk effekter */
-.nav-link-active {
-  .nav-icon {
-    @apply transform scale-110;
-  }
-  
-  .nav-text {
-    @apply font-semibold;
-    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
-  }
-  
-  /* Dekorativ border-top */
-  &::before {
-    content: '';
-    @apply absolute top-0 left-1/2 transform -translate-x-1/2;
-    width: 70%;
-    height: 2px;
-    background: linear-gradient(90deg, 
-      transparent 0%, 
-      rgba(255, 215, 0, 0.4) 30%,
-      rgba(255, 215, 0, 0.6) 50%,
-      rgba(255, 215, 0, 0.4) 70%,
-      transparent 100%
-    );
-  }
+.nav-link-active .nav-icon {
+  @apply transform scale-110;
+}
+
+.nav-link-active .nav-text {
+  @apply font-semibold;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+
+/* Dekorativ border-top för aktiva länkar */
+.nav-link-active::before {
+  content: '';
+  @apply absolute top-0 left-1/2 transform -translate-x-1/2;
+  width: 70%;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 215, 0, 0.4) 30%,
+    rgba(255, 215, 0, 0.6) 50%,
+    rgba(255, 215, 0, 0.4) 70%,
+    transparent 100%
+  );
 }
 
 /* Hover effekter */
 .nav-link:hover .nav-icon {
   @apply transform scale-105;
+}
+
+/* Justera huvudinnehållsområdet för att ge plats för navbaren */
+.main-content {
+  padding-bottom: 60px; /* Anpassad för den mindre navbaren */
 }
 
 /* Lägg till i head-taggen i index.html */

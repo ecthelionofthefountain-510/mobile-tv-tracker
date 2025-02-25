@@ -7,8 +7,8 @@ const Navbar = () => {
   
   return (
     <nav className="fixed bottom-0 w-full bg-gray-900/95 text-white border-t-2 border-yellow-600/50 shadow-lg backdrop-blur-sm">
-      <div className="max-w-screen-lg mx-auto">
-        <div className="flex justify-between px-6 py-2">
+      <div className="w-full mx-auto">
+        <div className="flex justify-between">
           <Link 
             to="/shows" 
             className={`nav-link ${
@@ -68,8 +68,6 @@ const Navbar = () => {
             <div className="nav-icon">👤</div>
             <span className="nav-text">Profile</span>
           </Link>
-
-      
         </div>
       </div>
     </nav>
