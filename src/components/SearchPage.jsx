@@ -173,30 +173,46 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 min-h-screen pb-20">
       {/* Search Controls */}
-      <div className="space-y-2">
+      <div className="space-y-2 sticky top-0 z-10 bg-transparent pt-1 pb-3">
         <div className="flex items-center space-x-2">
-          <input
-            type="text"
-            placeholder="Search for movies or TV shows..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                searchContent();
-              }
-            }}
-            className="w-full p-2 border border-yellow-500 rounded-md bg-gray-800 text-white placeholder-gray-400"
-          />
+          <div className="relative flex-grow">
+            <input
+              type="text"
+              placeholder="Search for movies or TV shows..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  searchContent();
+                }
+              }}
+              className="w-full p-2 pl-8 border border-yellow-500 rounded-md bg-gray-800 text-white placeholder-gray-400"
+            />
+            <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+              🔍
+            </div>
+            {query && (
+              <button 
+                onClick={() => {
+                  setQuery("");
+                  setResults([]);
+                }}
+                className="absolute inset-y-0 right-0 flex items-center pr-3"
+              >
+                ✖️
+              </button>
+            )}
+          </div>
           <button
             onClick={searchContent}
             disabled={isSearching}
-            className={`p-2 bg-yellow-500 text-gray-900 font-bold rounded-md hover:bg-yellow-600 transition duration-300 ${
+            className={`p-2 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-600 transition-all ${
               isSearching ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            {isSearching ? 'Searching...' : 'Search'}
+            {isSearching ? 'Searching...' : 'SEARCH'}
           </button>
         </div>
         
@@ -204,29 +220,41 @@ const SearchPage = () => {
         <div className="flex space-x-2">
           <button
             onClick={() => setSearchType("all")}
-            className={`px-3 py-1 rounded ${
-              searchType === "all" ? "bg-yellow-500 text-gray-900" : "bg-gray-700 text-yellow-500"
+            className={`px-3 py-1 rounded-md text-sm font-medium ${
+              searchType === "all" 
+                ? "bg-yellow-600 text-gray-900" 
+                : "bg-gray-800 text-yellow-500"
             }`}
           >
-            All
+            ALL
           </button>
           <button
             onClick={() => setSearchType("movies")}
-            className={`px-3 py-1 rounded ${
-              searchType === "movies" ? "bg-yellow-500 text-gray-900" : "bg-gray-700 text-yellow-500"
+            className={`px-3 py-1 rounded-md text-sm font-medium ${
+              searchType === "movies" 
+                ? "bg-yellow-600 text-gray-900" 
+                : "bg-gray-800 text-yellow-500"
             }`}
           >
-            Movies
+            MOVIES
           </button>
           <button
             onClick={() => setSearchType("tv")}
-            className={`px-3 py-1 rounded ${
-              searchType === "tv" ? "bg-yellow-500 text-gray-900" : "bg-gray-700 text-yellow-500"
+            className={`px-3 py-1 rounded-md text-sm font-medium ${
+              searchType === "tv" 
+                ? "bg-yellow-600 text-gray-900" 
+                : "bg-gray-800 text-yellow-500"
             }`}
           >
-            TV Shows
+            TV SHOWS
           </button>
         </div>
+        
+        {query && results.length > 0 && (
+          <div className="mt-2 text-sm text-gray-400">
+            FOUND {results.length} {results.length === 1 ? "RESULT" : "RESULTS"}
+          </div>
+        )}
       </div>
 
       {/* Search Results */}
@@ -235,53 +263,91 @@ const SearchPage = () => {
           <div className="text-yellow-400 text-lg">Searching...</div>
         </div>
       ) : (
-        <ul className="mt-4 space-y-4">
+        <div className="space-y-4">
           {results.map((item) => {
             const isWatched = watched.some((watchedItem) => watchedItem.id === item.id);
             const isFavorited = favorites.some(fav => fav.id === item.id);
 
             return (
-              <li 
+              <div 
                 key={item.id} 
-                className="mb-2 flex items-center space-x-4 bg-gray-800 p-3 rounded-lg cursor-pointer hover:bg-gray-700"
+                className="mb-4 relative bg-gray-900 rounded-lg overflow-hidden border border-gray-700 cursor-pointer"
                 onClick={() => viewDetails(item)}
               >
-                {item.poster_path && (
-                  <img 
-                    src={`${IMAGE_BASE_URL}${item.poster_path}`} 
-                    alt={item.title} 
-                    className="w-16 h-auto rounded-md hover:opacity-80 transition-opacity"
-                  />
-                )}
-                <div className="flex-grow">
-                  <span className="text-yellow-400">{item.title}</span>
-                  <span className="text-xs text-gray-400 ml-2">
-                    ({item.mediaType === 'tv' ? 'TV Show' : 'Movie'})
-                  </span>
-                  {item.mediaType === 'tv' && (
-                    <span className="text-xs text-gray-400 block">
-                      {item.number_of_seasons} {item.number_of_seasons === 1 ? 'Season' : 'Seasons'}
-                    </span>
-                  )}
+                <div className="flex">
+                  {/* Poster positioned to match your screenshot - same size as screenshot */}
+                  <div className="w-16 sm:w-20 flex-shrink-0">
+                    {item.poster_path ? (
+                      <img 
+                        src={`${IMAGE_BASE_URL}${item.poster_path}`} 
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-800 flex items-center justify-center text-gray-600">
+                        No Image
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Content section with exact spacing and text styles to match screenshot */}
+                  <div className="flex-1 pl-2 pr-2 py-1.5 flex flex-col">
+                    <h3 className="text-base sm:text-lg font-bold text-yellow-500">
+                      {item.title?.toUpperCase()}
+                    </h3>
+                    
+                    <div className="text-gray-400 text-xs mt-0.5">
+                      <div>
+                        {item.mediaType === 'tv' ? 'TV SHOW' : 'MOVIE'}
+                        {item.mediaType === 'tv' && item.number_of_seasons && (
+                          <span> • {item.number_of_seasons} {item.number_of_seasons === 1 ? 'SEASON' : 'SEASONS'}</span>
+                        )}
+                      </div>
+                      {item.release_date && (
+                        <div>
+                          RELEASED: {new Date(item.release_date).getFullYear()}
+                        </div>
+                      )}
+                      {item.first_air_date && (
+                        <div>
+                          FIRST AIRED: {new Date(item.first_air_date).getFullYear()}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Buttons with exact sizes and styling from screenshot */}
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <button
+                        onClick={(e) => toggleFavorite(item, e)}
+                        className={`py-1 rounded font-medium text-xs text-center ${
+                          isFavorited 
+                            ? "bg-yellow-600 text-white" 
+                            : "bg-gray-800 text-yellow-500 border border-yellow-600/40"
+                        }`}
+                      >
+                        <span className="flex justify-center items-center">
+                          <span className="mr-1">{isFavorited ? "★" : "☆"}</span>
+                          <span>{isFavorited ? "FAVORITED" : "FAVORITE"}</span>
+                        </span>
+                      </button>
+                      
+                      <button
+                        onClick={(e) => addToWatched(item, e)}
+                        className={`py-1 rounded font-medium text-xs text-center ${
+                          isWatched
+                            ? "bg-green-700 text-white" 
+                            : "bg-green-800 text-green-400"
+                        }`}
+                      >
+                        <span className="flex justify-center items-center">
+                          <span className="mr-1">{isWatched ? "✓" : ""}</span>
+                          <span>{isWatched ? "WATCHED" : "ADD TO WATCHED"}</span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-
-                <div className="flex space-x-2">
-                  <button
-                    onClick={(e) => toggleFavorite(item, e)}
-                    className={`p-1 text-white rounded ${
-                      isFavorited ? "bg-yellow-600" : "bg-gray-600"
-                    }`}
-                  >
-                    {isFavorited ? "★" : "☆"}
-                  </button>
-                  <button
-                    onClick={(e) => addToWatched(item, e)}
-                    className={`p-1 text-white rounded ${isWatched ? "bg-green-700" : "bg-green-600"}`}
-                  >
-                    {isWatched ? "Watched" : "Add to Watched"}
-                  </button>
-                </div>
-              </li>
+              </div>
             );
           })}
           
@@ -291,7 +357,7 @@ const SearchPage = () => {
               <p className="text-yellow-500 mt-2">Try a different search term</p>
             </div>
           )}
-        </ul>
+        </div>
       )}
 
       {/* Loading Indicator */}
@@ -301,7 +367,7 @@ const SearchPage = () => {
             <div className="text-yellow-400 text-lg mb-3">Loading details...</div>
             <button 
               onClick={closeModal}
-              className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600"
+              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-all"
             >
               Cancel
             </button>
