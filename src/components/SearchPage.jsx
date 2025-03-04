@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
+import FlyingItemAnimation from "./FlyingItemAnimation";
 
 const SearchPage = () => {
   const [query, setQuery] = useState("");
@@ -11,6 +12,12 @@ const SearchPage = () => {
   const [searchType, setSearchType] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Animation state
+  const [animationItem, setAnimationItem] = useState(null);
+  const [animationTargetType, setAnimationTargetType] = useState("");
+  const [animationStartPosition, setAnimationStartPosition] = useState(null);
+  const [isAnimating, setIsAnimating] = useState(false);
   
   // States for modal
   const [selectedItem, setSelectedItem] = useState(null);
@@ -81,58 +88,120 @@ const SearchPage = () => {
     }
   };
 
-  // Add item to watched list
-  const addToWatched = async (item, e) => {
+  // Handle animation completion
+  const handleAnimationComplete = () => {
+    console.log("Animation completed for target type:", animationTargetType);
+    
+    if (animationTargetType === 'favorite') {
+      const updatedFavorites = [...favorites, animationItem];
+      setFavorites(updatedFavorites);
+      localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+    } else if (animationTargetType === 'movie' || animationTargetType === 'tv') {
+      addItemToWatched(animationItem);
+    }
+    
+    // Reset animation state
+    setIsAnimating(false);
+    setAnimationItem(null);
+    setAnimationTargetType("");
+    setAnimationStartPosition(null);
+  };
+
+  // Actually add item to watched list after animation
+  const addItemToWatched = async (item) => {
+    if (!item) return;
+    
+    let itemToAdd = { 
+      ...item,
+      dateAdded: new Date().toISOString()
+    };
+
+    if (item.mediaType === 'tv') {
+      try {
+        if (!item.number_of_seasons) {
+          const detailsResponse = await fetch(
+            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
+          );
+          const tvDetails = await detailsResponse.json();
+          itemToAdd.number_of_seasons = tvDetails.number_of_seasons;
+        }
+        
+        itemToAdd.seasons = {};
+        for (let i = 1; i <= itemToAdd.number_of_seasons; i++) {
+          itemToAdd.seasons[i] = {
+            watchedEpisodes: []
+          };
+        }
+      } catch (error) {
+        console.error("Error fetching TV show details:", error);
+      }
+    }
+
+    const updatedList = [...watched, itemToAdd];
+    setWatched(updatedList);
+    localStorage.setItem("watched", JSON.stringify(updatedList));
+  };
+
+  // Start animation for adding to watched
+  const addToWatched = (item, e) => {
     e.stopPropagation();
     
-    if (!watched.find((watchedItem) => watchedItem.id === item.id)) {
-      let itemToAdd = { 
-        ...item,
-        dateAdded: new Date().toISOString()
+    if (watched.some((watchedItem) => watchedItem.id === item.id)) {
+      return; // Already in watched list
+    }
+    
+    const imgElement = e.currentTarget.closest(".mb-4").querySelector("img");
+    if (imgElement) {
+      const rect = imgElement.getBoundingClientRect();
+      const startPosition = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
       };
-
-      if (item.mediaType === 'tv') {
-        try {
-          if (!item.number_of_seasons) {
-            const detailsResponse = await fetch(
-              `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
-            );
-            const tvDetails = await detailsResponse.json();
-            itemToAdd.number_of_seasons = tvDetails.number_of_seasons;
-          }
-          
-          itemToAdd.seasons = {};
-          for (let i = 1; i <= itemToAdd.number_of_seasons; i++) {
-            itemToAdd.seasons[i] = {
-              watchedEpisodes: []
-            };
-          }
-        } catch (error) {
-          console.error("Error fetching TV show details:", error);
-        }
-      }
-
-      const updatedList = [...watched, itemToAdd];
-      setWatched(updatedList);
-      localStorage.setItem("watched", JSON.stringify(updatedList));
+      
+      // Set animation state
+      setAnimationItem(item);
+      setAnimationTargetType(item.mediaType);
+      setAnimationStartPosition(startPosition);
+      setIsAnimating(true);
+    } else {
+      // Fallback if image element not found
+      addItemToWatched(item);
     }
   };
 
-  // Toggle favorite status
+  // Toggle favorite status with animation
   const toggleFavorite = (item, e) => {
     e.stopPropagation();
     
     const isFavorited = favorites.some(fav => fav.id === item.id);
-    let updatedFavorites;
     
     if (isFavorited) {
-      updatedFavorites = favorites.filter(fav => fav.id !== item.id);
+      // Just remove from favorites without animation
+      const updatedFavorites = favorites.filter(fav => fav.id !== item.id);
+      setFavorites(updatedFavorites);
+      localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
     } else {
-      updatedFavorites = [...favorites, item];
+      // Start animation for adding to favorites
+      const imgElement = e.currentTarget.closest(".mb-4").querySelector("img");
+      if (imgElement) {
+        const rect = imgElement.getBoundingClientRect();
+        const startPosition = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+        
+        // Set animation state
+        setAnimationItem(item);
+        setAnimationTargetType('favorite');
+        setAnimationStartPosition(startPosition);
+        setIsAnimating(true);
+      } else {
+        // Fallback if image element not found
+        const updatedFavorites = [...favorites, item];
+        setFavorites(updatedFavorites);
+        localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+      }
     }
-    
-    setFavorites(updatedFavorites);
-    localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
   };
 
   // View item details
@@ -276,7 +345,7 @@ const SearchPage = () => {
               >
                 <div className="flex">
                   {/* Poster positioned to match your screenshot - same size as screenshot */}
-                  <div className="w-16 sm:w-20 flex-shrink-0 p-2">
+                  <div className="w-16 sm:w-20 flex-shrink-0 p-1">
                     {item.poster_path ? (
                       <img 
                         src={`${IMAGE_BASE_URL}${item.poster_path}`} 
@@ -333,6 +402,7 @@ const SearchPage = () => {
                       
                       <button
                         onClick={(e) => addToWatched(item, e)}
+                        disabled={isWatched}
                         className={`py-1 rounded font-medium text-xs text-center ${
                           isWatched
                             ? "bg-green-700 text-white" 
@@ -358,6 +428,16 @@ const SearchPage = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Flying Item Animation */}
+      {isAnimating && animationItem && (
+        <FlyingItemAnimation
+          item={animationItem}
+          targetType={animationTargetType}
+          startPosition={animationStartPosition}
+          onComplete={handleAnimationComplete}
+        />
       )}
 
       {/* Loading Indicator */}

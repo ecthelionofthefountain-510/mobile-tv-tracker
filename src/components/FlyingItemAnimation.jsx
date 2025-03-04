@@ -14,6 +14,25 @@ const FlyingItemAnimation = ({
   const [rotation, setRotation] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   
+  // Hårdkodade målkoordinater som fallback (botten av skärmen)
+  const getDefaultTarget = () => {
+    // Placera målet längst ner i mitten för movies, vänster för tv, höger för favorites
+    const y = window.innerHeight - 30; // Strax ovanför botten av skärmen
+    
+    let x;
+    if (targetType === 'movie') {
+      x = window.innerWidth * 0.5; // Mitten
+    } else if (targetType === 'tv') {
+      x = window.innerWidth * 0.25; // En fjärdedel in från vänster
+    } else if (targetType === 'favorite') {
+      x = window.innerWidth * 0.75; // Tre fjärdedelar in från vänster
+    } else {
+      x = window.innerWidth * 0.5; // Fallback till mitten
+    }
+    
+    return { x, y };
+  };
+  
   useEffect(() => {
     if (!isAnimating) {
       // Starta animationen omedelbart
@@ -23,34 +42,36 @@ const FlyingItemAnimation = ({
       let targetSelector;
       
       if (targetType === 'movie') {
-        targetSelector = '.nav-link[href="/movies"] .nav-icon';
+        targetSelector = 'a[href="/movies"]';
       } else if (targetType === 'tv') {
-        targetSelector = '.nav-link[href="/shows"] .nav-icon';
+        targetSelector = 'a[href="/shows"]';
       } else if (targetType === 'favorite') {
-        targetSelector = '.nav-link[href="/favorites"] .nav-icon';
+        targetSelector = 'a[href="/favorites"]';
       }
       
       console.log("Animerar till:", targetSelector);
       
       const targetElement = document.querySelector(targetSelector);
       
-      if (!targetElement) {
-        console.error("Målikonen hittades inte:", targetSelector);
-        onComplete();
-        return;
-      }
+      // Beräkna målposition, med fallback
+      let targetPosition;
       
-      const targetRect = targetElement.getBoundingClientRect();
-      const targetPosition = {
-        x: targetRect.left + targetRect.width / 2,
-        y: targetRect.top + targetRect.height / 2
-      };
+      if (targetElement) {
+        const targetRect = targetElement.getBoundingClientRect();
+        targetPosition = {
+          x: targetRect.left + targetRect.width / 2,
+          y: targetRect.top + targetRect.height / 2
+        };
+      } else {
+        console.log("Hittade inte målelementet, använder fallback-position");
+        targetPosition = getDefaultTarget();
+      }
       
       console.log("Startposition:", position);
       console.log("Målposition:", targetPosition);
       
       // Animationskonfiguration
-      const duration = 800; // Längre för att kunna se animationen bättre
+      const duration = 800; // 800ms för hela animationen
       const startTime = Date.now();
       
       const animate = () => {
@@ -119,15 +140,15 @@ const FlyingItemAnimation = ({
         border: '2px solid rgba(255, 215, 0, 0.8)'
       }}
     >
-      {item.poster_path ? (
+      {item && item.poster_path ? (
         <img 
           src={`${IMAGE_BASE_URL}${item.poster_path}`} 
-          alt={item.title}
+          alt={item?.title || "Item"}
           className="w-full h-full object-cover"
         />
       ) : (
         <div className="w-full h-full bg-gray-800 flex items-center justify-center text-yellow-500 text-xs">
-          {item.title?.substring(0,15)}
+          {item?.title?.substring(0,15) || "Item"}
         </div>
       )}
     </div>

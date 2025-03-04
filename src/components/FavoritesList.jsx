@@ -3,14 +3,24 @@ import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 import NotificationModal from "./NotificationModal";
+import FlyingItemAnimation from "./FlyingItemAnimation";
 
 const FavoritesList = () => {
   const [favorites, setFavorites] = useState([]);
+  const [filteredFavorites, setFilteredFavorites] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [watched, setWatched] = useState([]);
-  // Lägg till state för notifikationer
+  
+  // Animation state
+  const [animationItem, setAnimationItem] = useState(null);
+  const [animationTargetType, setAnimationTargetType] = useState("");
+  const [animationStartPosition, setAnimationStartPosition] = useState(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  
+  // Notification state
   const [notification, setNotification] = useState({
     show: false,
     message: ""
@@ -29,9 +39,11 @@ const FavoritesList = () => {
         );
         
         setFavorites(sortedFavorites);
+        setFilteredFavorites(sortedFavorites);
       } catch (error) {
         console.error("Error loading favorites:", error);
         setFavorites([]);
+        setFilteredFavorites([]);
       }
     };
     
@@ -50,7 +62,22 @@ const FavoritesList = () => {
     loadWatched();
   }, []);
 
-  // Lägg till funktion för att visa notifikationer
+  // Handle search input changes
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    if (value.trim() === "") {
+      setFilteredFavorites(favorites);
+    } else {
+      const filtered = favorites.filter(item => 
+        item.title.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredFavorites(filtered);
+    }
+  };
+
+  // Show notification
   const showNotification = (message) => {
     setNotification({
       show: true,
@@ -58,7 +85,7 @@ const FavoritesList = () => {
     });
   };
 
-  // Lägg till funktion för att stänga notifikationer
+  // Close notification
   const closeNotification = () => {
     setNotification({
       show: false,
@@ -115,6 +142,9 @@ const FavoritesList = () => {
     console.log("Removing item with ID:", id);
     const updatedList = favorites.filter(item => item.id !== id);
     setFavorites(updatedList);
+    setFilteredFavorites(updatedList.filter(item => 
+      searchTerm.trim() === "" || item.title.toLowerCase().includes(searchTerm.toLowerCase())
+    ));
     localStorage.setItem("favorites", JSON.stringify(updatedList));
     
     // Close modal if the removed item is currently selected
@@ -123,19 +153,22 @@ const FavoritesList = () => {
     }
   };
 
-  // Add an item to watched list and remove from favorites
-  const addToWatched = async (item, e) => {
-    // Stop event propagation
-    e.stopPropagation();
-    
-    // Check if already in watched list
-    const isAlreadyWatched = watched.some(watchedItem => watchedItem.id === item.id);
-    
-    if (isAlreadyWatched) {
-      showNotification("This item is already in your watched list.");
-      return;
+  // Handle animation completion
+  const handleAnimationComplete = () => {
+    console.log("Animation completed for", animationItem?.title);
+    if (animationItem) {
+      completeAddToWatched(animationItem);
     }
     
+    // Reset animation state
+    setIsAnimating(false);
+    setAnimationItem(null);
+    setAnimationTargetType("");
+    setAnimationStartPosition(null);
+  };
+
+  // Complete add to watched process after animation
+  const completeAddToWatched = async (item) => {
     try {
       console.log("Adding to watched:", item);
       
@@ -178,9 +211,12 @@ const FavoritesList = () => {
       // Remove from favorites
       const updatedFavorites = favorites.filter(fav => fav.id !== item.id);
       setFavorites(updatedFavorites);
+      setFilteredFavorites(updatedFavorites.filter(item => 
+        searchTerm.trim() === "" || item.title.toLowerCase().includes(searchTerm.toLowerCase())
+      ));
       localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
       
-      // Visa notifikation istället för alert
+      // Show notification
       showNotification(`"${item.title}" has been added to your watched list`);
       
       // Close modal if the item is currently selected
@@ -191,6 +227,42 @@ const FavoritesList = () => {
     } catch (error) {
       console.error("Error adding to watched:", error);
       showNotification(`Failed to add to watched: ${error.message}`);
+    }
+  };
+
+  // Add an item to watched list with animation
+  const addToWatched = (item, e) => {
+    // Stop event propagation
+    e.stopPropagation();
+    
+    // Check if already in watched list
+    const isAlreadyWatched = watched.some(watchedItem => watchedItem.id === item.id);
+    
+    if (isAlreadyWatched) {
+      showNotification("This item is already in your watched list.");
+      return;
+    }
+    
+    // Get the starting position for the animation
+    const imgElement = e.currentTarget.closest(".relative").querySelector("img");
+    if (imgElement) {
+      const rect = imgElement.getBoundingClientRect();
+      const startPosition = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+      
+      // Set animation state
+      setAnimationItem(item);
+      setAnimationTargetType(item.mediaType === 'tv' ? 'tv' : 'movie');
+      setAnimationStartPosition(startPosition);
+      setIsAnimating(true);
+      
+      console.log("Starting animation for", item.title, "to", item.mediaType);
+    } else {
+      // Fallback if image element not found
+      console.error("Could not find image element for animation");
+      completeAddToWatched(item);
     }
   };
 
@@ -205,9 +277,56 @@ const FavoritesList = () => {
         Favorites List
       </h2>
       
+      {/* Search Controls */}
+      <div className="sticky top-0 z-10 bg-transparent pt-1 pb-3 mb-4">
+        <div className="relative">
+          <div className="flex items-center space-x-2">
+            <div className="relative flex-grow">
+              <input
+                type="text"
+                placeholder="Search your favorites..."
+                value={searchTerm}
+                onChange={handleSearch}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch({ target: { value: searchTerm } });
+                  }
+                }}
+                className="w-full p-2 pl-8 border border-yellow-500 rounded-md bg-gray-800 text-white placeholder-gray-400"
+              />
+              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                🔍
+              </div>
+              {searchTerm && (
+                <button 
+                  onClick={() => {
+                    setSearchTerm("");
+                    setFilteredFavorites(favorites);
+                  }}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                >
+                  ✖️
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => handleSearch({ target: { value: searchTerm } })}
+              className="p-2 bg-yellow-500 text-gray-900 font-bold rounded-md hover:bg-yellow-600 transition duration-300"
+            >
+              Search
+            </button>
+          </div>
+        </div>
+        {searchTerm && (
+          <div className="mt-2 text-sm text-gray-400">
+            Found {filteredFavorites.length} {filteredFavorites.length === 1 ? "favorite" : "favorites"}
+          </div>
+        )}
+      </div>
+      
       {/* Favorites List */}
       <div className="grid grid-cols-1 gap-4">
-        {favorites.map(item => {
+        {filteredFavorites.map(item => {
           const alreadyWatched = isInWatchedList(item.id);
           
           return (
@@ -263,13 +382,29 @@ const FavoritesList = () => {
         })}
         
         {/* Empty State */}
-        {favorites.length === 0 && (
+        {filteredFavorites.length === 0 && (
           <div className="text-center py-10">
-            <p className="text-gray-400">No favorites added yet.</p>
-            <p className="text-yellow-500 mt-2">Start adding your favorite movies and shows!</p>
+            {favorites.length === 0 ? (
+              <>
+                <p className="text-gray-400">No favorites added yet.</p>
+                <p className="text-yellow-500 mt-2">Start adding your favorite movies and shows!</p>
+              </>
+            ) : (
+              <p className="text-gray-400">No favorites match your search.</p>
+            )}
           </div>
         )}
       </div>
+      
+      {/* Flying Item Animation */}
+      {isAnimating && animationItem && (
+        <FlyingItemAnimation
+          item={animationItem}
+          targetType={animationTargetType}
+          startPosition={animationStartPosition}
+          onComplete={handleAnimationComplete}
+        />
+      )}
       
       {/* Loading Indicator */}
       {isLoading && selectedItem && (

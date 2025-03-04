@@ -103,7 +103,7 @@ const ShowsList = () => {
             <div className="relative flex-grow">
               <input
                 type="text"
-                placeholder="Search your shows..."
+                placeholder="Search shows ..."
                 value={searchTerm}
                 onChange={handleSearch}
                 onKeyPress={(e) => {

@@ -90,7 +90,7 @@ const MoviesList = () => {
             <div className="relative flex-grow">
               <input
                 type="text"
-                placeholder="Search your movies..."
+                placeholder="Search movies ..."
                 value={searchTerm}
                 onChange={handleSearch}
                 onKeyPress={(e) => {
