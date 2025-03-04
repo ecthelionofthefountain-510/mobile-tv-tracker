@@ -45,67 +45,101 @@ img {
   border: 2px solid rgba(255, 215, 0, 0.5);
 }
 
-/* 🔥 Responsiv navbar */
+/* Add these styles to your index.css file */
+
+/* Enhanced Navbar styling */
 nav {
   @apply fixed bottom-0 w-full text-white;
-  background: linear-gradient(to top, rgb(17, 24, 39, 0.95), rgb(17, 24, 39, 0.85));
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
-  padding-top: 7px;
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  padding-top: 8px;
+  padding-bottom: 8px;
+  z-index: 50;
 }
 
-/* 🛡️ Navbar länkar med förbättrad responsivitet */
+/* Better navbar links with visual elements */
 .nav-link {
-  @apply flex flex-col items-center relative py-1 transition-all duration-300;
-  /* Dynamisk bredd som anpassar sig efter skärmstorlek */
-  width: 20%; /* 5 objekt = 20% var */
-  min-width: 48px; /* Minsta bredd för att säkerställa att ikonen syns */
-  padding-left: 0;
-  padding-right: 0;
+  @apply flex flex-col items-center justify-center relative py-2 transition-all duration-300;
+  width: 25%; /* 4 items = 25% each */
+  min-width: 60px;
+}
+
+.nav-icon-container {
+  @apply relative flex items-center justify-center;
+  height: 40px;
+  width: 40px;
 }
 
 .nav-icon {
-  @apply text-xl sm:text-2xl mb-0 sm:mb-1 transition-transform duration-300;
+  @apply text-2xl mb-1 transition-all duration-300 z-10;
+  transform-origin: center;
 }
 
 .nav-text {
-  @apply text-[10px] sm:text-xs tracking-wide font-medium opacity-90;
-  font-family: 'Cinzel', serif; /* LOTR-inspirerad font */
+  @apply text-xs tracking-wide font-medium opacity-90 transition-all duration-300;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.03em;
 }
 
-/* Aktiv länk effekter */
+/* Glow effect for icons */
+.nav-glow {
+  @apply absolute rounded-full opacity-0 transition-all duration-300;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.3) 0%, rgba(250, 204, 21, 0) 70%);
+  height: 100%;
+  width: 100%;
+  top: 0;
+  left: 0;
+  transform: scale(0.8);
+}
+
+/* Active link styling */
 .nav-link-active .nav-icon {
-  @apply transform scale-110;
+  @apply transform scale-125;
+  text-shadow: 0 0 10px rgba(250, 204, 21, 0.7);
 }
 
 .nav-link-active .nav-text {
   @apply font-semibold;
-  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.5);
 }
 
-/* Dekorativ border-top för aktiva länkar */
-.nav-link-active::before {
+.nav-link-active .nav-glow {
+  @apply opacity-100;
+  transform: scale(1.2);
+}
+
+/* Animated indicator for active tab */
+.nav-link-active::after {
   content: '';
-  @apply absolute top-0 left-1/2 transform -translate-x-1/2;
-  width: 70%;
-  height: 2px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(255, 215, 0, 0.4) 30%,
-    rgba(255, 215, 0, 0.6) 50%,
-    rgba(255, 215, 0, 0.4) 70%,
-    transparent 100%
-  );
+  @apply absolute top-0 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-yellow-400;
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.8);
+  animation: pulseWidth 2s infinite ease-in-out;
 }
 
-/* Hover effekter */
+@keyframes pulseWidth {
+  0%, 100% { width: 24px; opacity: 0.8; }
+  50% { width: 28px; opacity: 1; }
+}
+
+/* Hover effects */
 .nav-link:hover .nav-icon {
-  @apply transform scale-105;
+  @apply transform scale-110;
 }
 
-/* Justera huvudinnehållsområdet för att ge plats för navbaren */
+.nav-link:hover .nav-glow {
+  @apply opacity-50;
+  transform: scale(1);
+}
+
+/* Press effect */
+.nav-link:active .nav-icon {
+  @apply transform scale-90;
+  transition: transform 0.1s;
+}
+
+/* Main content adjustment */
 .main-content {
-  padding-bottom: 60px; /* Anpassad för den mindre navbaren */
+  padding-bottom: 80px; /* Adjusted for the taller navbar */
 }
 
 /* Lägg till i head-taggen i index.html */

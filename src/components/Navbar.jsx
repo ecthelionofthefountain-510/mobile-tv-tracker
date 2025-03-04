@@ -1,4 +1,4 @@
-// Navbar.jsx
+// Navbar.jsx - Improved Design
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -6,10 +6,10 @@ const Navbar = () => {
   const location = useLocation();
   
   return (
-    <nav className="fixed bottom-0 w-full bg-gray-900/95 text-white border-t-2 border-yellow-600/50 shadow-lg backdrop-blur-sm">
-      <div className="w-full mx-auto">
+    <nav className="fixed bottom-0 w-full bg-gradient-to-t from-gray-900/95 to-gray-800/90 text-white border-t border-yellow-600/30 shadow-lg backdrop-blur-lg">
+      <div className="w-full mx-auto px-1">
         <div className="flex justify-between">
-        <Link 
+          <Link 
             to="/search" 
             className={`nav-link ${
               location.pathname === '/search' 
@@ -17,7 +17,10 @@ const Navbar = () => {
                 : 'text-gray-400 hover:text-yellow-500'
             }`}
           >
-            <div className="nav-icon">🔍</div>
+            <div className="nav-icon-container">
+              <div className="nav-icon">🔍</div>
+              <div className="nav-glow"></div>
+            </div>
             <span className="nav-text">Search</span>
           </Link>
 
@@ -29,7 +32,10 @@ const Navbar = () => {
                 : 'text-gray-400 hover:text-yellow-500'
             }`}
           >
-            <div className="nav-icon">📺</div>
+            <div className="nav-icon-container">
+              <div className="nav-icon">📺</div>
+              <div className="nav-glow"></div>
+            </div>
             <span className="nav-text">Shows</span>
           </Link>
           
@@ -41,11 +47,12 @@ const Navbar = () => {
                 : 'text-gray-400 hover:text-yellow-500'
             }`}
           >
-            <div className="nav-icon">🎬</div>
+            <div className="nav-icon-container">
+              <div className="nav-icon">🎬</div>
+              <div className="nav-glow"></div>
+            </div>
             <span className="nav-text">Movies</span>
           </Link>
-          
-         
           
           <Link 
             to="/favorites" 
@@ -55,20 +62,11 @@ const Navbar = () => {
                 : 'text-gray-400 hover:text-yellow-500'
             }`}
           >
-            <div className="nav-icon">⭐</div>
+            <div className="nav-icon-container">
+              <div className="nav-icon">⭐</div>
+              <div className="nav-glow"></div>
+            </div>
             <span className="nav-text">Favorites</span>
-          </Link>
-
-          <Link 
-            to="/profile" 
-            className={`nav-link ${
-              location.pathname === '/profile' 
-                ? 'text-yellow-400 nav-link-active' 
-                : 'text-gray-400 hover:text-yellow-500'
-            }`}
-          >
-            <div className="nav-icon">👤</div>
-            <span className="nav-text">Profile</span>
           </Link>
         </div>
       </div>
