@@ -443,7 +443,7 @@ const SearchPage = () => {
             <ul className="text-sm text-gray-300 space-y-1">
               <li className="flex items-start">
                 <span className="text-yellow-500 mr-2">•</span>
-                <span>Add shows and movies to your <b className="text-yellow-400">WATCHED</b> list to track progress</span>
+                <span>Keep track of watched movies in the <b className="text-yellow-400">MOVIES</b>tab</span>
               </li>
               <li className="flex items-start">
                 <span className="text-yellow-500 mr-2">•</span>
