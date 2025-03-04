@@ -132,37 +132,41 @@ const MoviesList = () => {
 
       {filteredMovies.map((movie) => (
         <div 
-          key={movie.id}
-          className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30"
-        >
-          <div className="flex p-4">
-            <img
-              src={`${IMAGE_BASE_URL}${movie.poster_path}`}
-              alt={movie.title}
-              onClick={() => handleMovieSelect(movie)}
-              className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
-            />
-            <div className="flex-grow ml-4">
-              <h3 className="text-2xl font-semibold text-yellow-400">
-                {movie.title}
-              </h3>
-              <div className="text-gray-400 mt-1">
-                Movie
-              </div>
-              {movie.release_date && (
-                <div className="text-gray-400 mt-1">
-                  Released: {new Date(movie.release_date).getFullYear()}
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => removeMovie(movie.id)}
-              className="absolute bottom-4 right-4 px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-md"
-            >
-              Remove
-            </button>
-          </div>
+  key={movie.id}
+  className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30"
+>
+  <div className="flex p-4">
+    <img
+      src={`${IMAGE_BASE_URL}${movie.poster_path}`}
+      alt={movie.title}
+      onClick={() => handleMovieSelect(movie)}
+      className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
+    />
+    <div className="flex-grow ml-4">
+      <h3 className="text-2xl font-semibold text-yellow-400">
+        {movie.title}
+      </h3>
+      <div className="text-gray-400 mt-1">
+        Movie
+      </div>
+      {movie.release_date && (
+        <div className="text-gray-400 mt-1">
+          Released: {new Date(movie.release_date).getFullYear()}
         </div>
+      )}
+    </div>
+  </div>
+  
+  {/* Remove-knapp på egen rad med mer utrymme */}
+  <div className="flex justify-end px-4 pb-3">
+    <button
+      onClick={() => removeMovie(movie.id)}
+      className="px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-md"
+    >
+      Remove
+    </button>
+  </div>
+</div>
       ))}
       
       {/* Movie Detail Modal */}
