@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
+import SwipeableSearchResult from "./SwipeableSearchResult";
+import NotificationModal from "./NotificationModal";
+import SwipeTipModal from "./SwipeTipModal";
 
 const SearchPage = () => {
   const [query, setQuery] = useState("");
@@ -15,6 +18,15 @@ const SearchPage = () => {
   // States for modal
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
+  
+  // Add notification state
+  const [notification, setNotification] = useState({
+    show: false,
+    message: ""
+  });
+  
+  // State för tips-modalen
+  const [showTip, setShowTip] = useState(false);
 
   // Search for content
   const searchContent = async () => {
@@ -73,62 +85,88 @@ const SearchPage = () => {
       
       combinedResults.sort((a, b) => b.popularity - a.popularity);
       setResults(combinedResults);
+      
+      // Visa tips-modalen om vi har resultat
+      if (combinedResults.length > 0) {
+        setShowTip(true);
+      }
     } catch (error) {
       console.error("Error searching content:", error);
-      alert(`Search error: ${error.message}`);
+      showNotification(`Search error: ${error.message}`);
     } finally {
       setIsSearching(false);
     }
   };
 
+  // Show notification
+  const showNotification = (message) => {
+    setNotification({
+      show: true,
+      message
+    });
+  };
+
+  // Close notification
+  const closeNotification = () => {
+    setNotification({
+      show: false,
+      message: ""
+    });
+  };
+
   // Add item to watched list
-  const addToWatched = async (item, e) => {
-    e.stopPropagation();
-    
-    if (!watched.find((watchedItem) => watchedItem.id === item.id)) {
+  const addToWatched = async (item) => {
+    // Check if already in watched
+    if (watched.some(watchedItem => watchedItem.id === item.id)) {
+      showNotification("This item is already in your watched list.");
+      return;
+    }
+
+    try {
       let itemToAdd = { 
         ...item,
         dateAdded: new Date().toISOString()
       };
 
       if (item.mediaType === 'tv') {
-        try {
-          if (!item.number_of_seasons) {
-            const detailsResponse = await fetch(
-              `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
-            );
-            const tvDetails = await detailsResponse.json();
-            itemToAdd.number_of_seasons = tvDetails.number_of_seasons;
-          }
-          
-          itemToAdd.seasons = {};
-          for (let i = 1; i <= itemToAdd.number_of_seasons; i++) {
-            itemToAdd.seasons[i] = {
-              watchedEpisodes: []
-            };
-          }
-        } catch (error) {
-          console.error("Error fetching TV show details:", error);
+        if (!item.number_of_seasons) {
+          const detailsResponse = await fetch(
+            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
+          );
+          const tvDetails = await detailsResponse.json();
+          itemToAdd.number_of_seasons = tvDetails.number_of_seasons;
+        }
+        
+        itemToAdd.seasons = {};
+        for (let i = 1; i <= itemToAdd.number_of_seasons; i++) {
+          itemToAdd.seasons[i] = {
+            watchedEpisodes: []
+          };
         }
       }
 
       const updatedList = [...watched, itemToAdd];
       setWatched(updatedList);
       localStorage.setItem("watched", JSON.stringify(updatedList));
+      
+      showNotification(`"${item.title}" added to your watched list.`);
+    } catch (error) {
+      console.error("Error adding to watched:", error);
+      showNotification(`Failed to add to watched: ${error.message}`);
     }
   };
 
   // Toggle favorite status
-  const toggleFavorite = (item, e) => {
-    e.stopPropagation();
-    
+  const toggleFavorite = (item) => {
     const isFavorited = favorites.some(fav => fav.id === item.id);
     let updatedFavorites;
     
     if (isFavorited) {
       updatedFavorites = favorites.filter(fav => fav.id !== item.id);
+      showNotification(`"${item.title}" removed from favorites.`);
     } else {
       updatedFavorites = [...favorites, item];
+      showNotification(`"${item.title}" added to favorites.`);
     }
     
     setFavorites(updatedFavorites);
@@ -160,7 +198,7 @@ const SearchPage = () => {
       })
       .catch(error => {
         console.error("Error fetching item details:", error);
-        alert(`Failed to load details: ${error.message}`);
+        showNotification(`Failed to load details: ${error.message}`);
         setIsLoading(false);
         setSelectedItem(null);
       });
@@ -269,85 +307,15 @@ const SearchPage = () => {
             const isFavorited = favorites.some(fav => fav.id === item.id);
 
             return (
-              <div 
-                key={item.id} 
-                className="mb-4 relative bg-gray-900 rounded-lg overflow-hidden border border-gray-700 cursor-pointer"
-                onClick={() => viewDetails(item)}
-              >
-                <div className="flex">
-                  {/* Poster positioned to match your screenshot - same size as screenshot */}
-                  <div className="w-16 sm:w-20 flex-shrink-0 p-1">
-                    {item.poster_path ? (
-                      <img 
-                        src={`${IMAGE_BASE_URL}${item.poster_path}`} 
-                        alt={item.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-800 flex items-center justify-center text-gray-600">
-                        No Image
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Content section with exact spacing and text styles to match screenshot */}
-                  <div className="flex-1 pl-2 pr-2 py-1.5 flex flex-col">
-                    <h3 className="text-base sm:text-lg font-bold text-yellow-500">
-                      {item.title?.toUpperCase()}
-                    </h3>
-                    
-                    <div className="text-gray-400 text-xs mt-0.5">
-                      <div>
-                        {item.mediaType === 'tv' ? 'TV SHOW' : 'MOVIE'}
-                        {item.mediaType === 'tv' && item.number_of_seasons && (
-                          <span> • {item.number_of_seasons} {item.number_of_seasons === 1 ? 'SEASON' : 'SEASONS'}</span>
-                        )}
-                      </div>
-                      {item.release_date && (
-                        <div>
-                          RELEASED: {new Date(item.release_date).getFullYear()}
-                        </div>
-                      )}
-                      {item.first_air_date && (
-                        <div>
-                          FIRST AIRED: {new Date(item.first_air_date).getFullYear()}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Buttons with exact sizes and styling from screenshot */}
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <button
-                        onClick={(e) => toggleFavorite(item, e)}
-                        className={`py-1 rounded font-medium text-xs text-center ${
-                          isFavorited 
-                            ? "bg-yellow-600 text-white" 
-                            : "bg-gray-800 text-yellow-500 border border-yellow-600/40"
-                        }`}
-                      >
-                        <span className="flex justify-center items-center">
-                          <span className="mr-1">{isFavorited ? "★" : "☆"}</span>
-                          <span>{isFavorited ? "FAVORITED" : "FAVORITE"}</span>
-                        </span>
-                      </button>
-                      
-                      <button
-                        onClick={(e) => addToWatched(item, e)}
-                        className={`py-1 rounded font-medium text-xs text-center ${
-                          isWatched
-                            ? "bg-green-700 text-white" 
-                            : "bg-green-800 text-green-400"
-                        }`}
-                      >
-                        <span className="flex justify-center items-center">
-                          <span className="mr-1">{isWatched ? "✓" : ""}</span>
-                          <span>{isWatched ? "WATCHED" : "ADD TO WATCHED"}</span>
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <SwipeableSearchResult
+                key={item.id}
+                item={item}
+                onFavorite={toggleFavorite}
+                onAddToWatched={addToWatched}
+                onItemClick={viewDetails}
+                isFavorited={isFavorited}
+                isWatched={isWatched}
+              />
             );
           })}
           
@@ -388,6 +356,23 @@ const SearchPage = () => {
             onClose={closeModal}
           />
         )
+      )}
+
+      {/* Notification Modal */}
+      {notification.show && (
+        <NotificationModal
+          message={notification.message}
+          onClose={closeNotification}
+          autoCloseTime={2000}
+        />
+      )}
+      
+      {/* Tips Modal för swipe-funktionalitet */}
+      {showTip && (
+        <SwipeTipModal
+          onClose={() => setShowTip(false)}
+          autoCloseTime={4000}
+        />
       )}
     </div>
   );
