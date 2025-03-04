@@ -84,13 +84,14 @@ const MoviesList = () => {
 
   return (
     <div className="p-4 min-h-screen pb-20">
-      <div className="sticky top-0 z-10 bg-transparent pt-1 pb-3">
-        <div className="relative">
+      {/* Search section with enhanced background */}
+      <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-md shadow-lg rounded-lg border border-gray-800 mb-4">
+        <div className="p-3">
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">
               <input
                 type="text"
-                placeholder="Search movies ..."
+                placeholder="Search your movies..."
                 value={searchTerm}
                 onChange={handleSearch}
                 onKeyPress={(e) => {
@@ -119,54 +120,55 @@ const MoviesList = () => {
               onClick={() => handleSearch({ target: { value: searchTerm } })}
               className="p-2 bg-yellow-500 text-gray-900 font-bold rounded-md hover:bg-yellow-600 transition duration-300"
             >
-              Search
+              GO!
             </button>
           </div>
+          
+          {searchTerm && (
+            <div className="mt-2 text-sm text-gray-400">
+              Found {filteredMovies.length} {filteredMovies.length === 1 ? "movie" : "movies"}
+            </div>
+          )}
         </div>
-        {searchTerm && (
-          <div className="mt-2 text-sm text-gray-400">
-            Found {filteredMovies.length} {filteredMovies.length === 1 ? "movie" : "movies"}
-          </div>
-        )}
       </div>
 
       {filteredMovies.map((movie) => (
         <div 
-  key={movie.id}
-  className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30"
->
-  <div className="flex p-4">
-    <img
-      src={`${IMAGE_BASE_URL}${movie.poster_path}`}
-      alt={movie.title}
-      onClick={() => handleMovieSelect(movie)}
-      className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
-    />
-    <div className="flex-grow ml-4">
-      <h3 className="text-2xl font-semibold text-yellow-400">
-        {movie.title}
-      </h3>
-      <div className="text-gray-400 mt-1">
-        Movie
-      </div>
-      {movie.release_date && (
-        <div className="text-gray-400 mt-1">
-          Released: {new Date(movie.release_date).getFullYear()}
+          key={movie.id}
+          className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30"
+        >
+          <div className="flex p-4">
+            <img
+              src={`${IMAGE_BASE_URL}${movie.poster_path}`}
+              alt={movie.title}
+              onClick={() => handleMovieSelect(movie)}
+              className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
+            />
+            <div className="flex-grow ml-4">
+              <h3 className="text-2xl font-semibold text-yellow-400">
+                {movie.title}
+              </h3>
+              <div className="text-gray-400 mt-1">
+                Movie
+              </div>
+              {movie.release_date && (
+                <div className="text-gray-400 mt-1">
+                  Released: {new Date(movie.release_date).getFullYear()}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Remove-knapp på egen rad med mer utrymme */}
+          <div className="flex justify-end px-4 pb-3">
+            <button
+              onClick={() => removeMovie(movie.id)}
+              className="px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-md"
+            >
+              Remove
+            </button>
+          </div>
         </div>
-      )}
-    </div>
-  </div>
-  
-  {/* Remove-knapp på egen rad med mer utrymme */}
-  <div className="flex justify-end px-4 pb-3">
-    <button
-      onClick={() => removeMovie(movie.id)}
-      className="px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-md"
-    >
-      Remove
-    </button>
-  </div>
-</div>
       ))}
       
       {/* Movie Detail Modal */}

@@ -128,7 +128,6 @@ const SearchPage = () => {
     }
   };
 
-  // Rest of your existing functions
   // Add item to watched list
   const addToWatched = async (item, e) => {
     e.stopPropagation();
@@ -310,87 +309,89 @@ const SearchPage = () => {
 
   return (
     <div className="p-4 min-h-screen pb-20">
-      {/* Search Controls */}
-      <div className="space-y-2 sticky top-0 z-10 bg-transparent pt-1 pb-3">
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-grow">
-            <input
-              type="text"
-              placeholder="Search for movies or TV shows..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  searchContent();
-                }
-              }}
-              className="w-full p-2 pl-8 border border-yellow-500 rounded-md bg-gray-800 text-white placeholder-gray-400"
-            />
-            <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
-              🔍
-            </div>
-            {query && (
-              <button 
-                onClick={() => {
-                  setQuery("");
-                  setResults([]);
+      {/* Search Controls with enhanced background */}
+      <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-md shadow-lg rounded-lg border border-gray-800 mb-4">
+        <div className="p-3 space-y-3">
+          <div className="flex items-center space-x-2">
+            <div className="relative flex-grow">
+              <input
+                type="text"
+                placeholder="Search for movies or TV shows..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    searchContent();
+                  }
                 }}
-                className="absolute inset-y-0 right-0 flex items-center pr-3"
-              >
-                ✖️
-              </button>
-            )}
+                className="w-full p-2 pl-8 border border-yellow-500 rounded-md bg-gray-800 text-white placeholder-gray-400"
+              />
+              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                🔍
+              </div>
+              {query && (
+                <button 
+                  onClick={() => {
+                    setQuery("");
+                    setResults([]);
+                  }}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                >
+                  ✖️
+                </button>
+              )}
+            </div>
+            <button
+              onClick={searchContent}
+              disabled={isSearching}
+              className={`p-2 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-600 transition-all ${
+                isSearching ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {isSearching ? 'Searching...' : 'GO!'}
+            </button>
           </div>
-          <button
-            onClick={searchContent}
-            disabled={isSearching}
-            className={`p-2 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-600 transition-all ${
-              isSearching ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-          >
-            {isSearching ? 'Searching...' : 'SEARCH'}
-          </button>
-        </div>
-        
-        {/* Content Type Filters */}
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setSearchType("all")}
-            className={`px-3 py-1 rounded-md text-sm font-medium ${
-              searchType === "all" 
-                ? "bg-yellow-600 text-gray-900" 
-                : "bg-gray-800 text-yellow-500"
-            }`}
-          >
-            ALL
-          </button>
-          <button
-            onClick={() => setSearchType("movies")}
-            className={`px-3 py-1 rounded-md text-sm font-medium ${
-              searchType === "movies" 
-                ? "bg-yellow-600 text-gray-900" 
-                : "bg-gray-800 text-yellow-500"
-            }`}
-          >
-            MOVIES
-          </button>
-          <button
-            onClick={() => setSearchType("tv")}
-            className={`px-3 py-1 rounded-md text-sm font-medium ${
-              searchType === "tv" 
-                ? "bg-yellow-600 text-gray-900" 
-                : "bg-gray-800 text-yellow-500"
-            }`}
-          >
-            TV SHOWS
-          </button>
-        </div>
-        
-        {query && results.length > 0 && (
-          <div className="mt-2 text-sm text-gray-400">
-            FOUND {results.length} {results.length === 1 ? "RESULT" : "RESULTS"}
+          
+          {/* Content Type Filters */}
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setSearchType("all")}
+              className={`px-3 py-1 rounded-md text-sm font-medium ${
+                searchType === "all" 
+                  ? "bg-yellow-600 text-gray-900" 
+                  : "bg-gray-800 text-yellow-500"
+              }`}
+            >
+              ALL
+            </button>
+            <button
+              onClick={() => setSearchType("movies")}
+              className={`px-3 py-1 rounded-md text-sm font-medium ${
+                searchType === "movies" 
+                  ? "bg-yellow-600 text-gray-900" 
+                  : "bg-gray-800 text-yellow-500"
+              }`}
+            >
+              MOVIES
+            </button>
+            <button
+              onClick={() => setSearchType("tv")}
+              className={`px-3 py-1 rounded-md text-sm font-medium ${
+                searchType === "tv" 
+                  ? "bg-yellow-600 text-gray-900" 
+                  : "bg-gray-800 text-yellow-500"
+              }`}
+            >
+              TV SHOWS
+            </button>
           </div>
-        )}
+          
+          {query && results.length > 0 && (
+            <div className="mt-2 text-sm text-gray-400">
+              FOUND {results.length} {results.length === 1 ? "RESULT" : "RESULTS"}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search Results or Welcome Content */}

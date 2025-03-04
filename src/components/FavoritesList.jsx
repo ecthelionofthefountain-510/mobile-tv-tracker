@@ -3,7 +3,6 @@ import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 import NotificationModal from "./NotificationModal";
-import FlyingItemAnimation from "./FlyingItemAnimation";
 
 const FavoritesList = () => {
   const [favorites, setFavorites] = useState([]);
@@ -13,14 +12,7 @@ const FavoritesList = () => {
   const [itemDetails, setItemDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [watched, setWatched] = useState([]);
-  
-  // Animation state
-  const [animationItem, setAnimationItem] = useState(null);
-  const [animationTargetType, setAnimationTargetType] = useState("");
-  const [animationStartPosition, setAnimationStartPosition] = useState(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-  
-  // Notification state
+  // State for notifications
   const [notification, setNotification] = useState({
     show: false,
     message: ""
@@ -62,6 +54,22 @@ const FavoritesList = () => {
     loadWatched();
   }, []);
 
+  // Show notification function
+  const showNotification = (message) => {
+    setNotification({
+      show: true,
+      message
+    });
+  };
+
+  // Close notification function
+  const closeNotification = () => {
+    setNotification({
+      show: false,
+      message: ""
+    });
+  };
+
   // Handle search input changes
   const handleSearch = (e) => {
     const value = e.target.value;
@@ -75,22 +83,6 @@ const FavoritesList = () => {
       );
       setFilteredFavorites(filtered);
     }
-  };
-
-  // Show notification
-  const showNotification = (message) => {
-    setNotification({
-      show: true,
-      message
-    });
-  };
-
-  // Close notification
-  const closeNotification = () => {
-    setNotification({
-      show: false,
-      message: ""
-    });
   };
 
   // Function to view details of an item
@@ -143,7 +135,7 @@ const FavoritesList = () => {
     const updatedList = favorites.filter(item => item.id !== id);
     setFavorites(updatedList);
     setFilteredFavorites(updatedList.filter(item => 
-      searchTerm.trim() === "" || item.title.toLowerCase().includes(searchTerm.toLowerCase())
+      item.title.toLowerCase().includes(searchTerm.toLowerCase())
     ));
     localStorage.setItem("favorites", JSON.stringify(updatedList));
     
@@ -153,22 +145,19 @@ const FavoritesList = () => {
     }
   };
 
-  // Handle animation completion
-  const handleAnimationComplete = () => {
-    console.log("Animation completed for", animationItem?.title);
-    if (animationItem) {
-      completeAddToWatched(animationItem);
+  // Add an item to watched list and remove from favorites
+  const addToWatched = async (item, e) => {
+    // Stop event propagation
+    e.stopPropagation();
+    
+    // Check if already in watched list
+    const isAlreadyWatched = watched.some(watchedItem => watchedItem.id === item.id);
+    
+    if (isAlreadyWatched) {
+      showNotification("This item is already in your watched list.");
+      return;
     }
     
-    // Reset animation state
-    setIsAnimating(false);
-    setAnimationItem(null);
-    setAnimationTargetType("");
-    setAnimationStartPosition(null);
-  };
-
-  // Complete add to watched process after animation
-  const completeAddToWatched = async (item) => {
     try {
       console.log("Adding to watched:", item);
       
@@ -212,11 +201,11 @@ const FavoritesList = () => {
       const updatedFavorites = favorites.filter(fav => fav.id !== item.id);
       setFavorites(updatedFavorites);
       setFilteredFavorites(updatedFavorites.filter(item => 
-        searchTerm.trim() === "" || item.title.toLowerCase().includes(searchTerm.toLowerCase())
+        item.title.toLowerCase().includes(searchTerm.toLowerCase())
       ));
       localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
       
-      // Show notification
+      // Show notification instead of alert
       showNotification(`"${item.title}" has been added to your watched list`);
       
       // Close modal if the item is currently selected
@@ -230,56 +219,19 @@ const FavoritesList = () => {
     }
   };
 
-  // Add an item to watched list with animation
-  const addToWatched = (item, e) => {
-    // Stop event propagation
-    e.stopPropagation();
-    
-    // Check if already in watched list
-    const isAlreadyWatched = watched.some(watchedItem => watchedItem.id === item.id);
-    
-    if (isAlreadyWatched) {
-      showNotification("This item is already in your watched list.");
-      return;
-    }
-    
-    // Get the starting position for the animation
-    const imgElement = e.currentTarget.closest(".relative").querySelector("img");
-    if (imgElement) {
-      const rect = imgElement.getBoundingClientRect();
-      const startPosition = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2
-      };
-      
-      // Set animation state
-      setAnimationItem(item);
-      setAnimationTargetType(item.mediaType === 'tv' ? 'tv' : 'movie');
-      setAnimationStartPosition(startPosition);
-      setIsAnimating(true);
-      
-      console.log("Starting animation for", item.title, "to", item.mediaType);
-    } else {
-      // Fallback if image element not found
-      console.error("Could not find image element for animation");
-      completeAddToWatched(item);
-    }
-  };
-
   // Check if an item is in the watched list
   const isInWatchedList = (id) => {
     return watched.some(item => item.id === id);
   };
 
   return (
-    <div className="p-4 min-h-screen">
-      <h2 className="text-2xl font-bold text-yellow-400 mb-6 text-center tracking-wider">
-        Favorites List
-      </h2>
-      
-      {/* Search Controls */}
-      <div className="sticky top-0 z-10 bg-transparent pt-1 pb-3 mb-4">
-        <div className="relative">
+    <div className="p-4 min-h-screen pb-20">
+      {/* Header with search section - enhanced background */}
+      <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-md shadow-lg rounded-lg border border-gray-800 mb-4 ">
+        <div className="p-3">
+          
+          
+          {/* Search input */}
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">
               <input
@@ -313,15 +265,16 @@ const FavoritesList = () => {
               onClick={() => handleSearch({ target: { value: searchTerm } })}
               className="p-2 bg-yellow-500 text-gray-900 font-bold rounded-md hover:bg-yellow-600 transition duration-300"
             >
-              Search
+              GO!
             </button>
           </div>
+          
+          {searchTerm && (
+            <div className="mt-2 text-sm text-gray-400">
+              Found {filteredFavorites.length} {filteredFavorites.length === 1 ? "item" : "items"}
+            </div>
+          )}
         </div>
-        {searchTerm && (
-          <div className="mt-2 text-sm text-gray-400">
-            Found {filteredFavorites.length} {filteredFavorites.length === 1 ? "favorite" : "favorites"}
-          </div>
-        )}
       </div>
       
       {/* Favorites List */}
@@ -390,21 +343,11 @@ const FavoritesList = () => {
                 <p className="text-yellow-500 mt-2">Start adding your favorite movies and shows!</p>
               </>
             ) : (
-              <p className="text-gray-400">No favorites match your search.</p>
+              <p className="text-gray-400">No favorites match your search</p>
             )}
           </div>
         )}
       </div>
-      
-      {/* Flying Item Animation */}
-      {isAnimating && animationItem && (
-        <FlyingItemAnimation
-          item={animationItem}
-          targetType={animationTargetType}
-          startPosition={animationStartPosition}
-          onComplete={handleAnimationComplete}
-        />
-      )}
       
       {/* Loading Indicator */}
       {isLoading && selectedItem && (
@@ -436,7 +379,7 @@ const FavoritesList = () => {
         )
       )}
 
-      {/* Visa NotificationModal när notification.show är true */}
+      {/* NotificationModal */}
       {notification.show && (
         <NotificationModal
           message={notification.message}

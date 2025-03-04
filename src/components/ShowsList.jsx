@@ -97,13 +97,14 @@ const ShowsList = () => {
 
   return (
     <div className="p-4 min-h-screen pb-20">
-      <div className="sticky top-0 z-10 bg-transparent pt-1 pb-3">
-        <div className="relative">
+      {/* Search section with enhanced background */}
+      <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-md shadow-lg rounded-lg border border-gray-800 mb-4">
+        <div className="p-3">
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">
               <input
                 type="text"
-                placeholder="Search shows ..."
+                placeholder="Search your shows..."
                 value={searchTerm}
                 onChange={handleSearch}
                 onKeyPress={(e) => {
@@ -132,15 +133,16 @@ const ShowsList = () => {
               onClick={() => handleSearch({ target: { value: searchTerm } })}
               className="p-2 bg-yellow-500 text-gray-900 font-bold rounded-md hover:bg-yellow-600 transition duration-300"
             >
-              Search
+              GO!
             </button>
           </div>
+          
+          {searchTerm && (
+            <div className="mt-2 text-sm text-gray-400">
+              Found {filteredShows.length} {filteredShows.length === 1 ? "show" : "shows"}
+            </div>
+          )}
         </div>
-        {searchTerm && (
-          <div className="mt-2 text-sm text-gray-400">
-            Found {filteredShows.length} {filteredShows.length === 1 ? "show" : "shows"}
-          </div>
-        )}
       </div>
       
       {filteredShows.map((show) => {
@@ -149,47 +151,47 @@ const ShowsList = () => {
             .reduce((sum, season) => sum + (season.watchedEpisodes?.length || 0), 0) : 0;
 
         return (
-<div 
-  key={show.id}
-  onClick={() => setSelectedShow(show)}
-  className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30 cursor-pointer hover:bg-gray-700/90"
->
-  <div className="flex p-4">
-    <img
-      src={`${IMAGE_BASE_URL}${show.poster_path}`}
-      alt={show.title}
-      onClick={(e) => {
-        e.stopPropagation();
-        handleShowModalSelect(show);
-      }}
-      className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
-    />
-    <div className="flex-grow ml-4">
-      <h3 className="text-2xl font-semibold text-yellow-400">
-        {show.title}
-      </h3>
-      <div className="text-gray-400 mt-1">
-        {show.number_of_seasons} Seasons • TV Show
-      </div>
-      <div className="text-gray-400 mt-1">
-        {watchedEpisodes} episodes watched
-      </div>
-    </div>
-  </div>
-  
-  {/* Remove-knapp på egen rad med mer utrymme */}
-  <div className="flex justify-end px-4 pb-3">
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        removeShow(show.id);
-      }}
-      className="px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-md"
-    >
-      Remove
-    </button>
-  </div>
-</div>
+          <div 
+            key={show.id}
+            onClick={() => setSelectedShow(show)}
+            className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30 cursor-pointer hover:bg-gray-700/90"
+          >
+            <div className="flex p-4">
+              <img
+                src={`${IMAGE_BASE_URL}${show.poster_path}`}
+                alt={show.title}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleShowModalSelect(show);
+                }}
+                className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
+              />
+              <div className="flex-grow ml-4">
+                <h3 className="text-2xl font-semibold text-yellow-400">
+                  {show.title}
+                </h3>
+                <div className="text-gray-400 mt-1">
+                  {show.number_of_seasons} Seasons • TV Show
+                </div>
+                <div className="text-gray-400 mt-1">
+                  {watchedEpisodes} episodes watched
+                </div>
+              </div>
+            </div>
+            
+            {/* Remove-knapp på egen rad med mer utrymme */}
+            <div className="flex justify-end px-4 pb-3">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeShow(show.id);
+                }}
+                className="px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-md"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
         );
       })}
       
