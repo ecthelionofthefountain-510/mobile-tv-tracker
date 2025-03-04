@@ -276,7 +276,7 @@ const SearchPage = () => {
               >
                 <div className="flex">
                   {/* Poster positioned to match your screenshot - same size as screenshot */}
-                  <div className="w-16 sm:w-20 flex-shrink-0">
+                  <div className="w-16 sm:w-20 flex-shrink-0 p-1">
                     {item.poster_path ? (
                       <img 
                         src={`${IMAGE_BASE_URL}${item.poster_path}`} 
