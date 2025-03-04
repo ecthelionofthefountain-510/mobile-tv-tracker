@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
+import NotificationModal from "./NotificationModal";
 
 const FavoritesList = () => {
   const [favorites, setFavorites] = useState([]);
@@ -9,6 +10,11 @@ const FavoritesList = () => {
   const [itemDetails, setItemDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [watched, setWatched] = useState([]);
+  // Lägg till state för notifikationer
+  const [notification, setNotification] = useState({
+    show: false,
+    message: ""
+  });
   
   useEffect(() => {
     // Load favorites from localStorage
@@ -44,6 +50,22 @@ const FavoritesList = () => {
     loadWatched();
   }, []);
 
+  // Lägg till funktion för att visa notifikationer
+  const showNotification = (message) => {
+    setNotification({
+      show: true,
+      message
+    });
+  };
+
+  // Lägg till funktion för att stänga notifikationer
+  const closeNotification = () => {
+    setNotification({
+      show: false,
+      message: ""
+    });
+  };
+
   // Function to view details of an item
   const viewDetails = (item) => {
     console.log("View details clicked for:", item);
@@ -73,7 +95,7 @@ const FavoritesList = () => {
       })
       .catch(error => {
         console.error("Error fetching item details:", error);
-        alert(`Failed to load details: ${error.message}`);
+        showNotification(`Failed to load details: ${error.message}`);
         setIsLoading(false);
       });
   };
@@ -101,7 +123,7 @@ const FavoritesList = () => {
     }
   };
 
-  // Add an item to watched list
+  // Add an item to watched list and remove from favorites
   const addToWatched = async (item, e) => {
     // Stop event propagation
     e.stopPropagation();
@@ -110,7 +132,7 @@ const FavoritesList = () => {
     const isAlreadyWatched = watched.some(watchedItem => watchedItem.id === item.id);
     
     if (isAlreadyWatched) {
-      alert("This item is already in your watched list.");
+      showNotification("This item is already in your watched list.");
       return;
     }
     
@@ -153,12 +175,22 @@ const FavoritesList = () => {
       setWatched(updatedWatched);
       localStorage.setItem("watched", JSON.stringify(updatedWatched));
       
-      // Show success message
-      alert(`"${item.title}" has been added to your watched list.`);
+      // Remove from favorites
+      const updatedFavorites = favorites.filter(fav => fav.id !== item.id);
+      setFavorites(updatedFavorites);
+      localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+      
+      // Visa notifikation istället för alert
+      showNotification(`"${item.title}" has been added to your watched list`);
+      
+      // Close modal if the item is currently selected
+      if (selectedItem && selectedItem.id === item.id) {
+        closeModal();
+      }
       
     } catch (error) {
       console.error("Error adding to watched:", error);
-      alert(`Failed to add to watched: ${error.message}`);
+      showNotification(`Failed to add to watched: ${error.message}`);
     }
   };
 
@@ -267,6 +299,15 @@ const FavoritesList = () => {
             onClose={closeModal}
           />
         )
+      )}
+
+      {/* Visa NotificationModal när notification.show är true */}
+      {notification.show && (
+        <NotificationModal
+          message={notification.message}
+          onClose={closeNotification}
+          autoCloseTime={3000}
+        />
       )}
     </div>
   );
