@@ -14,7 +14,7 @@ const App = () => {
       <div className="flex flex-col h-screen">
         <div className="main-content flex-grow overflow-auto pb-16">
           <Routes>
-            <Route path="/" element={<Navigate to="/shows" replace />} />
+            <Route path="/" element={<Navigate to="/search" replace />} />
             <Route path="/shows" element={<ShowsList />} />
             <Route path="/movies" element={<MoviesList />} />
             <Route path="/search" element={<SearchPage />} />
