@@ -144,3 +144,92 @@ nav {
 
 /* Lägg till i head-taggen i index.html */
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&display=swap');
+
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
+/* Animerad pulseffekt för trender-rubriken */
+@keyframes gentle-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* Snygga animationer för sökresultat */
+.search-result-item {
+  transition: all 0.3s ease;
+}
+
+.search-result-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Loading animation för trending-innehåll */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Fade-in animation för kort */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Stiliserad divider för sektioner */
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, 
+    transparent, 
+    rgba(217, 119, 6, 0.5), 
+    transparent
+  );
+  margin: 1.5rem 0;
+}
+
+/* Parchment-stil för tips-sektionen */
+.parchment {
+  background-image: linear-gradient(
+    to bottom right, 
+    rgba(255, 251, 235, 0.05), 
+    rgba(120, 53, 15, 0.1)
+  );
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+/* Effekt för tipslistan */
+.tip-list li {
+  transition: transform 0.2s;
+}
+
+.tip-list li:hover {
+  transform: translateX(5px);
+}
+
+/* Scroll-styling för hela appen */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(30, 30, 30, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(217, 119, 6, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 119, 6, 0.7);
+}
+
