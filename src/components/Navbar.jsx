@@ -9,6 +9,18 @@ const Navbar = () => {
     <nav className="fixed bottom-0 w-full bg-gray-900/95 text-white border-t-2 border-yellow-600/50 shadow-lg backdrop-blur-sm">
       <div className="w-full mx-auto">
         <div className="flex justify-between">
+        <Link 
+            to="/search" 
+            className={`nav-link ${
+              location.pathname === '/search' 
+                ? 'text-yellow-400 nav-link-active' 
+                : 'text-gray-400 hover:text-yellow-500'
+            }`}
+          >
+            <div className="nav-icon">🔍</div>
+            <span className="nav-text">Search</span>
+          </Link>
+
           <Link 
             to="/shows" 
             className={`nav-link ${
@@ -33,17 +45,7 @@ const Navbar = () => {
             <span className="nav-text">Movies</span>
           </Link>
           
-          <Link 
-            to="/search" 
-            className={`nav-link ${
-              location.pathname === '/search' 
-                ? 'text-yellow-400 nav-link-active' 
-                : 'text-gray-400 hover:text-yellow-500'
-            }`}
-          >
-            <div className="nav-icon">🔍</div>
-            <span className="nav-text">Explore</span>
-          </Link>
+         
           
           <Link 
             to="/favorites" 
