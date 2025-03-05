@@ -1,4 +1,4 @@
-// MoviesList.jsx with alphabetical sorting and search
+// MoviesList.jsx with alphabetical sorting, search, and X button in corner
 import React, { useState, useEffect } from "react";
 import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
@@ -63,7 +63,11 @@ const MoviesList = () => {
     setMovieDetails(null);
   };
 
-  const removeMovie = (id) => {
+  const removeMovie = (id, e) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
     const updatedWatched = allWatched.filter(item => item.id !== id);
     localStorage.setItem("watched", JSON.stringify(updatedWatched));
@@ -136,12 +140,21 @@ const MoviesList = () => {
         <div 
           key={movie.id}
           className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30"
+          onClick={() => handleMovieSelect(movie)}
         >
-          <div className="flex p-4">
+          {/* X button in the top-right corner */}
+          <button
+            onClick={(e) => removeMovie(movie.id, e)}
+            className="absolute top-2 right-2 z-10 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md transition-colors"
+            aria-label="Remove movie"
+          >
+            ✕
+          </button>
+          
+          <div className="flex p-1">
             <img
               src={`${IMAGE_BASE_URL}${movie.poster_path}`}
               alt={movie.title}
-              onClick={() => handleMovieSelect(movie)}
               className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
             />
             <div className="flex-grow ml-4">
@@ -157,16 +170,6 @@ const MoviesList = () => {
                 </div>
               )}
             </div>
-          </div>
-          
-          {/* Remove-knapp på egen rad med mer utrymme */}
-          <div className="flex justify-end px-4 pb-3">
-            <button
-              onClick={() => removeMovie(movie.id)}
-              className="px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-md"
-            >
-              Remove
-            </button>
           </div>
         </div>
       ))}

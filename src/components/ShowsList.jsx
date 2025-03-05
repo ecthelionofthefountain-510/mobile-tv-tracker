@@ -64,7 +64,11 @@ const ShowsList = () => {
     setShowDetails(null);
   };
 
-  const removeShow = (id) => {
+  const removeShow = (id, e) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
     const updatedWatched = allWatched.filter(item => item.id !== id);
     localStorage.setItem("watched", JSON.stringify(updatedWatched));
@@ -156,7 +160,16 @@ const ShowsList = () => {
             onClick={() => setSelectedShow(show)}
             className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30 cursor-pointer hover:bg-gray-700/90"
           >
-            <div className="flex p-4">
+            {/* X button in the top-right corner */}
+            <button
+              onClick={(e) => removeShow(show.id, e)}
+              className="absolute top-2 right-2 z-10 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md transition-colors"
+              aria-label="Remove show"
+            >
+              ✕
+            </button>
+            
+            <div className="flex p-1">
               <img
                 src={`${IMAGE_BASE_URL}${show.poster_path}`}
                 alt={show.title}
@@ -177,19 +190,6 @@ const ShowsList = () => {
                   {watchedEpisodes} episodes watched
                 </div>
               </div>
-            </div>
-            
-            {/* Remove-knapp på egen rad med mer utrymme */}
-            <div className="flex justify-end px-4 pb-3">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeShow(show.id);
-                }}
-                className="px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-md"
-              >
-                Remove
-              </button>
             </div>
           </div>
         );

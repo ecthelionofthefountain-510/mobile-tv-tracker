@@ -285,9 +285,18 @@ const FavoritesList = () => {
           return (
             <div 
               key={item.id} 
-              className="relative bg-gray-800 bg-opacity-90 rounded-lg p-4 shadow-xl border border-yellow-900/30 cursor-pointer hover:bg-gray-700/90"
+              className="relative bg-gray-800 bg-opacity-90 rounded-lg p-1 shadow-xl border border-yellow-900/30 cursor-pointer hover:bg-gray-700/90"
               onClick={() => viewDetails(item)}
             >
+              {/* X button in the top-right corner */}
+              <button
+                onClick={(e) => removeFromFavorites(item.id, e)}
+                className="absolute top-2 right-2 z-10 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md transition-colors"
+                aria-label="Remove from favorites"
+              >
+                ✕
+              </button>
+              
               <div className="flex items-start space-x-4">
                 {/* Poster */}
                 <div className="relative w-24 h-36 flex-shrink-0">
@@ -308,14 +317,7 @@ const FavoritesList = () => {
                     {item.mediaType === 'tv' ? 'TV Series' : 'Movie'}
                   </span>
                   
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <button
-                      onClick={(e) => removeFromFavorites(item.id, e)}
-                      className="px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-md transition-colors duration-200 text-sm"
-                    >
-                      Remove
-                    </button>
-                    
+                  <div className="mt-4">
                     <button
                       onClick={(e) => addToWatched(item, e)}
                       disabled={alreadyWatched}
