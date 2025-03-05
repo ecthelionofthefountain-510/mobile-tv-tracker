@@ -288,10 +288,10 @@ const FavoritesList = () => {
               className="relative bg-gray-800 bg-opacity-90 rounded-lg p-1 shadow-xl border border-yellow-900/30 cursor-pointer hover:bg-gray-700/90"
               onClick={() => viewDetails(item)}
             >
-              {/* X button in the top-right corner */}
+              {/* X button in the top-right corner - UPDATED STYLING */}
               <button
                 onClick={(e) => removeFromFavorites(item.id, e)}
-                className="absolute top-2 right-2 z-10 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md transition-colors"
+                className="absolute top-0 right-0 z-60 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md transition-colors transform translate-x-1/2 -translate-y-1/2"
                 aria-label="Remove from favorites"
               >
                 ✕
