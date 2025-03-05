@@ -86,7 +86,7 @@ const MoviesList = () => {
     <div className="p-4 min-h-screen pb-20">
       {/* Search section with enhanced background */}
       <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-md shadow-lg rounded-lg border border-gray-800 mb-4">
-        <div className="p-3">
+        <div className="p-1">
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">
               <input
