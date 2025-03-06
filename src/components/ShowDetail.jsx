@@ -47,6 +47,8 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     if (hasChanges) {
       saveChangesToStorage();
     }
+    
+    // Trigger the onBack callback to navigate back
     onBack();
   };
 
