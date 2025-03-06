@@ -297,7 +297,7 @@ const FavoritesList = () => {
                 ✕
               </button>
               
-              <div className="flex p-3 relative h-13" style={{ minHeight: '150px' }}>
+              <div className="flex p-1 relative h-13" style={{ minHeight: '150px' }}>
                 <img
                   src={`${IMAGE_BASE_URL}${item.poster_path}`}
                   alt={item.title}

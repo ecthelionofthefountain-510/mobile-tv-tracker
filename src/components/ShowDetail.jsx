@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import NotificationModal from "./NotificationModal";
 
@@ -11,11 +11,44 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [sortOption, setSortOption] = useState("episode_asc");
   const [notification, setNotification] = useState({ show: false, message: "" });
   const [stats, setStats] = useState({ total: 0, watched: 0 });
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Calculate progress stats on load and when seasons change
   useEffect(() => {
     calculateStats();
   }, [seasons, episodesData]);
+
+  // Save changes to localStorage whenever seasons data changes
+  useEffect(() => {
+    if (hasChanges) {
+      saveChangesToStorage();
+    }
+  }, [seasons, hasChanges]);
+
+  // Function to save changes to localStorage
+  const saveChangesToStorage = useCallback(() => {
+    console.log("Saving changes to storage");
+    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
+    const updatedWatched = allWatched.map(item => {
+      if (item.id === show.id) {
+        return {
+          ...item,
+          seasons: seasons
+        };
+      }
+      return item;
+    });
+    localStorage.setItem("watched", JSON.stringify(updatedWatched));
+    setHasChanges(false);
+  }, [seasons, show.id]);
+
+  // Modified onBack handler to ensure changes are saved
+  const handleBack = () => {
+    if (hasChanges) {
+      saveChangesToStorage();
+    }
+    onBack();
+  };
 
   // Calculate watched vs total episodes
   const calculateStats = () => {
@@ -142,7 +175,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       updatedEpisodes.delete(episodeNumber);
     }
 
-    updateSeasonsInStorage(seasonNumber, Array.from(updatedEpisodes));
+    updateSeasonsInState(seasonNumber, Array.from(updatedEpisodes));
   };
 
   // Toggle all episodes in a season (without notification)
@@ -155,7 +188,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       currentSeason.watchedEpisodes?.includes(epNum)
     );
 
-    updateSeasonsInStorage(seasonNumber, isAllWatched ? [] : allEpisodes);
+    updateSeasonsInState(seasonNumber, isAllWatched ? [] : allEpisodes);
   };
   
   // Toggle episodes with filter
@@ -198,7 +231,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       targetEpisodes.forEach(epNum => updatedWatchedEpisodes.delete(epNum));
     }
     
-    updateSeasonsInStorage(seasonNumber, Array.from(updatedWatchedEpisodes));
+    updateSeasonsInState(seasonNumber, Array.from(updatedWatchedEpisodes));
   };
 
   // Update all seasons at once with specific status (without notification)
@@ -231,21 +264,9 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
         }
       }
       
-      // Update all seasons at once in local storage
-      const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
-      const updatedWatched = allWatched.map(item => {
-        if (item.id === show.id) {
-          return {
-            ...item,
-            seasons: updatedSeasons
-          };
-        }
-        return item;
-      });
-      localStorage.setItem("watched", JSON.stringify(updatedWatched));
-      
       // Update state
       setSeasons(updatedSeasons);
+      setHasChanges(true);
       setIsLoading(false);
     } catch (error) {
       console.error("Error marking all seasons:", error);
@@ -253,9 +274,9 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     }
   };
   
-  // Helper to update seasons in localStorage
-  const updateSeasonsInStorage = (seasonNumber, watchedEpisodes) => {
-    // Update local state first
+  // Helper to update seasons in state (and mark that changes exist)
+  const updateSeasonsInState = (seasonNumber, watchedEpisodes) => {
+    // Update local state
     const updatedSeasons = {
       ...seasons,
       [seasonNumber]: {
@@ -265,19 +286,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     };
     
     setSeasons(updatedSeasons);
-    
-    // Update localStorage
-    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
-    const updatedWatched = allWatched.map(item => {
-      if (item.id === show.id) {
-        return {
-          ...item,
-          seasons: updatedSeasons
-        };
-      }
-      return item;
-    });
-    localStorage.setItem("watched", JSON.stringify(updatedWatched));
+    setHasChanges(true);
   };
 
   return (
@@ -286,7 +295,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       <div className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-20 pb-4 pt-2">
         <div className="flex items-center justify-between mb-3">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="text-yellow-400 hover:text-yellow-300 flex items-center"
           >
             <span className="mr-1">←</span> Back
