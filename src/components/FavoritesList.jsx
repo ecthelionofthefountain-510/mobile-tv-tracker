@@ -291,7 +291,7 @@ const FavoritesList = () => {
               {/* X button in the top-right corner */}
               <button
                 onClick={(e) => removeFromFavorites(item.id, e)}
-                className="absolute top-0 right-0 z-60 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md transition-colors transform translate-x-1/2 -translate-y-1/2"
+                className="absolute top-0 right-0 z-60 bg-red-600 hover:bg-red-700 text-white border rounded w-6 h-6 flex items-center justify-center shadow-md transition-colors transform translate-x-1/2 -translate-y-1/2"
                 aria-label="Remove from favorites"
               >
                 ✕
@@ -305,7 +305,7 @@ const FavoritesList = () => {
                 />
                 <div className="flex-grow ml-4 flex flex-col">
                   <div className="pb-12">
-                    <h3 className="text-1xl font-semibold text-yellow-400 line-clamp-2">
+                    <h3 className="text-xl font-semibold text-yellow-400 line-clamp-2">
                       {item.title}
                     </h3>
                     <div className="text-gray-400 mt-1">

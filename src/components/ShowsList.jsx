@@ -187,7 +187,7 @@ return (
           {/* X button in the top-right corner - UPDATED STYLING */}
           <button
             onClick={(e) => removeShow(show.id, e)}
-            className="absolute top-0 right-0 z-60 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md transition-colors transform translate-x-1/2 -translate-y-1/2"
+            className="absolute top-0 right-0 z-60 bg-red-600 hover:bg-red-700 text-white border rounded w-6 h-6 flex items-center justify-center shadow-md transition-colors transform translate-x-1/2 -translate-y-1/2"
             aria-label="Remove show"
           >
             ✕
