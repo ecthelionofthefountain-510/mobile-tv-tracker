@@ -151,24 +151,26 @@ const MoviesList = () => {
             ✕
           </button>
           
-          <div className="flex p-1">
+          <div className="flex p-1 relative h-10" style={{ minHeight: '150px' }}>
             <img
               src={`${IMAGE_BASE_URL}${movie.poster_path}`}
               alt={movie.title}
               className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
             />
-            <div className="flex-grow ml-4">
-              <h3 className="text-2xl font-semibold text-yellow-400">
-                {movie.title}
-              </h3>
-              <div className="text-gray-400 mt-1">
-                Movie
-              </div>
-              {movie.release_date && (
+            <div className="flex-grow ml-4 flex flex-col">
+              <div className="pb-12">
+                <h3 className="text-2xl font-semibold text-yellow-400 line-clamp-2">
+                  {movie.title}
+                </h3>
                 <div className="text-gray-400 mt-1">
-                  Released: {new Date(movie.release_date).getFullYear()}
+                  Movie
                 </div>
-              )}
+                {movie.release_date && (
+                  <div className="text-gray-400 mt-1">
+                    Released: {new Date(movie.release_date).getFullYear()}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

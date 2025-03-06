@@ -277,7 +277,7 @@ const FavoritesList = () => {
         </div>
       </div>
       
-      {/* Favorites List */}
+      {/* Favorites List with updated styling to match Movies/Shows */}
       <div className="grid grid-cols-1 gap-4">
         {filteredFavorites.map(item => {
           const alreadyWatched = isInWatchedList(item.id);
@@ -285,10 +285,10 @@ const FavoritesList = () => {
           return (
             <div 
               key={item.id} 
-              className="relative bg-gray-800 bg-opacity-90 rounded-lg p-1 shadow-xl border border-yellow-900/30 cursor-pointer hover:bg-gray-700/90"
+              className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30 cursor-pointer hover:bg-gray-700/90"
               onClick={() => viewDetails(item)}
             >
-              {/* X button in the top-right corner - UPDATED STYLING */}
+              {/* X button in the top-right corner */}
               <button
                 onClick={(e) => removeFromFavorites(item.id, e)}
                 className="absolute top-0 right-0 z-60 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md transition-colors transform translate-x-1/2 -translate-y-1/2"
@@ -297,27 +297,34 @@ const FavoritesList = () => {
                 ✕
               </button>
               
-              <div className="flex items-start space-x-4">
-                {/* Poster */}
-                <div className="relative w-24 h-36 flex-shrink-0">
-                  <img
-                    src={`${IMAGE_BASE_URL}${item.poster_path}`}
-                    alt={item.title}
-                    className="w-full h-full object-cover rounded-md shadow-lg border-2 border-yellow-600/30"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-md"/>
-                </div>
-                
-                {/* Item Info */}
-                <div className="flex-grow">
-                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">
-                    {item.title}
-                  </h3>
-                  <span className="inline-block px-2 py-1 bg-yellow-600/20 text-yellow-400 text-xs rounded-full mb-2">
-                    {item.mediaType === 'tv' ? 'TV Series' : 'Movie'}
-                  </span>
+              <div className="flex p-3 relative h-13" style={{ minHeight: '150px' }}>
+                <img
+                  src={`${IMAGE_BASE_URL}${item.poster_path}`}
+                  alt={item.title}
+                  className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30"
+                />
+                <div className="flex-grow ml-4 flex flex-col">
+                  <div className="pb-12">
+                    <h3 className="text-1xl font-semibold text-yellow-400 line-clamp-2">
+                      {item.title}
+                    </h3>
+                    <div className="text-gray-400 mt-1">
+                      {item.mediaType === 'tv' ? 'TV Show' : 'Movie'}
+                    </div>
+                    {item.release_date && (
+                      <div className="text-gray-400 mt-1">
+                        Released: {new Date(item.release_date).getFullYear()}
+                      </div>
+                    )}
+                    {item.first_air_date && (
+                      <div className="text-gray-400 mt-1">
+                        First aired: {new Date(item.first_air_date).getFullYear()}
+                      </div>
+                    )}
+                  </div>
                   
-                  <div className="mt-4">
+                  {/* Knapp sektion, absolut positionerad i nedre högra hörnet */}
+                  <div className="absolute bottom-3 right-3 z-10">
                     <button
                       onClick={(e) => addToWatched(item, e)}
                       disabled={alreadyWatched}
