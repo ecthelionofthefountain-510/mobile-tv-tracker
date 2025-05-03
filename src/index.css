@@ -108,18 +108,18 @@ nav {
   transform: scale(1.2);
 }
 
-/* Animated indicator for active tab */
+/* Animated indicator for active tab
 .nav-link-active::after {
   content: '';
   @apply absolute top-0 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-yellow-400;
   box-shadow: 0 0 8px rgba(250, 204, 21, 0.8);
   animation: pulseWidth 2s infinite ease-in-out;
-}
+} */
 
-@keyframes pulseWidth {
+/* @keyframes pulseWidth {
   0%, 100% { width: 24px; opacity: 0.8; }
   50% { width: 28px; opacity: 1; }
-}
+} */
 
 /* Hover effects */
 .nav-link:hover .nav-icon {
