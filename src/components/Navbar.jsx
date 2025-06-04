@@ -4,9 +4,10 @@ import { FaSearch, FaTv, FaFilm, FaHeart } from 'react-icons/fa';
 import './Navbar.css';
 
 const navItems = [
-  { to: "/search", icon: <FaSearch />, label: "Search" },
+  
   { to: "/shows", icon: <FaTv />, label: "Shows" },
   { to: "/movies", icon: <FaFilm />, label: "Movies" },
+  { to: "/search", icon: <FaSearch />, label: "Explore" },
   { to: "/favorites", icon: <FaHeart />, label: "Favorites" },
 ];
 

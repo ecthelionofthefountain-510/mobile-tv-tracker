@@ -235,19 +235,6 @@ const SearchPage = () => {
                 className="w-full p-2 pl-8 border border-yellow-500 rounded-md bg-gray-800 text-white placeholder-gray-400"
               />
               <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">🔍</div>
-              {/* {query && results.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-gray-900 border border-yellow-600 rounded-md mt-1 z-50 w-full max-h-80 overflow-y-auto shadow-lg">
-                  {results.slice(0, 6).map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => viewDetails(item)}
-                      className="px-3 py-2 hover:bg-gray-700 cursor-pointer text-sm text-yellow-300"
-                    >
-                      {item.title}
-                    </div>
-                  ))}
-                </div>
-              )} */}
             </div>
             <button onClick={searchContent} className="p-2 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-600 transition-all">
               GO!
@@ -264,12 +251,48 @@ const SearchPage = () => {
         <div className="text-center py-10 text-gray-400">Start typing to search for content.</div>
       )}
 
+      {!query && trendingItems.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-lg font-bold text-yellow-400 mb-2">🔥 Trending Now</h2>
+          <div className="flex flex-col space-y-4">
+            {trendingItems.map(item => (
+              <div
+                key={item.id}
+                className="flex items-center bg-gray-900 rounded-lg shadow-md border border-gray-700 cursor-pointer hover:bg-gray-800 transition"
+                onClick={() => viewDetails(item)}
+              >
+                <img
+                  src={item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : ""}
+                  alt={item.title}
+                  className="w-16 h-24 object-cover rounded-l-lg"
+                />
+                <div className="flex-1 p-3">
+                  <div className="text-base font-semibold text-yellow-400 truncate">{item.title}</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {item.mediaType === "tv" ? "TV Show" : "Movie"}
+                    {item.release_date && <> • {new Date(item.release_date).getFullYear()}</>}
+                    {item.first_air_date && <> • {new Date(item.first_air_date).getFullYear()}</>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {selectedItem && !isLoading && itemDetails && (
         selectedItem.mediaType === 'tv' ? (
           <ShowDetailModal show={itemDetails} onClose={closeModal} />
         ) : (
           <MovieDetailModal movie={itemDetails} onClose={closeModal} />
         )
+      )}
+
+      {!isSearching && results.length === 0 && query && (
+        <div className="text-center py-10 text-gray-400 flex flex-col items-center">
+          <span className="text-5xl mb-2">🤔</span>
+          <span>No results found for <span className="text-yellow-400">{query}</span></span>
+        </div>
       )}
     </div>
   );
