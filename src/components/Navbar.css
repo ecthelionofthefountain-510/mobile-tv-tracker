@@ -1,0 +1,121 @@
+.custom-navbar {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 80px;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  background: transparent;
+}
+
+.navbar-bg-svg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.navbar-content {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 2;
+}
+
+.nav-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 8px;
+  padding-bottom: 6px;
+  color: #fff;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  letter-spacing: 1px;
+  transition: color 0.2s;
+}
+
+.nav-link-active .nav-icon {
+  color: #facc15;
+  filter: drop-shadow(0 0 6px #facc15aa);
+}
+
+.nav-link-active .nav-label {
+  color: #facc15;
+  font-weight: bold;
+  text-shadow: 0 0 6px #facc15aa;
+}
+
+.nav-icon {
+  margin-bottom: 2px;
+  font-size: 24px;
+  transition: color 0.2s, filter 0.2s;
+}
+
+.navbar-content .nav-icon {
+  display: block;
+  margin: 0 auto 2px auto;
+  font-size: 22px;
+}
+
+.nav-label {
+  margin-top: 18px; /* Öka detta värde för att flytta ner texten */
+  display: block;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.navbar-content .active .nav-label {
+  color: #facc15;
+}
+
+.navbar-center-icon {
+  background: #18181b;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  border: 4px solid #18181b;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 3;
+  position: absolute;
+  top: 0;
+  transition: left 0.3s;
+}
+
+.active {
+  color: #facc15;
+}
+
+.nav-icon {
+  margin-bottom: 2px;
+  font-size: 24px;
+  transition: color 0.2s, filter 0.2s;
+}
+
+.navbar-floating-icon {
+  position: absolute;
+  top: -16px;
+  z-index: 10;
+  width: 56px;
+  height: 56px;
+  background: #18181b;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  border: 4px solid #232323;
+  font-size: 28px;
+  transition: left 0.3s;
+}

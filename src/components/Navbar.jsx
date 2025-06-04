@@ -1,77 +1,39 @@
-// Navbar.jsx - Improved Design
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState } from 'react';
+import { FaHome, FaSearch, FaShoppingBasket, FaUser } from 'react-icons/fa';
+import './Navbar.css';
 
-const Navbar = () => {
-  const location = useLocation();
-  
+const navItems = [
+  { name: 'Home', icon: <FaHome /> },
+  { name: 'Search', icon: <FaSearch /> },
+  { name: 'Cart', icon: <FaShoppingBasket /> },
+  { name: 'Profile', icon: <FaUser /> },
+];
+
+export default function Navbar() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
   return (
-    <nav className="fixed bottom-0 w-full bg-gradient-to-t from-gray-900/95 to-gray-800/90 text-white border-t border-yellow-600/30 shadow-lg backdrop-blur-lg">
-      <div className="w-full mx-auto px-1">
-        <div className="flex justify-between">
-          <Link 
-            to="/search" 
-            className={`nav-link ${
-              location.pathname === '/search' 
-                ? 'text-yellow-400 nav-link-active' 
-                : 'text-gray-400 hover:text-yellow-500'
-            }`}
+    <nav className="custom-navbar">
+      <div className="navbar-content">
+        {navItems.map((item, index) => (
+          <div
+            key={item.name}
+            className={`nav-link ${index === activeIndex ? 'nav-link-active' : ''}`}
+            onClick={() => setActiveIndex(index)}
           >
-            <div className="nav-icon-container">
-              <div className="nav-icon">🔍</div>
-              <div className="nav-glow"></div>
-            </div>
-            <span className="nav-text">Search</span>
-          </Link>
+            <div className="nav-icon">{item.icon}</div>
+            <span className="nav-label">{item.name}</span>
+          </div>
+        ))}
 
-          <Link 
-            to="/shows" 
-            className={`nav-link ${
-              location.pathname === '/shows' 
-                ? 'text-yellow-400 nav-link-active' 
-                : 'text-gray-400 hover:text-yellow-500'
-            }`}
-          >
-            <div className="nav-icon-container">
-              <div className="nav-icon">📺</div>
-              <div className="nav-glow"></div>
-            </div>
-            <span className="nav-text">Shows</span>
-          </Link>
-          
-          <Link 
-            to="/movies" 
-            className={`nav-link ${
-              location.pathname === '/movies' 
-                ? 'text-yellow-400 nav-link-active' 
-                : 'text-gray-400 hover:text-yellow-500'
-            }`}
-          >
-            <div className="nav-icon-container">
-              <div className="nav-icon">🎬</div>
-              <div className="nav-glow"></div>
-            </div>
-            <span className="nav-text">Movies</span>
-          </Link>
-          
-          <Link 
-            to="/favorites" 
-            className={`nav-link ${
-              location.pathname === '/favorites' 
-                ? 'text-yellow-400 nav-link-active' 
-                : 'text-gray-400 hover:text-yellow-500'
-            }`}
-          >
-            <div className="nav-icon-container">
-              <div className="nav-icon">⭐</div>
-              <div className="nav-glow"></div>
-            </div>
-            <span className="nav-text">Favorites</span>
-          </Link>
+        {/* Floating Center Icon */}
+        <div
+          className="navbar-floating-icon"
+          style={{ left: `calc(${(activeIndex + 0.5) * 25}% - 28px)` }} // 25% per tab
+        >
+          {navItems[activeIndex].icon}
         </div>
       </div>
     </nav>
   );
-};
-
-export default Navbar;
+}
