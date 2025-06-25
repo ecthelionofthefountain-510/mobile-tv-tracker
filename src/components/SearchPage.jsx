@@ -12,12 +12,11 @@ const SearchPage = () => {
   const [searchType, setSearchType] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-
+  const [trending, setTrending] = useState([]);
+  const [isTrendingLoading, setIsTrendingLoading] = useState(false);
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
-
-
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -30,6 +29,28 @@ const SearchPage = () => {
 
     return () => clearTimeout(delayDebounce);
   }, [query, searchType]);
+
+  useEffect(() => {
+    const fetchTrending = async () => {
+      setIsTrendingLoading(true);
+      try {
+        const res = await fetch(`${TMDB_BASE_URL}/trending/all/week?api_key=${API_KEY}`);
+        const data = await res.json();
+        setTrending(
+          (data.results || []).map(item => ({
+            ...item,
+            mediaType: item.media_type,
+            title: item.title || item.name,
+          }))
+        );
+      } catch (err) {
+        setTrending([]);
+      } finally {
+        setIsTrendingLoading(false);
+      }
+    };
+    fetchTrending();
+  }, []);
 
   const searchContent = async () => {
     if (!query.trim()) return;
@@ -172,12 +193,34 @@ const SearchPage = () => {
               {item.release_date && <div>RELEASED: {new Date(item.release_date).getFullYear()}</div>}
               {item.first_air_date && <div>FIRST AIRED: {new Date(item.first_air_date).getFullYear()}</div>}
             </div>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <button onClick={(e) => toggleFavorite(item, e)} className={`py-1 rounded text-xs ${isFavorited ? "bg-yellow-600 text-white" : "bg-gray-800 text-yellow-500 border border-yellow-600/40"}`}>
-                <span className="flex items-center justify-center">{isFavorited ? "★ FAVORITED" : "☆ FAVORITE"}</span>
+            <div className="flex gap-2 mt-2">
+              <button
+                className={`px-3 py-1 text-xs font-semibold rounded transition
+                  ${isWatched
+                    ? "bg-green-600 text-white cursor-default"
+                    : "bg-yellow-500 text-gray-900 hover:bg-yellow-600"}
+                `}
+                onClick={e => {
+                  if (!isWatched) addToWatched(item, e);
+                  e.stopPropagation();
+                }}
+                disabled={isWatched}
+              >
+                {isWatched ? "Added" : "Add to Watched"}
               </button>
-              <button onClick={(e) => addToWatched(item, e)} className={`py-1 rounded text-xs ${isWatched ? "bg-green-700 text-white" : "bg-green-800 text-green-400"}`}>
-                <span className="flex items-center justify-center">{isWatched ? "✓ WATCHED" : "ADD TO WATCHED"}</span>
+              <button
+                className={`px-3 py-1 text-xs font-semibold rounded transition
+                  ${isFavorited
+                    ? "bg-yellow-400 text-gray-900 cursor-default"
+                    : "bg-gray-700 text-yellow-400 hover:bg-yellow-600 hover:text-gray-900"}
+                `}
+                onClick={e => {
+                  if (!isFavorited) toggleFavorite(item, e);
+                  e.stopPropagation();
+                }}
+                disabled={isFavorited}
+              >
+                {isFavorited ? "Favorited" : "Favorite"}
               </button>
             </div>
           </div>
@@ -214,6 +257,19 @@ const SearchPage = () => {
         <div className="space-y-4">{results.map(renderContentItem)}</div>
       ) : (
         <div className="py-10 text-center text-gray-400">Start typing to search for content.</div>
+      )}
+
+      {!query && (
+        <div>
+          <h2 className="mb-2 text-lg font-bold text-yellow-400">Trending</h2>
+          {isTrendingLoading ? (
+            <div className="py-4 text-yellow-400">Laddar...</div>
+          ) : (
+            <div className="space-y-4">
+              {trending.slice(0, 8).map(item => renderContentItem(item))}
+            </div>
+          )}
+        </div>
       )}
 
       {selectedItem && !isLoading && itemDetails && (
