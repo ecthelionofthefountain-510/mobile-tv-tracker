@@ -147,21 +147,23 @@ const SearchPage = () => {
     localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
   };
 
-  const viewDetails = (item) => {
+  const viewDetails = async (item) => {
     setSelectedItem(item);
     setIsLoading(true);
     const endpoint = item.mediaType === 'tv' ? 'tv' : 'movie';
 
-    fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`)
-      .then(res => res.json())
-      .then(data => {
-        setItemDetails(data);
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setIsLoading(false);
-      });
+    try {
+      const [details, credits, videos] = await Promise.all([
+        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`).then(res => res.json()),
+      ]);
+      setItemDetails({ ...details, credits, videos });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const closeModal = () => {

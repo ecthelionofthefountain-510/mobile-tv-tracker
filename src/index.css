@@ -8,8 +8,8 @@
 
 /* 🌍 Anpassa sidan för mobil */
 body {
-  @apply bg-gray-900 text-gray-300 font-lotr;
-  background-image: url('/public/img/background2.png');
+  @apply text-gray-300 bg-gray-900 font-lotr;
+  background-image: url('/img/background2.png');
   background-size: cover;
   background-attachment: fixed;
   background-position: center;
@@ -19,11 +19,11 @@ body {
 
 /* 📱 Säkra textstorlek för mobil */
 h1 {
-  @apply text-2xl md:text-4xl font-bold text-yellow-400;
+  @apply text-2xl font-bold text-yellow-400 md:text-4xl;
 }
 
 h2 {
-  @apply text-xl md:text-3xl font-semibold text-yellow-300;
+  @apply text-xl font-semibold text-yellow-300 md:text-3xl;
 }
 
 p {
@@ -32,7 +32,7 @@ p {
 
 /* 🏹 Filmkort */
 li {
-  @apply p-3 rounded-lg shadow-lg flex flex-col items-center;
+  @apply flex flex-col items-center p-3 rounded-lg shadow-lg;
   background: rgba(40, 40, 40, 0.8);
   transition: transform 0.3s ease-in-out;
   width: 90%; /* Gör listan mer mobilvänlig */
@@ -45,7 +45,7 @@ li:hover {
 
 /* 📸 Filmaffischer */
 img {
-  @apply rounded-md shadow-lg w-32 md:w-40;
+  @apply w-32 rounded-md shadow-lg md:w-40;
   border: 2px solid rgba(255, 215, 0, 0.5);
 }
 
@@ -63,7 +63,7 @@ nav {
 
 /* Better navbar links with visual elements */
 .nav-link {
-  @apply flex flex-col items-center justify-center relative py-2 transition-all duration-300;
+  @apply relative flex flex-col items-center justify-center py-2 transition-all duration-300;
   width: 25%; /* 4 items = 25% each */
   min-width: 60px;
 }
@@ -75,19 +75,19 @@ nav {
 }
 
 .nav-icon {
-  @apply text-2xl mb-1 transition-all duration-300 z-10;
+  @apply z-10 mb-1 text-2xl transition-all duration-300;
   transform-origin: center;
 }
 
 .nav-text {
-  @apply text-xs tracking-wide font-medium opacity-90 transition-all duration-300;
+  @apply text-xs font-medium tracking-wide transition-all duration-300 opacity-90;
   font-family: 'Cinzel', serif;
   letter-spacing: 0.03em;
 }
 
 /* Glow effect for icons */
 .nav-glow {
-  @apply absolute rounded-full opacity-0 transition-all duration-300;
+  @apply absolute transition-all duration-300 rounded-full opacity-0;
   background: radial-gradient(circle, rgba(250, 204, 21, 0.3) 0%, rgba(250, 204, 21, 0) 70%);
   height: 100%;
   width: 100%;
@@ -115,7 +115,7 @@ nav {
 /* Animated indicator for active tab
 .nav-link-active::after {
   content: '';
-  @apply absolute top-0 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-yellow-400;
+  @apply absolute top-0 w-6 h-1 transform -translate-x-1/2 bg-yellow-400 rounded-full left-1/2;
   box-shadow: 0 0 8px rgba(250, 204, 21, 0.8);
   animation: pulseWidth 2s infinite ease-in-out;
 } */
