@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
 import ShowDetailModal from "./ShowDetailModal";
-import { SwipeableList, SwipeableListItem } from 'react-swipeable-list';
-import 'react-swipeable-list/dist/styles.css';
 import ShowCard from "./ShowCard";
+import SwipeableShowCard from './SwipeableShowCard';
 
 const ShowsList = () => {
   const [watchedShows, setWatchedShows] = useState([]);
@@ -13,7 +12,7 @@ const ShowsList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showForModal, setShowForModal] = useState(null);
   const [showDetails, setShowDetails] = useState(null);
-  const [sortBy, setSortBy] = useState("title"); // "title" eller "dateAdded"
+  const [sortBy, setSortBy] = useState("title");
 
   useEffect(() => {
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
@@ -22,7 +21,6 @@ const ShowsList = () => {
     setFilteredShows(sortShows(shows, sortBy));
   }, [sortBy]);
 
-  // Sort shows alphabetically by title
   const sortShows = (shows, sortBy) => {
     if (sortBy === "title") {
       return [...shows].sort((a, b) =>
@@ -36,22 +34,19 @@ const ShowsList = () => {
     return shows;
   };
 
-  // Handle search input changes
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    
     if (value.trim() === "") {
       setFilteredShows(watchedShows);
     } else {
-      const filtered = watchedShows.filter(show => 
+      const filtered = watchedShows.filter(show =>
         show.title.toLowerCase().includes(value.toLowerCase())
       );
       setFilteredShows(filtered);
     }
   };
 
-  // Fetch detailed show information
   const fetchShowDetails = async (showId) => {
     try {
       const response = await fetch(
@@ -64,67 +59,55 @@ const ShowsList = () => {
     }
   };
 
-  // Handle selecting a show for detailed view
   const handleShowSelect = (show) => {
-    // Create a copy of the show to avoid reference issues
-    setSelectedShow({...show});
+    setSelectedShow({ ...show });
   };
 
-  // Handle selecting a show for modal view
   const handleShowModalSelect = (show) => {
     setShowForModal(show);
     fetchShowDetails(show.id);
   };
 
-  // Close the show detail modal
   const closeShowModal = () => {
     setShowForModal(null);
     setShowDetails(null);
   };
 
-  // Callback function to update the shows list when returning from detail view
   const handleShowUpdated = (updatedShow) => {
-    // Update the shows in state
-    const updatedShows = watchedShows.map(show => 
+    const updatedShows = watchedShows.map(show =>
       show.id === updatedShow.id ? updatedShow : show
     );
     setWatchedShows(updatedShows);
-    setFilteredShows(updatedShows.filter(show => 
+    setFilteredShows(updatedShows.filter(show =>
       show.title.toLowerCase().includes(searchTerm.toLowerCase())
     ));
   };
 
-  const removeShow = (id, e) => {
-    if (e) {
-      e.stopPropagation();
-    }
-    
+  const removeShow = (id) => {
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
     const updatedWatched = allWatched.filter(item => item.id !== id);
     localStorage.setItem("watched", JSON.stringify(updatedWatched));
-    
     const updatedShows = watchedShows.filter(show => show.id !== id);
     setWatchedShows(updatedShows);
-    
-    // Update filtered list as well
-    setFilteredShows(updatedShows.filter(show => 
+    setFilteredShows(updatedShows.filter(show =>
       show.title.toLowerCase().includes(searchTerm.toLowerCase())
     ));
-    
-    // Close modal if the removed show is currently selected
     if (showForModal && showForModal.id === id) {
       closeShowModal();
     }
-    
     setSelectedShow(null);
+  };
+
+  // Lägg till i favoriter-funktion (dummy)
+  const addToFavorites = (show) => {
+    alert(`Lägg till "${show.title}" i favoriter!`);
   };
 
   if (selectedShow) {
     return (
-      <ShowDetail 
-        show={selectedShow} 
+      <ShowDetail
+        show={selectedShow}
         onBack={() => {
-          // Get the latest data before going back
           const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
           const updatedShow = allWatched.find(item => item.id === selectedShow.id);
           if (updatedShow) {
@@ -139,7 +122,6 @@ const ShowsList = () => {
 
   return (
     <div className="min-h-screen p-4 pb-20">
-      {/* Search section with enhanced background */}
       <div className="sticky top-0 z-10 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900/95 backdrop-blur-md">
         <div className="p-1">
           <div className="flex items-center space-x-2">
@@ -160,7 +142,7 @@ const ShowsList = () => {
                 🔍
               </div>
               {searchTerm && (
-                <button 
+                <button
                   onClick={() => {
                     setSearchTerm("");
                     setFilteredShows(watchedShows);
@@ -178,7 +160,6 @@ const ShowsList = () => {
               GO!
             </button>
           </div>
-          
           {searchTerm && (
             <div className="mt-2 text-sm text-gray-400">
               Found {filteredShows.length} {filteredShows.length === 1 ? "show" : "shows"}
@@ -186,7 +167,7 @@ const ShowsList = () => {
           )}
         </div>
       </div>
-      
+
       <div className="flex items-center justify-between mb-2">
         <div className="font-semibold text-yellow-400">Your Shows</div>
         <select
@@ -198,46 +179,26 @@ const ShowsList = () => {
           <option value="dateAdded">Senast tillagd</option>
         </select>
       </div>
-      
-      <SwipeableList>
+
+      <div className="space-y-4">
         {filteredShows.map((show) => (
-          <SwipeableListItem
+          <SwipeableShowCard
             key={show.id}
-            swipeLeft={{
-              content: (
-                <div className="flex items-center justify-end h-full pr-6 text-lg font-bold text-white bg-green-600 rounded-lg">
-                  ★ Till favoriter
-                </div>
-              ),
-              action: () => {/* Lägg till i favoriter-funktion här */},
-            }}
-            swipeRight={{
-              content: (
-                <div className="flex items-center justify-start h-full pl-6 text-lg font-bold text-white bg-red-600 rounded-lg">
-                  🗑 Ta bort
-                </div>
-              ),
-              action: () => removeShow(show.id),
-            }}
-          >
-            <ShowCard
-              item={show}
-              onSelect={handleShowSelect}
-              onRemove={removeShow}
-              showRemoveButton={false}
-            />
-          </SwipeableListItem>
+            show={show}
+            onSelect={handleShowSelect}
+            onRemove={removeShow}
+            onAddToFavorites={addToFavorites}
+          />
         ))}
-      </SwipeableList>
-      
-      {/* Show Detail Modal */}
+      </div>
+
       {showForModal && showDetails && (
-        <ShowDetailModal 
-          show={showDetails} 
+        <ShowDetailModal
+          show={showDetails}
           onClose={closeShowModal}
         />
       )}
-      
+
       {filteredShows.length === 0 && (
         <div className="py-10 text-center">
           {watchedShows.length === 0 ? (

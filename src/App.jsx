@@ -21,15 +21,12 @@ function ScrollToTop() {
   return null;
 }
 
-
-
-
 const App = () => {
   return (
     <Router>
       <ScrollToTop />
       <div className="flex flex-col h-screen">
-        <div className="main-content flex-grow overflow-auto pb-16">
+        <div className="flex-grow pb-16 overflow-auto main-content">
           <Routes>
             <Route path="/" element={<Navigate to="/search" replace />} />
             <Route path="/shows" element={<ShowsList />} />

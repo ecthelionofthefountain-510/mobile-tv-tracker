@@ -1,52 +1,40 @@
-import React, { useRef } from "react";
+import React from "react";
 import { IMAGE_BASE_URL } from "../config";
+import { useSwipeable } from 'react-swipeable';
 
 const ShowDetailModal = ({ show, onClose }) => {
+  const handlers = useSwipeable({
+    onSwipedDown: () => onClose(),
+    preventScrollOnSwipe: true,
+    trackTouch: true,
+    delta: 30,
+  });
+
   if (!show) return null;
-
-  // Swipe to close
-  const touchStartY = useRef(null);
-
-  const handleTouchStart = (e) => {
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e) => {
-    if (touchStartY.current === null) return;
-    const touchEndY = e.changedTouches[0].clientY;
-    if (touchEndY - touchStartY.current > 80) { // 80px swipe down
-      onClose();
-    }
-    touchStartY.current = null;
-  };
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) onClose();
   };
 
   return (
-    <div 
+    <div
+      {...handlers}
       className="fixed inset-0 z-50 flex items-center justify-center p-0 bg-black bg-opacity-75 sm:p-4"
       onClick={handleBackdropClick}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
     >
-      <div 
+      <div
         className="relative bg-gray-800 rounded-none sm:rounded-lg shadow-xl w-full max-w-full sm:max-w-2xl max-h-[100vh] sm:max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        {/* Close button up top, always visible */}
         <button
           onClick={onClose}
           className="absolute z-20 px-4 py-2 text-white bg-gray-700 rounded-md top-2 right-2 hover:bg-gray-600"
         >
           Close
         </button>
-
-        {/* Backdrop image */}
         {show.backdrop_path && (
           <div className="relative w-full h-40 overflow-hidden md:h-56">
-            <img 
+            <img
               src={`${IMAGE_BASE_URL}${show.backdrop_path}`}
               alt={`${show.title || show.name} backdrop`}
               className="object-cover w-full h-full"
@@ -54,8 +42,6 @@ const ShowDetailModal = ({ show, onClose }) => {
             <div className="absolute inset-0 z-0 bg-black bg-opacity-70"></div>
           </div>
         )}
-
-        {/* Poster centrerad */}
         <div className="relative z-10 flex justify-center mb-4 -mt-16">
           <img
             src={show.poster_path ? `${IMAGE_BASE_URL}${show.poster_path}` : "/no-profile.png"}
@@ -63,8 +49,6 @@ const ShowDetailModal = ({ show, onClose }) => {
             className="bg-gray-900 border-2 rounded-md shadow-lg w-28 sm:w-32 md:w-40 border-yellow-600/30"
           />
         </div>
-
-        {/* All info/text under postern */}
         <div className="px-6 mt-2 text-left">
           <h2 className="mb-1 text-3xl font-bold text-yellow-400">{show.title || show.name}</h2>
           {show.tagline && (
@@ -101,8 +85,6 @@ const ShowDetailModal = ({ show, onClose }) => {
             </div>
           )}
         </div>
-        
-        {/* Show details */}
         <div className="p-6 pt-3 pb-28">
           {show.overview && (
             <div className="mb-4">
@@ -110,8 +92,6 @@ const ShowDetailModal = ({ show, onClose }) => {
               <p className="text-gray-300">{show.overview}</p>
             </div>
           )}
-          
-          {/* Cast */}
           {show.credits && show.credits.cast && (
             <div className="mb-4">
               <h3 className="mb-2 text-lg font-semibold text-yellow-400">Cast</h3>
@@ -129,8 +109,6 @@ const ShowDetailModal = ({ show, onClose }) => {
               </div>
             </div>
           )}
-
-          {/* Trailer */}
           {show.videos && show.videos.results && show.videos.results.length > 0 && (
             <div className="mb-4">
               <h3 className="mb-2 text-lg font-semibold text-yellow-400">Watch trailer</h3>

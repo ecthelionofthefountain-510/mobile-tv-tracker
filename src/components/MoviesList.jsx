@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
-import MovieCard from "./MovieCard";
 import { SwipeableList, SwipeableListItem } from 'react-swipeable-list';
 import 'react-swipeable-list/dist/styles.css';
+import SwipeableMovieCard from './SwipeableMovieCard';
 
 const MoviesList = () => {
   const [watchedMovies, setWatchedMovies] = useState([]);
@@ -97,6 +97,11 @@ const MoviesList = () => {
     }
   };
 
+  const addToFavorites = (movie) => {
+    // Lägg till logik för att lägga till i favoriter här
+    alert(`Lägger till "${movie.title}" i favoriter!`);
+  };
+
   return (
     <div className="min-h-screen p-4 pb-20">
       {/* Search section with enhanced background */}
@@ -161,33 +166,14 @@ const MoviesList = () => {
       </div>
 
       <SwipeableList>
-        {filteredMovies.map((movie) => (
-          <SwipeableListItem
+        {filteredMovies.map(movie => (
+          <SwipeableMovieCard
             key={movie.id}
-            swipeLeft={{
-              content: (
-                <div className="flex items-center justify-end h-full pr-6 text-lg font-bold text-white bg-green-600 rounded-lg">
-                  ★ Till favoriter
-                </div>
-              ),
-              action: () => {/* Lägg till i favoriter-funktion här */},
-            }}
-            swipeRight={{
-              content: (
-                <div className="flex items-center justify-start h-full pl-6 text-lg font-bold text-white bg-red-600 rounded-lg">
-                  🗑 Ta bort
-                </div>
-              ),
-              action: () => removeMovie(movie.id),
-            }}
-          >
-            <MovieCard
-              item={movie}
-              onSelect={handleMovieSelect}
-              onRemove={removeMovie}
-              showRemoveButton={false} // Dölj knappen när swipe används
-            />
-          </SwipeableListItem>
+            movie={movie}
+            onSelect={handleMovieSelect}
+            onRemove={removeMovie}
+            onAddToFavorites={addToFavorites}
+          />
         ))}
       </SwipeableList>
 

@@ -245,3 +245,10 @@ nav {
   scrollbar-width: none;
 }
 
+html, body, #root, .main-content {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+  touch-action: pan-x pan-y !important;
+  pointer-events: auto !important;
+}
+

@@ -3,10 +3,9 @@ import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 import NotificationModal from "./NotificationModal";
-import { SwipeableList, SwipeableListItem } from "react-swipeable-list";
-import "react-swipeable-list/dist/styles.css";
 import FavoriteCard from "./FavoriteCard";
 import ShowCard from "./ShowCard";
+import SwipeableFavoriteCard from './SwipeableFavoriteCard';
 
 const FavoritesList = () => {
   const [favorites, setFavorites] = useState([]);
@@ -308,50 +307,17 @@ const FavoritesList = () => {
             <option value="dateAdded">Senast tillagd</option>
           </select>
         </div>
-        <SwipeableList>
+        <div className="space-y-4">
           {filteredFavorites.map((item) => (
-            <SwipeableListItem
+            <SwipeableFavoriteCard
               key={item.id}
-              swipeLeft={{
-                content: (
-                  <div className="flex items-center justify-end h-full pr-6 text-lg font-bold text-white bg-green-600 rounded-lg">
-                    {item.mediaType === "tv" ? "➕ Till serier" : "➕ Till filmer"}
-                  </div>
-                ),
-                action: (e) => {
-                  if (item.mediaType === "tv") {
-                    addToShows(item, e);
-                  } else {
-                    addToWatched(item, e);
-                  }
-                },
-              }}
-              swipeRight={{
-                content: (
-                  <div className="flex items-center justify-start h-full pl-6 text-lg font-bold text-white bg-red-600 rounded-lg">
-                    🗑 Ta bort
-                  </div>
-                ),
-                action: (e) => removeFromFavorites(item.id, e),
-              }}
-            >
-              {item.mediaType === "tv" ? (
-                <ShowCard
-                  item={item}
-                  onSelect={viewDetails}
-                  onRemove={removeFromFavorites}
-                  showButtons={false} // Viktigt!
-                />
-              ) : (
-                <FavoriteCard
-                  item={item}
-                  onClick={() => viewDetails(item)}
-                  showButtons={false} // Viktigt!
-                />
-              )}
-            </SwipeableListItem>
+              item={item}
+              onSelect={viewDetails}
+              onRemove={removeFromFavorites}
+              onAddToWatched={addToWatched}
+            />
           ))}
-        </SwipeableList>
+        </div>
         
         {/* Empty State */}
         {filteredFavorites.length === 0 && (
