@@ -5,6 +5,7 @@ import MovieDetailModal from "./MovieDetailModal";
 import { SwipeableList, SwipeableListItem } from 'react-swipeable-list';
 import 'react-swipeable-list/dist/styles.css';
 import SwipeableMovieCard from './SwipeableMovieCard';
+import SwipeInfoToast from "./SwipeInfoToast";
 
 const MoviesList = () => {
   const [watchedMovies, setWatchedMovies] = useState([]);
@@ -13,6 +14,7 @@ const MoviesList = () => {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [sortBy, setSortBy] = useState("title"); // "title" eller "dateAdded"
+  const [showSwipeInfo, setShowSwipeInfo] = useState(true);
 
   useEffect(() => {
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
@@ -21,6 +23,13 @@ const MoviesList = () => {
     setWatchedMovies(sortMovies(movies, sortBy));
     setFilteredMovies(sortMovies(movies, sortBy));
   }, [sortBy]);
+
+  useEffect(() => {
+    if (!localStorage.getItem("swipeInfoSeen")) {
+      setShowSwipeInfo(true);
+      localStorage.setItem("swipeInfoSeen", "1");
+    }
+  }, []);
 
   const sortMovies = (movies, sortBy) => {
     if (sortBy === "title") {
@@ -196,6 +205,10 @@ const MoviesList = () => {
             <p className="text-gray-400">No movies match your search</p>
           )}
         </div>
+      )}
+
+      {showSwipeInfo && (
+        <SwipeInfoToast onClose={() => setShowSwipeInfo(false)} />
       )}
     </div>
   );

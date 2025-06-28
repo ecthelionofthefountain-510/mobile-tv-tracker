@@ -4,6 +4,7 @@ import ShowDetail from "./ShowDetail";
 import ShowDetailModal from "./ShowDetailModal";
 import ShowCard from "./ShowCard";
 import SwipeableShowCard from './SwipeableShowCard';
+import SwipeInfoToast from "./SwipeInfoToast";
 
 const ShowsList = () => {
   const [watchedShows, setWatchedShows] = useState([]);
@@ -13,6 +14,7 @@ const ShowsList = () => {
   const [showForModal, setShowForModal] = useState(null);
   const [showDetails, setShowDetails] = useState(null);
   const [sortBy, setSortBy] = useState("title");
+  const [showSwipeInfo, setShowSwipeInfo] = useState(true);
 
   useEffect(() => {
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
@@ -20,6 +22,13 @@ const ShowsList = () => {
     setWatchedShows(sortShows(shows, sortBy));
     setFilteredShows(sortShows(shows, sortBy));
   }, [sortBy]);
+
+  useEffect(() => {
+    if (!localStorage.getItem("swipeInfoSeen")) {
+      setShowSwipeInfo(true);
+      localStorage.setItem("swipeInfoSeen", "1");
+    }
+  }, []);
 
   const sortShows = (shows, sortBy) => {
     if (sortBy === "title") {
@@ -210,6 +219,10 @@ const ShowsList = () => {
             <p className="text-gray-400">No shows match your search</p>
           )}
         </div>
+      )}
+
+      {showSwipeInfo && (
+        <SwipeInfoToast onClose={() => setShowSwipeInfo(false)} />
       )}
     </div>
   );

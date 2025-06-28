@@ -6,6 +6,7 @@ import NotificationModal from "./NotificationModal";
 import FavoriteCard from "./FavoriteCard";
 import ShowCard from "./ShowCard";
 import SwipeableFavoriteCard from './SwipeableFavoriteCard';
+import SwipeInfoToast from "./SwipeInfoToast";
 
 const FavoritesList = () => {
   const [favorites, setFavorites] = useState([]);
@@ -22,6 +23,7 @@ const FavoritesList = () => {
     show: false,
     message: ""
   });
+  const [showSwipeInfo, setShowSwipeInfo] = useState(true);
   
   useEffect(() => {
     // Load favorites from localStorage
@@ -240,6 +242,13 @@ const FavoritesList = () => {
     return items;
   };
 
+  useEffect(() => {
+    if (!localStorage.getItem("swipeInfoSeen")) {
+      setShowSwipeInfo(true);
+      localStorage.setItem("swipeInfoSeen", "1");
+    }
+  }, []);
+  
   return (
     <div className="min-h-screen p-4 pb-20">
       {/* Header with search section - enhanced background */}
@@ -371,6 +380,11 @@ const FavoritesList = () => {
           onClose={closeNotification}
           autoCloseTime={3000}
         />
+      )}
+
+      {/* Swipe Info Toast */}
+      {showSwipeInfo && (
+        <SwipeInfoToast onClose={() => setShowSwipeInfo(false)} />
       )}
     </div>
   );
