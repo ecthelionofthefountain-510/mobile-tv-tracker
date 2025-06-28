@@ -5,91 +5,87 @@ const ShowDetailModal = ({ show, onClose }) => {
   if (!show) return null;
 
   const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+    if (e.target === e.currentTarget) onClose();
   };
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20 bg-black bg-opacity-75"
+      className="fixed inset-0 z-50 flex items-center justify-center p-0 bg-black bg-opacity-75 sm:p-4"
       onClick={handleBackdropClick}
     >
       <div 
-        className="relative bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="relative bg-gray-800 rounded-none sm:rounded-lg shadow-xl w-full max-w-full sm:max-w-2xl max-h-[100vh] sm:max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        {/* Close button */}
-        <button 
+        {/* Close button up top, always visible */}
+        <button
           onClick={onClose}
-          className="absolute z-10 flex items-center justify-center w-8 h-8 text-white bg-gray-700 rounded-full top-2 right-2 hover:bg-gray-600"
+          className="absolute z-20 px-4 py-2 text-white bg-gray-700 rounded-md top-2 right-2 hover:bg-gray-600"
         >
-          ✕
+          Close
         </button>
-        
-        <div className="relative">
-          {/* Backdrop image */}
-          {show.backdrop_path && (
-            <div className="relative w-full h-40 overflow-hidden md:h-56">
-              <img 
-                src={`${IMAGE_BASE_URL}${show.backdrop_path}`}
-                alt={`${show.title || show.name} backdrop`}
-                className="object-cover w-full h-full"
-              />
-              <div className="absolute inset-0 z-0 bg-black bg-opacity-70"></div>
+
+        {/* Backdrop image */}
+        {show.backdrop_path && (
+          <div className="relative w-full h-40 overflow-hidden md:h-56">
+            <img 
+              src={`${IMAGE_BASE_URL}${show.backdrop_path}`}
+              alt={`${show.title || show.name} backdrop`}
+              className="object-cover w-full h-full"
+            />
+            <div className="absolute inset-0 z-0 bg-black bg-opacity-70"></div>
+          </div>
+        )}
+
+        {/* Poster centrerad */}
+        <div className="relative z-10 flex justify-center mb-4 -mt-16">
+          <img
+            src={show.poster_path ? `${IMAGE_BASE_URL}${show.poster_path}` : "/no-profile.png"}
+            alt={show.title || show.name}
+            className="bg-gray-900 border-2 rounded-md shadow-lg w-28 sm:w-32 md:w-40 border-yellow-600/30"
+          />
+        </div>
+
+        {/* All info/text under postern */}
+        <div className="px-6 mt-2 text-left">
+          <h2 className="mb-1 text-3xl font-bold text-yellow-400">{show.title || show.name}</h2>
+          {show.tagline && (
+            <div className="mb-2 text-lg italic text-yellow-300">"{show.tagline}"</div>
+          )}
+          <div className="flex items-center gap-2 mb-2">
+            {show.vote_average > 0 && (
+              <span className="inline-block px-2 py-1 text-sm font-semibold text-white bg-yellow-600 rounded">{show.vote_average.toFixed(1)} / 10</span>
+            )}
+            {show.vote_count > 0 && (
+              <span className="text-sm text-gray-200">{show.vote_count} votes</span>
+            )}
+          </div>
+          <div className="mb-2 text-base font-medium text-gray-200">
+            {show.genres && show.genres.map(g => g.name).join(", ")}
+          </div>
+          {show.first_air_date && (
+            <div className="mb-1 text-sm text-gray-200">
+              First aired: {new Date(show.first_air_date).getFullYear()}
             </div>
           )}
-
-          {/* Poster centrerad */}
-          <div className="relative z-10 flex justify-center mb-4 -mt-16">
-            <img
-              src={show.poster_path ? `${IMAGE_BASE_URL}${show.poster_path}` : "/no-profile.png"}
-              alt={show.title || show.name}
-              className="w-32 bg-gray-900 border-2 rounded-md shadow-lg md:w-40 border-yellow-600/30"
-            />
-          </div>
-
-          {/* All info/text under postern */}
-          <div className="px-6 mt-2 text-left">
-            <h2 className="mb-1 text-3xl font-bold text-yellow-400">{show.title || show.name}</h2>
-            {show.tagline && (
-              <div className="mb-2 text-lg italic text-yellow-300">"{show.tagline}"</div>
-            )}
-            <div className="flex items-center gap-2 mb-2">
-              {show.vote_average > 0 && (
-                <span className="inline-block px-2 py-1 text-sm font-semibold text-white bg-yellow-600 rounded">{show.vote_average.toFixed(1)} / 10</span>
-              )}
-              {show.vote_count > 0 && (
-                <span className="text-sm text-gray-200">{show.vote_count} votes</span>
-              )}
-            </div>
-            <div className="mb-2 text-base font-medium text-gray-200">
-              {show.genres && show.genres.map(g => g.name).join(", ")}
-            </div>
-            {show.first_air_date && (
-              <div className="mb-1 text-sm text-gray-200">
-                First aired: {new Date(show.first_air_date).getFullYear()}
-              </div>
-            )}
-            {show.last_air_date && (
-              <div className="mb-1 text-sm text-gray-200">
-                Last aired: {new Date(show.last_air_date).getFullYear()}
-              </div>
-            )}
+          {show.last_air_date && (
             <div className="mb-1 text-sm text-gray-200">
-              {show.number_of_seasons} {show.number_of_seasons === 1 ? 'Season' : 'Seasons'}
-              {show.number_of_episodes && ` • ${show.number_of_episodes} Episodes`}
+              Last aired: {new Date(show.last_air_date).getFullYear()}
             </div>
-            {show.networks && show.networks.length > 0 && (
-              <div className="mt-2 text-xs text-gray-400">
-                Networks: {show.networks.map(n => n.name).join(", ")}
-              </div>
-            )}
+          )}
+          <div className="mb-1 text-sm text-gray-200">
+            {show.number_of_seasons} {show.number_of_seasons === 1 ? 'Season' : 'Seasons'}
+            {show.number_of_episodes && ` • ${show.number_of_episodes} Episodes`}
           </div>
+          {show.networks && show.networks.length > 0 && (
+            <div className="mt-2 text-xs text-gray-400">
+              Networks: {show.networks.map(n => n.name).join(", ")}
+            </div>
+          )}
         </div>
         
         {/* Show details */}
-        <div className="p-6 pt-3">
+        <div className="p-6 pt-3 pb-28">
           {show.overview && (
             <div className="mb-4">
               <h3 className="mb-2 text-lg font-semibold text-yellow-400">Overview</h3>
@@ -130,15 +126,6 @@ const ShowDetailModal = ({ show, onClose }) => {
               </a>
             </div>
           )}
-          
-          <div className="flex justify-end pt-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-white bg-gray-700 rounded-md hover:bg-gray-600"
-            >
-              Close
-            </button>
-          </div>
         </div>
       </div>
     </div>
