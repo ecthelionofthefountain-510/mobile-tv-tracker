@@ -237,3 +237,11 @@ nav {
   background: rgba(217, 119, 6, 0.7);
 }
 
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

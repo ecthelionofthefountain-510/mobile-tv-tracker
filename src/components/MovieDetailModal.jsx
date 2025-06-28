@@ -14,13 +14,14 @@ const MovieDetailModal = ({ movie, onClose }) => {
       onClick={handleBackdropClick}
     >
       <div 
-        className="relative bg-gray-800 rounded-none sm:rounded-lg shadow-xl w-full max-w-full sm:max-w-2xl max-h-[100vh] sm:max-h-[90vh] overflow-y-auto"
+        className="relative bg-gray-800 rounded-none sm:rounded-lg shadow-xl w-full max-w-full sm:max-w-2xl max-h-[100vh] sm:max-h-[90vh] overflow-y-auto hide-scrollbar"
         onClick={e => e.stopPropagation()}
       >
         {/* Close button up top, always visible */}
         <button
           onClick={onClose}
-          className="absolute z-20 px-4 py-2 text-white bg-gray-700 rounded-md top-2 right-2 hover:bg-gray-600"
+          className="absolute z-30 px-5 py-3 text-base text-white bg-gray-700 rounded-md shadow-lg top-4 right-4 hover:bg-gray-600 sm:top-2 sm:right-2 sm:px-4 sm:py-2 sm:text-sm"
+          style={{ minWidth: 64, minHeight: 44 }} // extra touch-yta för mobil
         >
           Close
         </button>
