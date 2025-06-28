@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
 import ShowDetailModal from "./ShowDetailModal";
+import { SwipeableList, SwipeableListItem } from 'react-swipeable-list';
+import 'react-swipeable-list/dist/styles.css';
+import ShowCard from "./ShowCard";
 
 const ShowsList = () => {
   const [watchedShows, setWatchedShows] = useState([]);
@@ -10,19 +13,28 @@ const ShowsList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showForModal, setShowForModal] = useState(null);
   const [showDetails, setShowDetails] = useState(null);
+  const [sortBy, setSortBy] = useState("title"); // "title" eller "dateAdded"
 
   useEffect(() => {
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
     const shows = allWatched.filter(item => item.mediaType === "tv");
-    
-    // Sort shows alphabetically by title
-    const sortedShows = shows.sort((a, b) => 
-      a.title.toLowerCase().localeCompare(b.title.toLowerCase())
-    );
-    
-    setWatchedShows(sortedShows);
-    setFilteredShows(sortedShows);
-  }, []);
+    setWatchedShows(sortShows(shows, sortBy));
+    setFilteredShows(sortShows(shows, sortBy));
+  }, [sortBy]);
+
+  // Sort shows alphabetically by title
+  const sortShows = (shows, sortBy) => {
+    if (sortBy === "title") {
+      return [...shows].sort((a, b) =>
+        (a.title || a.name).toLowerCase().localeCompare((b.title || b.name).toLowerCase())
+      );
+    } else if (sortBy === "dateAdded") {
+      return [...shows].sort((a, b) =>
+        new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0)
+      );
+    }
+    return shows;
+  };
 
   // Handle search input changes
   const handleSearch = (e) => {
@@ -126,9 +138,9 @@ const ShowsList = () => {
   }
 
   return (
-    <div className="p-4 min-h-screen pb-20">
+    <div className="min-h-screen p-4 pb-20">
       {/* Search section with enhanced background */}
-      <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-md shadow-lg rounded-lg border border-gray-800 mb-4">
+      <div className="sticky top-0 z-10 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900/95 backdrop-blur-md">
         <div className="p-1">
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">
@@ -142,7 +154,7 @@ const ShowsList = () => {
                     handleSearch({ target: { value: searchTerm } });
                   }
                 }}
-                className="w-full p-2 pl-8 border border-yellow-500 rounded-md bg-gray-800 text-white placeholder-gray-400"
+                className="w-full p-2 pl-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
               />
               <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
                 🔍
@@ -161,7 +173,7 @@ const ShowsList = () => {
             </div>
             <button
               onClick={() => handleSearch({ target: { value: searchTerm } })}
-              className="p-2 bg-yellow-500 text-gray-900 font-bold rounded-md hover:bg-yellow-600 transition duration-300"
+              className="p-2 font-bold text-gray-900 transition duration-300 bg-yellow-500 rounded-md hover:bg-yellow-600"
             >
               GO!
             </button>
@@ -175,53 +187,48 @@ const ShowsList = () => {
         </div>
       </div>
       
-      {filteredShows.map((show) => {
-        const watchedEpisodes = show.seasons ? 
-          Object.values(show.seasons)
-            .reduce((sum, season) => sum + (season.watchedEpisodes?.length || 0), 0) : 0;
-
-        return (
-          <div 
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-semibold text-yellow-400">Your Shows</div>
+        <select
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value)}
+          className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
+        >
+          <option value="title">A-Ö</option>
+          <option value="dateAdded">Senast tillagd</option>
+        </select>
+      </div>
+      
+      <SwipeableList>
+        {filteredShows.map((show) => (
+          <SwipeableListItem
             key={show.id}
-            onClick={() => handleShowSelect(show)}
-            className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30 cursor-pointer hover:bg-gray-700/90"
-          >
-            {/* X button in the top-right corner - UPDATED STYLING */}
-            <button
-              onClick={(e) => removeShow(show.id, e)}
-              className="absolute top-0 right-0 z-60 bg-red-600 hover:bg-red-700 text-white border rounded w-6 h-6 flex items-center justify-center shadow-md transition-colors transform translate-x-1/2 -translate-y-1/2"
-              aria-label="Remove show"
-            >
-              ✕
-            </button>
-            
-            <div className="flex p-1 relative h-10" style={{ minHeight: '150px' }}>
-              <img
-                src={`${IMAGE_BASE_URL}${show.poster_path}`}
-                alt={show.title}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleShowModalSelect(show);
-                }}
-                className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30 cursor-pointer hover:opacity-80 transition-opacity"
-              />
-              <div className="flex-grow ml-4 flex flex-col">
-                <div className="pb-12">
-                  <h3 className="text-2xl font-semibold text-yellow-400 line-clamp-2">
-                    {show.title}
-                  </h3>
-                  <div className="text-gray-400 mt-1">
-                    {show.number_of_seasons} Seasons • TV Show
-                  </div>
-                  <div className="text-gray-400 mt-1">
-                    {watchedEpisodes} episodes watched
-                  </div>
+            swipeLeft={{
+              content: (
+                <div className="flex items-center justify-end h-full pr-6 text-lg font-bold text-white bg-green-600 rounded-lg">
+                  ★ Till favoriter
                 </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
+              ),
+              action: () => {/* Lägg till i favoriter-funktion här */},
+            }}
+            swipeRight={{
+              content: (
+                <div className="flex items-center justify-start h-full pl-6 text-lg font-bold text-white bg-red-600 rounded-lg">
+                  🗑 Ta bort
+                </div>
+              ),
+              action: () => removeShow(show.id),
+            }}
+          >
+            <ShowCard
+              item={show}
+              onSelect={handleShowSelect}
+              onRemove={removeShow}
+              showRemoveButton={false}
+            />
+          </SwipeableListItem>
+        ))}
+      </SwipeableList>
       
       {/* Show Detail Modal */}
       {showForModal && showDetails && (
@@ -232,11 +239,11 @@ const ShowsList = () => {
       )}
       
       {filteredShows.length === 0 && (
-        <div className="text-center py-10">
+        <div className="py-10 text-center">
           {watchedShows.length === 0 ? (
             <>
               <p className="text-gray-400">No shows in your watched list</p>
-              <p className="text-yellow-500 mt-2">Start adding some shows!</p>
+              <p className="mt-2 text-yellow-500">Start adding some shows!</p>
             </>
           ) : (
             <p className="text-gray-400">No shows match your search</p>

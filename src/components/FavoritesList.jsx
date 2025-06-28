@@ -3,6 +3,10 @@ import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 import NotificationModal from "./NotificationModal";
+import { SwipeableList, SwipeableListItem } from "react-swipeable-list";
+import "react-swipeable-list/dist/styles.css";
+import FavoriteCard from "./FavoriteCard";
+import ShowCard from "./ShowCard";
 
 const FavoritesList = () => {
   const [favorites, setFavorites] = useState([]);
@@ -12,6 +16,8 @@ const FavoritesList = () => {
   const [itemDetails, setItemDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [watched, setWatched] = useState([]);
+  const [sortBy, setSortBy] = useState("title"); // "title" eller "dateAdded"
+
   // State for notifications
   const [notification, setNotification] = useState({
     show: false,
@@ -26,9 +32,7 @@ const FavoritesList = () => {
         console.log("Loaded favorites:", storedFavorites);
         
         // Sort favorites alphabetically by title
-        const sortedFavorites = storedFavorites.sort((a, b) => 
-          a.title.toLowerCase().localeCompare(b.title.toLowerCase())
-        );
+        const sortedFavorites = sortFavorites(storedFavorites, sortBy);
         
         setFavorites(sortedFavorites);
         setFilteredFavorites(sortedFavorites);
@@ -52,7 +56,7 @@ const FavoritesList = () => {
     
     loadFavorites();
     loadWatched();
-  }, []);
+  }, [sortBy]);
 
   // Show notification function
   const showNotification = (message) => {
@@ -224,10 +228,23 @@ const FavoritesList = () => {
     return watched.some(item => item.id === id);
   };
 
+  const sortFavorites = (items, sortBy) => {
+    if (sortBy === "title") {
+      return [...items].sort((a, b) =>
+        (a.title || a.name).toLowerCase().localeCompare((b.title || b.name).toLowerCase())
+      );
+    } else if (sortBy === "dateAdded") {
+      return [...items].sort((a, b) =>
+        new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0)
+      );
+    }
+    return items;
+  };
+
   return (
-    <div className="p-4 min-h-screen pb-20">
+    <div className="min-h-screen p-4 pb-20">
       {/* Header with search section - enhanced background */}
-      <div className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur-md shadow-lg rounded-lg border border-gray-800 mb-4 ">
+      <div className="sticky top-0 z-10 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900/95 backdrop-blur-md ">
         <div className="p-1">
           
           
@@ -244,7 +261,7 @@ const FavoritesList = () => {
                     handleSearch({ target: { value: searchTerm } });
                   }
                 }}
-                className="w-full p-2 pl-8 border border-yellow-500 rounded-md bg-gray-800 text-white placeholder-gray-400"
+                className="w-full p-2 pl-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
               />
               <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
                 🔍
@@ -263,7 +280,7 @@ const FavoritesList = () => {
             </div>
             <button
               onClick={() => handleSearch({ target: { value: searchTerm } })}
-              className="p-2 bg-yellow-500 text-gray-900 font-bold rounded-md hover:bg-yellow-600 transition duration-300"
+              className="p-2 font-bold text-gray-900 transition duration-300 bg-yellow-500 rounded-md hover:bg-yellow-600"
             >
               GO!
             </button>
@@ -279,77 +296,70 @@ const FavoritesList = () => {
       
       {/* Favorites List with updated styling to match Movies/Shows */}
       <div className="grid grid-cols-1 gap-4">
-        {filteredFavorites.map(item => {
-          const alreadyWatched = isInWatchedList(item.id);
-          
-          return (
-            <div 
-              key={item.id} 
-              className="mb-4 relative bg-gray-800/90 rounded-lg border border-yellow-900/30 cursor-pointer hover:bg-gray-700/90"
-              onClick={() => viewDetails(item)}
+        {/* Header for favorites section */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="font-semibold text-yellow-400">Your Favorites</div>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
+          >
+            <option value="title">A-Ö</option>
+            <option value="dateAdded">Senast tillagd</option>
+          </select>
+        </div>
+        <SwipeableList>
+          {filteredFavorites.map((item) => (
+            <SwipeableListItem
+              key={item.id}
+              swipeLeft={{
+                content: (
+                  <div className="flex items-center justify-end h-full pr-6 text-lg font-bold text-white bg-green-600 rounded-lg">
+                    {item.mediaType === "tv" ? "➕ Till serier" : "➕ Till filmer"}
+                  </div>
+                ),
+                action: (e) => {
+                  if (item.mediaType === "tv") {
+                    addToShows(item, e);
+                  } else {
+                    addToWatched(item, e);
+                  }
+                },
+              }}
+              swipeRight={{
+                content: (
+                  <div className="flex items-center justify-start h-full pl-6 text-lg font-bold text-white bg-red-600 rounded-lg">
+                    🗑 Ta bort
+                  </div>
+                ),
+                action: (e) => removeFromFavorites(item.id, e),
+              }}
             >
-              {/* X button in the top-right corner */}
-              <button
-                onClick={(e) => removeFromFavorites(item.id, e)}
-                className="absolute top-0 right-0 z-60 bg-red-600 hover:bg-red-700 text-white border rounded w-6 h-6 flex items-center justify-center shadow-md transition-colors transform translate-x-1/2 -translate-y-1/2"
-                aria-label="Remove from favorites"
-              >
-                ✕
-              </button>
-              
-              <div className="flex p-1 relative h-13" style={{ minHeight: '150px' }}>
-                <img
-                  src={`${IMAGE_BASE_URL}${item.poster_path}`}
-                  alt={item.title}
-                  className="w-24 h-36 object-cover rounded-md border-2 border-yellow-600/30"
+              {item.mediaType === "tv" ? (
+                <ShowCard
+                  item={item}
+                  onSelect={viewDetails}
+                  onRemove={removeFromFavorites}
+                  showButtons={false} // Viktigt!
                 />
-                <div className="flex-grow ml-4 flex flex-col">
-                  <div className="pb-12">
-                    <h3 className="text-xl font-semibold text-yellow-400 line-clamp-2">
-                      {item.title}
-                    </h3>
-                    <div className="text-gray-400 mt-1">
-                      {item.mediaType === 'tv' ? 'TV Show' : 'Movie'}
-                    </div>
-                    {item.release_date && (
-                      <div className="text-gray-400 mt-1">
-                        Released: {new Date(item.release_date).getFullYear()}
-                      </div>
-                    )}
-                    {item.first_air_date && (
-                      <div className="text-gray-400 mt-1">
-                        First aired: {new Date(item.first_air_date).getFullYear()}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Knapp sektion, absolut positionerad i nedre högra hörnet */}
-                  <div className="absolute bottom-3 right-3 z-10">
-                    <button
-                      onClick={(e) => addToWatched(item, e)}
-                      disabled={alreadyWatched}
-                      className={`px-3 py-1 text-white rounded-md transition-colors duration-200 text-sm ${
-                        alreadyWatched 
-                          ? 'bg-green-700 cursor-not-allowed' 
-                          : 'bg-green-600 hover:bg-green-700'
-                      }`}
-                    >
-                      {alreadyWatched ? 'Already Watched' : 'Add to Watched'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+              ) : (
+                <FavoriteCard
+                  item={item}
+                  onClick={() => viewDetails(item)}
+                  showButtons={false} // Viktigt!
+                />
+              )}
+            </SwipeableListItem>
+          ))}
+        </SwipeableList>
         
         {/* Empty State */}
         {filteredFavorites.length === 0 && (
-          <div className="text-center py-10">
+          <div className="py-10 text-center">
             {favorites.length === 0 ? (
               <>
                 <p className="text-gray-400">No favorites added yet.</p>
-                <p className="text-yellow-500 mt-2">Start adding your favorite movies and shows!</p>
+                <p className="mt-2 text-yellow-500">Start adding your favorite movies and shows!</p>
               </>
             ) : (
               <p className="text-gray-400">No favorites match your search</p>
@@ -360,12 +370,12 @@ const FavoritesList = () => {
       
       {/* Loading Indicator */}
       {isLoading && selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 rounded-lg p-6 text-center">
-            <div className="text-yellow-400 text-lg mb-3">Loading details...</div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
+          <div className="p-6 text-center bg-gray-800 rounded-lg">
+            <div className="mb-3 text-lg text-yellow-400">Loading details...</div>
             <button 
               onClick={closeModal}
-              className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600"
+              className="px-4 py-2 text-white bg-gray-700 rounded-md hover:bg-gray-600"
             >
               Cancel
             </button>

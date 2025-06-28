@@ -1,31 +1,31 @@
 import React from "react";
 import { IMAGE_BASE_URL } from "../config";
 
-const MovieCard = ({ item, onSelect, onRemove }) => {
+const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
   return (
     <div 
-      className="mb-4 relative bg-gray-800/90 rounded-lg overflow-hidden border border-yellow-900/30 hover:bg-gray-700/90 transition-colors duration-200 cursor-pointer"
+      className="relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg cursor-pointer bg-gray-800/90 border-yellow-900/30 hover:bg-gray-700/90"
       onClick={() => onSelect(item)}
     >
       {/* Använder flex med bättre proportioner */}
       <div className="flex h-32 sm:h-40">
         {/* Större thumbnail som täcker hela höjden */}
-        <div className="h-full w-24 sm:w-28 flex-shrink-0">
+        <div className="flex-shrink-0 w-24 h-full sm:w-28">
           <img
             src={`${IMAGE_BASE_URL}${item.poster_path}`}
             alt={item.title}
-            className="h-full w-full object-cover border-r border-yellow-900/30"
+            className="object-cover w-full h-full border-r border-yellow-900/30"
           />
         </div>
         
         {/* Innehållscontainer med bättre padding och struktur */}
-        <div className="flex-1 flex flex-col justify-between p-3">
+        <div className="flex flex-col justify-between flex-1 p-3">
           <div>
-            <h3 className="text-lg sm:text-xl font-semibold text-yellow-400 line-clamp-1">
+            <h3 className="text-lg font-semibold text-yellow-400 sm:text-xl line-clamp-1">
               {item.title}
             </h3>
             
-            <div className="text-gray-400 text-sm mt-1">
+            <div className="mt-1 text-sm text-gray-400">
               {item.mediaType === 'tv' ? 'TV Show' : 'Movie'}
               {item.release_date && (
                 <span className="ml-2">
@@ -36,24 +36,26 @@ const MovieCard = ({ item, onSelect, onRemove }) => {
             
             {/* Extra info kan läggas till här */}
             {item.mediaType === 'tv' && item.number_of_seasons && (
-              <div className="text-gray-400 text-sm">
+              <div className="text-sm text-gray-400">
                 {item.number_of_seasons} {item.number_of_seasons === 1 ? 'Season' : 'Seasons'}
               </div>
             )}
           </div>
           
-          {/* Knapp sektion i botten av kortet */}
-          <div className="flex justify-end mt-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(item.id);
-              }}
-              className="px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors duration-150"
-            >
-              Remov
-            </button>
-          </div>
+          {/* Visa bara Remove-knappen om showRemoveButton är true */}
+          {showRemoveButton && (
+            <div className="flex justify-end mt-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(item.id);
+                }}
+                className="px-3 py-1 text-sm font-medium text-white transition-colors duration-150 rounded-md bg-red-600/80 hover:bg-red-700"
+              >
+                Remove
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

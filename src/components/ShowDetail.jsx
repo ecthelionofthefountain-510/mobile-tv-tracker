@@ -12,6 +12,10 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [notification, setNotification] = useState({ show: false, message: "" });
   const [stats, setStats] = useState({ total: 0, watched: 0 });
   const [hasChanges, setHasChanges] = useState(false);
+  const [sortBy, setSortBy] = useState("title"); // "title" eller "dateAdded"
+  const [searchTerm, setSearchTerm] = useState("");
+  const [watchedMovies, setWatchedMovies] = useState([]);
+  const [filteredMovies, setFilteredMovies] = useState([]);
 
   // Calculate progress stats on load and when seasons change
   useEffect(() => {
@@ -291,14 +295,49 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     setHasChanges(true);
   };
 
+  // Sort movies function
+  const sortMovies = (movies, sortBy) => {
+    if (sortBy === "title") {
+      return [...movies].sort((a, b) =>
+        a.title.toLowerCase().localeCompare(b.title.toLowerCase())
+      );
+    } else if (sortBy === "dateAdded") {
+      return [...movies].sort((a, b) =>
+        new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0)
+      );
+    }
+    return movies;
+  };
+
+  // When loading movies
+  useEffect(() => {
+    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
+    const movies = allWatched.filter(item => item.mediaType === "movie");
+    setWatchedMovies(sortMovies(movies, sortBy));
+    setFilteredMovies(sortMovies(movies, sortBy));
+  }, [sortBy]);
+
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    let filtered = watchedMovies;
+    if (value.trim() !== "") {
+      filtered = watchedMovies.filter(movie =>
+        movie.title.toLowerCase().includes(value.toLowerCase())
+      );
+    }
+    setFilteredMovies(sortMovies(filtered, sortBy));
+  };
+
   return (
-    <div className="p-4 min-h-screen pb-20 bg-gray-900">
+    <div className="min-h-screen p-4 pb-20 bg-gray-900">
       {/* Header with progress bar */}
-      <div className="sticky top-0 bg-gray-900/95 backdrop-blur-sm z-20 pb-4 pt-2">
+      <div className="sticky top-0 z-20 pt-2 pb-4 bg-gray-900/95 backdrop-blur-sm">
         <div className="flex items-center justify-between mb-3">
           <button
             onClick={handleBack}
-            className="text-yellow-400 hover:text-yellow-300 flex items-center"
+            className="flex items-center text-yellow-400 hover:text-yellow-300"
           >
             <span className="mr-1">←</span> Back
           </button>
@@ -307,7 +346,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           </h2>
           <button
             onClick={() => onRemove(show.id)}
-            className="px-3 py-1 bg-red-600/80 hover:bg-red-700 text-white text-sm rounded-md"
+            className="px-3 py-1 text-sm text-white rounded-md bg-red-600/80 hover:bg-red-700"
           >
             Remove
           </button>
@@ -315,7 +354,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
         
         {/* Overall progress bar */}
         <div className="mb-4">
-          <div className="flex justify-between text-sm mb-1">
+          <div className="flex justify-between mb-1 text-sm">
             <span className="text-gray-300">Overall Progress</span>
             <span className="text-yellow-400">
               {stats.watched}/{stats.total} ({stats.total > 0 ? Math.round((stats.watched / stats.total) * 100) : 0}%)
@@ -334,13 +373,13 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => markAllSeasonsAs(true)}
-              className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-md whitespace-nowrap overflow-hidden"
+              className="px-2 py-1 overflow-hidden text-xs text-white bg-green-600 rounded-md hover:bg-green-700 whitespace-nowrap"
             >
               MARK ALL WATCHED
             </button>
             <button
               onClick={() => markAllSeasonsAs(false)}
-              className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded-md whitespace-nowrap overflow-hidden"
+              className="px-2 py-1 overflow-hidden text-xs text-white bg-gray-600 rounded-md hover:bg-gray-700 whitespace-nowrap"
             >
               MARK ALL UNWATCHED
             </button>
@@ -350,7 +389,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           <select
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
-            className="bg-gray-800 text-yellow-400 border border-yellow-600/30 rounded-md px-2 py-1 text-sm"
+            className="px-2 py-1 text-sm text-yellow-400 bg-gray-800 border rounded-md border-yellow-600/30"
           >
             <option value="episode_asc">Episode ↑</option>
             <option value="episode_desc">Episode ↓</option>
@@ -377,18 +416,19 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           const progressPercent = totalEpisodes > 0 ? (watchedCount / totalEpisodes) * 100 : 0;
 
           return (
-            <div key={seasonNumber} className="rounded-lg overflow-hidden border border-yellow-900/20 bg-gray-800/40">
+            <div key={seasonNumber} className="overflow-hidden border rounded-lg border-yellow-900/20 bg-gray-800/40">
               {/* Season header */}
               <div 
                 onClick={() => toggleSeason(seasonNumber)}
-                className="bg-gray-800/90 p-3 cursor-pointer hover:bg-gray-700/90 transition-colors"
+                className="p-3 transition-colors cursor-pointer bg-gray-800/90 hover:bg-gray-700/90"
               >
+                
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
-                    <span className="text-yellow-400 font-medium mr-2">
+                    <span className="mr-2 font-medium text-yellow-400">
                       Season {seasonNumber}
                     </span>
-                    <span className="text-gray-400 text-sm">
+                    <span className="text-sm text-gray-400">
                       {watchedCount}/{totalEpisodes} Episodes
                     </span>
                   </div>
@@ -408,7 +448,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                         ? 'Watched'
                         : 'Mark All'}
                     </button>
-                    <span className="text-yellow-400 transform transition-transform duration-300">
+                    <span className="text-yellow-400 transition-transform duration-300 transform">
                       {isExpanded ? '▼' : '▶'}
                     </span>
                   </div>
@@ -425,25 +465,25 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
               {/* Episodes list - only show when expanded */}
               {isExpanded && (
-                <div className="bg-gray-800/50 p-3">
+                <div className="p-3 bg-gray-800/50">
                   {/* Simplified batch operations - optimized for mobile with separated controls */}
-                  <div className="mb-3 flex justify-between">
+                  <div className="flex justify-between mb-3">
                     <button 
                       onClick={() => toggleFilteredEpisodes(seasonNumber, episodes, true, "unseen")}
-                      className="px-2 py-1 bg-green-700/70 hover:bg-green-700 text-white text-xs rounded-md"
+                      className="px-2 py-1 text-xs text-white rounded-md bg-green-700/70 hover:bg-green-700"
                     >
                       Mark Unseen
                     </button>
                     <button 
                       onClick={() => toggleFilteredEpisodes(seasonNumber, episodes, false, "seen")}
-                      className="px-2 py-1 bg-gray-700/70 hover:bg-gray-700 text-white text-xs rounded-md"
+                      className="px-2 py-1 text-xs text-white rounded-md bg-gray-700/70 hover:bg-gray-700"
                     >
                       Unmark Seen
                     </button>
                   </div>
                   
                   {/* Episodes grid for larger screens, list for mobile */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {sortedEpisodes.map(episode => {
                       const isWatched = season.watchedEpisodes?.includes(episode.episode_number);
                       const airDate = episode.air_date ? new Date(episode.air_date) : null;
@@ -463,7 +503,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                               <img 
                                 src={`${IMAGE_BASE_URL}${episode.still_path}`} 
                                 alt={episode.name}
-                                className="w-12 h-8 object-cover rounded border-0"
+                                className="object-cover w-12 h-8 border-0 rounded"
                               />
                             )}
                             
@@ -476,7 +516,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm text-gray-300 font-medium">{episode.name}</div>
+                              <div className="text-sm font-medium text-gray-300">{episode.name}</div>
                               {airDate && (
                                 <div className="text-xs text-gray-400">
                                   {airDate.toLocaleDateString()}
@@ -512,10 +552,10 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       
       {/* Loading Indicator */}
       {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 rounded-lg p-6 text-center">
-            <div className="text-yellow-400 text-lg mb-3">{loadingText}</div>
-            <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
+          <div className="p-6 text-center bg-gray-800 rounded-lg">
+            <div className="mb-3 text-lg text-yellow-400">{loadingText}</div>
+            <div className="w-12 h-12 mx-auto mb-3 border-4 border-yellow-400 rounded-full border-t-transparent animate-spin"></div>
           </div>
         </div>
       )}
