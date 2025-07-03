@@ -13,7 +13,7 @@ const SwipeInfoToast = ({
   }, [onClose, autoCloseTime]);
 
   return (
-    <div className="fixed left-1/2 bottom-28 z-50 -translate-x-1/2 px-6 py-5 rounded-xl shadow-2xl border-2 border-yellow-500 bg-[#181c24] text-white flex flex-col items-center gap-2 max-w-[90vw] w-[340px]">
+    <div className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 px-6 py-5 rounded-xl shadow-2xl border-2 border-yellow-500 bg-[#181c24] text-white flex flex-col items-center gap-2 max-w-[90vw] w-[340px]">
       <div className="mb-1 text-lg font-bold tracking-wide">{title}</div>
       <div className="flex flex-col items-center text-base">
         <div>
