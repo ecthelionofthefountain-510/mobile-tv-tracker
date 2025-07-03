@@ -83,32 +83,41 @@ const MoviesList = () => {
     setMovieDetails(null);
   };
 
-  const removeMovie = (id, e) => {
-    if (e) {
-      e.stopPropagation();
-    }
-    
-    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
-    const updatedWatched = allWatched.filter(item => item.id !== id);
-    localStorage.setItem("watched", JSON.stringify(updatedWatched));
-    
+  const removeMovie = (id) => {
+    // Ta bort filmen från watchedMovies
     const updatedMovies = watchedMovies.filter(movie => movie.id !== id);
     setWatchedMovies(updatedMovies);
-    
-    // Update filtered list as well
-    setFilteredMovies(updatedMovies.filter(movie => 
+    setFilteredMovies(updatedMovies.filter(movie =>
       movie.title.toLowerCase().includes(searchTerm.toLowerCase())
     ));
-    
-    // Close modal if the removed movie is currently selected
+    localStorage.setItem("watched", JSON.stringify(updatedMovies));
     if (selectedMovie && selectedMovie.id === id) {
       closeMovieModal();
     }
   };
 
   const addToFavorites = (movie) => {
-    // Lägg till logik för att lägga till i favoriter här
-    alert(`Lägger till "${movie.title}" i favoriter!`);
+    // Lägg till filmen i favoriter om den inte redan finns där
+    const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+    if (favorites.some(fav => fav.id === movie.id)) {
+      // Visa notification om du vill
+      return;
+    }
+    const updatedFavorites = [...favorites, { ...movie, dateAdded: new Date().toISOString() }];
+    localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+
+    // Ta bort filmen från watchedMovies
+    const updatedMovies = watchedMovies.filter(m => m.id !== movie.id);
+    setWatchedMovies(updatedMovies);
+    setFilteredMovies(updatedMovies.filter(m =>
+      m.title.toLowerCase().includes(searchTerm.toLowerCase())
+    ));
+    localStorage.setItem("watched", JSON.stringify(updatedMovies));
+  };
+
+  const addToWatched = (movie) => {
+    // Lägg till logik för att lägga till i "watched" här
+    alert(`Lägger till "${movie.title}" i din lista över sedda filmer!`);
   };
 
   return (
@@ -181,7 +190,8 @@ const MoviesList = () => {
             movie={movie}
             onSelect={handleMovieSelect}
             onRemove={removeMovie}
-            onAddToFavorites={addToFavorites}
+            onAddToWatched={addToWatched}         // Funktion för vänster swipe
+            onAddToFavorites={addToFavorites}     // Funktion för höger swipe
           />
         ))}
       </SwipeableList>
@@ -208,7 +218,21 @@ const MoviesList = () => {
       )}
 
       {showSwipeInfo && (
-        <SwipeInfoToast onClose={() => setShowSwipeInfo(false)} />
+        <SwipeInfoToast
+          onClose={() => setShowSwipeInfo(false)}
+          leftAction={{
+            icon: "👈",
+            color: "text-red-400",
+            label: "VÄNSTER",
+            text: "för att ta bort från listan"
+          }}
+          rightAction={{
+            icon: "👉",
+            color: "text-yellow-400",
+            label: "HÖGER",
+            text: "för att lägga tillbaka i favoriter"
+          }}
+        />
       )}
     </div>
   );

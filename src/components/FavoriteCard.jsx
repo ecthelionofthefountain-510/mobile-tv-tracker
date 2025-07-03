@@ -1,7 +1,7 @@
 import React from "react";
 import { IMAGE_BASE_URL } from "../config";
 
-const FavoriteCard = ({ item, onClick, showButtons = true }) => {
+const FavoriteCard = ({ item, onClick, onRemove, onAddToWatched, alreadyWatched, showButtons = true }) => {
   return (
     <div
       className="relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg cursor-pointer bg-gray-800/90 border-yellow-900/30 hover:bg-gray-700/90"

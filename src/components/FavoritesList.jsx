@@ -132,10 +132,7 @@ const FavoritesList = () => {
   };
 
   // Remove an item from favorites
-  const removeFromFavorites = (id, e) => {
-    // Stop event propagation
-    e.stopPropagation();
-    
+  const removeFromFavorites = (id) => {
     console.log("Removing item with ID:", id);
     const updatedList = favorites.filter(item => item.id !== id);
     setFavorites(updatedList);
@@ -152,8 +149,6 @@ const FavoritesList = () => {
 
   // Add an item to watched list and remove from favorites
   const addToWatched = async (item, e) => {
-    // Stop event propagation
-    e.stopPropagation();
     
     // Check if already in watched list
     const isAlreadyWatched = watched.some(watchedItem => watchedItem.id === item.id);
@@ -324,6 +319,7 @@ const FavoritesList = () => {
               onSelect={viewDetails}
               onRemove={removeFromFavorites}
               onAddToWatched={addToWatched}
+              alreadyWatched={isInWatchedList(item.id)} // Lägg till denna rad!
             />
           ))}
         </div>
@@ -384,7 +380,21 @@ const FavoritesList = () => {
 
       {/* Swipe Info Toast */}
       {showSwipeInfo && (
-        <SwipeInfoToast onClose={() => setShowSwipeInfo(false)} />
+        <SwipeInfoToast
+          onClose={() => setShowSwipeInfo(false)}
+          leftAction={{
+            icon: "👈",
+            color: "text-green-400",
+            label: "VÄNSTER",
+            text: 'för att lägga till i "watched"'
+          }}
+          rightAction={{
+            icon: "👉",
+            color: "text-red-400",
+            label: "HÖGER",
+            text: "för att ta bort från favoriter"
+          }}
+        />
       )}
     </div>
   );

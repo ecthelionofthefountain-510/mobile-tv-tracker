@@ -109,7 +109,21 @@ const ShowsList = () => {
 
   // Lägg till i favoriter-funktion (dummy)
   const addToFavorites = (show) => {
-    alert(`Lägg till "${show.title}" i favoriter!`);
+    // Hämta nuvarande favoriter
+    const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+    // Lägg bara till om den inte redan finns
+    if (favorites.some(fav => fav.id === show.id)) return;
+
+    const updatedFavorites = [...favorites, { ...show, dateAdded: new Date().toISOString() }];
+    localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+
+    // Ta bort show från watchedShows
+    const updatedWatched = watchedShows.filter(s => s.id !== show.id);
+    setWatchedShows(updatedWatched);
+    setFilteredShows(updatedWatched.filter(s =>
+      s.title.toLowerCase().includes(searchTerm.toLowerCase())
+    ));
+    localStorage.setItem("watchedShows", JSON.stringify(updatedWatched));
   };
 
   if (selectedShow) {
@@ -222,7 +236,21 @@ const ShowsList = () => {
       )}
 
       {showSwipeInfo && (
-        <SwipeInfoToast onClose={() => setShowSwipeInfo(false)} />
+        <SwipeInfoToast
+          onClose={() => setShowSwipeInfo(false)}
+          leftAction={{
+            icon: "👈",
+            color: "text-red-400",
+            label: "VÄNSTER",
+            text: "för att ta bort från listan"
+          }}
+          rightAction={{
+            icon: "👉",
+            color: "text-yellow-400",
+            label: "HÖGER",
+            text: "för att lägga tillbaka i favoriter"
+          }}
+        />
       )}
     </div>
   );

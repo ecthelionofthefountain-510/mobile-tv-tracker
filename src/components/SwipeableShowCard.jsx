@@ -1,5 +1,5 @@
 import { useSwipeable } from 'react-swipeable';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import ShowCard from './ShowCard';
 
 const iconTrash = (
@@ -16,32 +16,26 @@ const iconCheck = (
   </svg>
 );
 
+const iconStar = (
+  <svg width="28" height="28" fill="none" viewBox="0 0 24 24">
+    <rect width="24" height="24" rx="12" fill="#fff" fillOpacity="0.1"/>
+    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill="#facc15"/>
+  </svg>
+);
+
 const SWIPE_THRESHOLD = 120;
 
 const SwipeableShowCard = ({ show, onSelect, onRemove, onAddToFavorites }) => {
   const [deltaX, setDeltaX] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const justSwiped = useRef(false);
 
   const handlers = useSwipeable({
-    onSwiping: (e) => {
-      setDeltaX(e.deltaX);
-    },
+    onSwiping: (e) => setDeltaX(e.deltaX),
     onSwipedLeft: (e) => {
-      if (Math.abs(e.deltaX) > SWIPE_THRESHOLD) {
+      if (Math.abs(e.deltaX) > SWIPE_THRESHOLD && onRemove) {
+        justSwiped.current = true;
         setDeltaX(-window.innerWidth);
-        setAnimating(true);
-        setTimeout(() => {
-          setDeltaX(0);
-          setAnimating(false);
-          onAddToFavorites(show);
-        }, 200);
-      } else {
-        setDeltaX(0);
-      }
-    },
-    onSwipedRight: (e) => {
-      if (e.deltaX > SWIPE_THRESHOLD) {
-        setDeltaX(window.innerWidth);
         setAnimating(true);
         setTimeout(() => {
           setDeltaX(0);
@@ -52,7 +46,22 @@ const SwipeableShowCard = ({ show, onSelect, onRemove, onAddToFavorites }) => {
         setDeltaX(0);
       }
     },
+    onSwipedRight: (e) => {
+      if (e.deltaX > SWIPE_THRESHOLD && onAddToFavorites) {
+        justSwiped.current = true;
+        setDeltaX(window.innerWidth);
+        setAnimating(true);
+        setTimeout(() => {
+          setDeltaX(0);
+          setAnimating(false);
+          onAddToFavorites(show);
+        }, 200);
+      } else {
+        setDeltaX(0);
+      }
+    },
     onSwiped: () => {
+      setTimeout(() => { justSwiped.current = false; }, 400);
       if (!animating) setDeltaX(0);
     },
     preventScrollOnSwipe: true,
@@ -64,12 +73,17 @@ const SwipeableShowCard = ({ show, onSelect, onRemove, onAddToFavorites }) => {
   let bg = '';
   let icon = null;
   if (deltaX < -10) {
-    bg = 'bg-green-600';
-    icon = iconCheck;
-  } else if (deltaX > 10) {
     bg = 'bg-red-600';
     icon = iconTrash;
+  } else if (deltaX > 10) {
+    bg = 'bg-yellow-400';
+    icon = iconStar;
   }
+
+  const handleSafeSelect = () => {
+    if (justSwiped.current || animating) return;
+    onSelect(show);
+  };
 
   return (
     <div className="relative" style={{ minHeight: 72 }}>
@@ -86,11 +100,12 @@ const SwipeableShowCard = ({ show, onSelect, onRemove, onAddToFavorites }) => {
           userSelect: 'none',
           transform: `translateX(${deltaX}px)`,
           transition: animating ? 'transform 0.2s' : deltaX === 0 ? 'transform 0.2s' : 'none',
+          pointerEvents: animating ? 'none' : 'auto',
         }}
       >
         <ShowCard
           item={show}
-          onSelect={onSelect}
+          onSelect={handleSafeSelect}
           onRemove={onRemove}
           showRemoveButton={false}
         />

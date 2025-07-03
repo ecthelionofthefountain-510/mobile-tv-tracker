@@ -5,7 +5,7 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
   return (
     <div 
       className="relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg cursor-pointer bg-gray-800/90 border-yellow-900/30 hover:bg-gray-700/90"
-      onClick={() => onSelect(item)}
+      onClick={onSelect ? () => onSelect(item) : undefined}
     >
       {/* Använder flex med bättre proportioner */}
       <div className="flex h-32 sm:h-40">
