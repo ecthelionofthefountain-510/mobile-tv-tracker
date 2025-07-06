@@ -5,6 +5,7 @@ import ShowsList from "./components/ShowsList";
 import MoviesList from "./components/MoviesList";
 import Navbar from "./components/Navbar";
 import FavoritesList from "./components/FavoritesList";
+import ProfilePage from "./components/ProfilePage";
 import "./index.css";
 
 function ScrollToTop() {
@@ -33,6 +34,8 @@ const App = () => {
             <Route path="/movies" element={<MoviesList />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/favorites" element={<FavoritesList />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            {/* Fallback route */}
           </Routes>
         </div>
         <Navbar />

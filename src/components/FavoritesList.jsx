@@ -24,6 +24,7 @@ const FavoritesList = () => {
     message: ""
   });
   const [showSwipeInfo, setShowSwipeInfo] = useState(true);
+  const [swipeFeedback, setSwipeFeedback] = useState({ show: false, message: "" });
   
   useEffect(() => {
     // Load favorites from localStorage
@@ -231,6 +232,11 @@ const FavoritesList = () => {
       localStorage.setItem("swipeInfoSeen", "1");
     }
   }, []);
+  
+  const showSwipeFeedback = (message) => {
+    setSwipeFeedback({ show: true, message });
+    setTimeout(() => setSwipeFeedback({ show: false, message: "" }), 1800);
+  };
   
   return (
     <div className="min-h-screen p-4 pb-20">

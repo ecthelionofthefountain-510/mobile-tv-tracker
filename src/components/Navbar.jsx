@@ -1,18 +1,36 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaSearch, FaTv, FaFilm, FaHeart } from 'react-icons/fa';
+import { FaSearch, FaTv, FaFilm, FaHeart, FaUser } from 'react-icons/fa';
 import './Navbar.css';
 
-const navItems = [
-  
-  { to: "/shows", icon: <FaTv />, label: "Shows" },
-  { to: "/movies", icon: <FaFilm />, label: "Movies" },
-  { to: "/search", icon: <FaSearch />, label: "Explore" },
-  { to: "/favorites", icon: <FaHeart />, label: "Favorites" },
-];
-
 export default function Navbar() {
+  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem("currentUser")));
+  const [profileImages, setProfileImages] = useState(() => JSON.parse(localStorage.getItem("profileImages")) || {});
+
+  // Uppdatera om localStorage ändras (t.ex. när man byter profil)
+  useEffect(() => {
+    const onStorage = () => {
+      setCurrentUser(JSON.parse(localStorage.getItem("currentUser")));
+      setProfileImages(JSON.parse(localStorage.getItem("profileImages")) || {});
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   const location = useLocation();
+  const navItems = [
+    { to: "/shows", icon: <FaTv />, label: "Shows" },
+    { to: "/movies", icon: <FaFilm />, label: "Movies" },
+    { to: "/search", icon: <FaSearch />, label: "Explore" },
+    { to: "/favorites", icon: <FaHeart />, label: "Favorites" },
+    {
+      to: "/profile",
+      icon: profileImages[currentUser]
+        ? <img src={profileImages[currentUser]} alt="Profile" className="object-cover w-6 h-6 bg-gray-800 border-2 border-yellow-300 rounded-full" />
+        : <FaUser />,
+      label: "Profile"
+    }
+  ];
   const activeIndex = navItems.findIndex(item => item.to === location.pathname);
 
   return (
@@ -33,11 +51,14 @@ export default function Navbar() {
         {/* Floating Center Icon */}
         <div
           className="navbar-floating-icon"
-          style={{ left: `calc(${(activeIndex + 0.5) * 25}% - 28px)` }}
+          style={{
+            left: `calc(${((activeIndex + 0.5) * (100 / navItems.length))}% - 28px)`
+          }}
         >
           {navItems[activeIndex]?.icon}
         </div>
       </div>
+      
     </nav>
   );
 }
