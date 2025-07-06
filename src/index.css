@@ -237,12 +237,15 @@ nav {
   background: rgba(217, 119, 6, 0.7);
 }
 
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
 .hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE 10+ */
+  overscroll-behavior: contain;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
+  width: 0 !important;
+  background: transparent !important;
 }
 
 html, body, #root, .main-content {

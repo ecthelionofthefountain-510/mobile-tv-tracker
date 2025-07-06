@@ -16,6 +16,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [watchedMovies, setWatchedMovies] = useState([]);
   const [filteredMovies, setFilteredMovies] = useState([]);
+  const [selectedEpisode, setSelectedEpisode] = useState(null);
 
   // Calculate progress stats on load and when seasons change
   useEffect(() => {
@@ -491,11 +492,12 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                       return (
                         <div 
                           key={episode.id}
-                          className={`p-3 rounded-md flex items-center justify-between ${
+                          className={`p-3 rounded-md flex items-center justify-between cursor-pointer ${
                             isWatched 
                               ? 'bg-green-800/20 border border-green-800/30' 
                               : 'bg-gray-700/30 border border-gray-700/30'
                           }`}
+                          onClick={() => setSelectedEpisode(episode)}
                         >
                           <div className="flex items-center space-x-3">
                             {/* Episode Image (if available) */}
@@ -567,6 +569,47 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           onClose={closeNotification}
           autoCloseTime={2000}
         />
+      )}
+
+      {/* Episode Detail Modal */}
+      {selectedEpisode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div className="relative w-full max-w-md p-6 bg-gray-900 rounded-lg">
+            <button
+              className="absolute flex items-center gap-2 px-4 py-2 text-base font-bold text-gray-900 transition bg-yellow-400 rounded-full shadow-lg top-3 right-3 hover:bg-yellow-500"
+              onClick={() => setSelectedEpisode(null)}
+              aria-label="Stäng avsnittsinfo"
+            >
+              <span className="text-lg">✖</span>
+            </button>
+            <h3 className="mb-2 text-xl font-bold text-yellow-400">
+              {selectedEpisode.name}
+            </h3>
+            <div className="mb-2 text-gray-400">
+              Säsong {selectedEpisode.season_number}, Avsnitt {selectedEpisode.episode_number}
+            </div>
+            {selectedEpisode.still_path && (
+              <img
+                src={`${IMAGE_BASE_URL}${selectedEpisode.still_path}`}
+                alt={selectedEpisode.name}
+                className="w-full mb-3 rounded"
+              />
+            )}
+            <div className="mb-2 text-gray-300">
+              {selectedEpisode.overview || "Ingen beskrivning tillgänglig."}
+            </div>
+            {selectedEpisode.vote_average > 0 && (
+              <div className="mb-1 text-yellow-300">
+                ★ {selectedEpisode.vote_average.toFixed(1)}
+              </div>
+            )}
+            {selectedEpisode.air_date && (
+              <div className="text-xs text-gray-400">
+                Sändes: {new Date(selectedEpisode.air_date).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

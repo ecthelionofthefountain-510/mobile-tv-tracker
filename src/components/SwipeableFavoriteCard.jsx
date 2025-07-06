@@ -95,14 +95,16 @@ const SwipeableFavoriteCard = ({
           pointerEvents: animating ? 'none' : 'auto',
         }}
       >
-        <FavoriteCard
-          item={item}
-          onSelect={handleSafeSelect}
-          onRemove={onRemove}
-          onAddToWatched={onAddToWatched}
-          alreadyWatched={alreadyWatched} // Skicka vidare hit!
-          showButtons={false}
-        />
+        <div onClick={() => onSelect(item)}>
+          <FavoriteCard
+            item={item}
+            onSelect={handleSafeSelect}
+            onRemove={onRemove}
+            onAddToWatched={onAddToWatched}
+            alreadyWatched={alreadyWatched} // Skicka vidare hit!
+            showButtons={false}
+          />
+        </div>
       </div>
       {(deltaX !== 0 || animating) && (
         <div className={`absolute inset-0 z-0 flex items-center ${deltaX < 0 ? 'justify-end pr-6' : 'justify-start pl-6'} ${bg} rounded-lg transition-all`}>

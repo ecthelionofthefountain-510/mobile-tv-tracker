@@ -91,37 +91,25 @@ const FavoritesList = () => {
   };
 
   // Function to view details of an item
-  const viewDetails = (item) => {
-    console.log("View details clicked for:", item);
-    
-    // Default to movie if mediaType is not specified
+  const viewDetails = async (item) => {
     const mediaType = item.mediaType || (item.first_air_date ? 'tv' : 'movie');
-    console.log("Determined media type:", mediaType);
-    
-    setSelectedItem({...item, mediaType});
+    setSelectedItem({ ...item, mediaType });
     setIsLoading(true);
-    
-    // Fetch item details
+
     const endpoint = mediaType === 'tv' ? 'tv' : 'movie';
-    console.log(`Fetching ${endpoint} details for ID: ${item.id}`);
-    
-    fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log("Received data:", data);
-        setItemDetails(data);
-        setIsLoading(false);
-      })
-      .catch(error => {
-        console.error("Error fetching item details:", error);
-        showNotification(`Failed to load details: ${error.message}`);
-        setIsLoading(false);
-      });
+
+    try {
+      const [details, credits, videos] = await Promise.all([
+        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`).then(res => res.json()),
+      ]);
+      setItemDetails({ ...details, credits, videos });
+    } catch (error) {
+      showNotification(`Failed to load details: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Close the detail modal
@@ -316,10 +304,11 @@ const FavoritesList = () => {
             <SwipeableFavoriteCard
               key={item.id}
               item={item}
+              swipeStartThreshold={30}
               onSelect={viewDetails}
               onRemove={removeFromFavorites}
               onAddToWatched={addToWatched}
-              alreadyWatched={isInWatchedList(item.id)} // Lägg till denna rad!
+              alreadyWatched={isInWatchedList(item.id)}
             />
           ))}
         </div>

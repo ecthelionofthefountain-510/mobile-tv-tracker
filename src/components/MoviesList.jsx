@@ -185,15 +185,15 @@ const MoviesList = () => {
         </select>
       </div>
 
-      <SwipeableList>
+      <SwipeableList swipeStartThreshold={30}>
         {filteredMovies.map(movie => (
           <SwipeableMovieCard
             key={movie.id}
             movie={movie}
             onSelect={handleMovieSelect}
             onRemove={removeMovie}
-            onAddToWatched={addToWatched}         // Funktion för vänster swipe
-            onAddToFavorites={addToFavorites}     // Funktion för höger swipe
+            onAddToWatched={addToWatched}
+            onAddToFavorites={addToFavorites}
           />
         ))}
       </SwipeableList>

@@ -217,6 +217,7 @@ const ShowsList = () => {
           <SwipeableShowCard
             key={show.id}
             show={show}
+            swipeStartThreshold={30}
             onSelect={handleShowSelect}
             onShowInfo={handleShowModalSelect}
             onRemove={removeShow}
