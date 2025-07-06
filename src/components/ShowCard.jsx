@@ -22,7 +22,7 @@ const GENRE_MAP = {
   37: "Western"
 };
 
-const ShowCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
+const ShowCard = ({ item, onSelect, onRemove, onShowInfo, showRemoveButton = true }) => {
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
   const getGenres = () => {
@@ -56,7 +56,14 @@ const ShowCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
       onClick={onSelect ? () => onSelect(displayItem) : undefined}
     >
       <div className="flex h-32 sm:h-40">
-        <div className="flex-shrink-0 w-24 h-full sm:w-28">
+        <div
+          className="flex-shrink-0 w-24 h-full sm:w-28"
+          onClick={e => {
+            e.stopPropagation(); // Hindra att kortets onClick triggas
+            if (onShowInfo) onShowInfo(displayItem);
+          }}
+          style={{ cursor: "pointer" }}
+        >
           <img
             src={displayItem.poster_path ? `${IMAGE_BASE_URL}${displayItem.poster_path}` : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='168' viewBox='0 0 112 168'%3E%3Crect width='112' height='168' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='0.3em' fill='%236B7280' font-family='Arial' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E"}
             alt={displayItem.name}
