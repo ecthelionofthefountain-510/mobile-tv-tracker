@@ -3,7 +3,7 @@ import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
 import ShowCard from "./ShowCard";
 import SwipeableShowCard from './SwipeableShowCard';
-import SwipeInfoToast from "./SwipeInfoToast";
+// import SwipeInfoToast from "./SwipeInfoToast";
 import ShowDetailModal from "./ShowDetailModal";
 import MovieDetailModal from "./MovieDetailModal";
 
@@ -16,7 +16,7 @@ const ShowsList = () => {
   const [showForModal, setShowForModal] = useState(null);
   const [showDetails, setShowDetails] = useState(null);
   const [sortBy, setSortBy] = useState("title");
-  const [showSwipeInfo, setShowSwipeInfo] = useState(true);
+  const [showSwipeInfo, setShowSwipeInfo] = useState(false);
 
   useEffect(() => {
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
@@ -26,9 +26,9 @@ const ShowsList = () => {
   }, [sortBy]);
 
   useEffect(() => {
+    // Visa bara om användaren inte sett toasten innan
     if (!localStorage.getItem("swipeInfoSeen")) {
       setShowSwipeInfo(true);
-      localStorage.setItem("swipeInfoSeen", "1");
     }
   }, []);
 
@@ -133,6 +133,11 @@ const ShowsList = () => {
       s.title.toLowerCase().includes(searchTerm.toLowerCase())
     ));
     localStorage.setItem("watchedShows", JSON.stringify(updatedWatched));
+  };
+
+  const handleCloseSwipeInfo = () => {
+    setShowSwipeInfo(false);
+    localStorage.setItem("swipeInfoSeen", "true");
   };
 
   if (selectedShow) {
@@ -243,7 +248,7 @@ const ShowsList = () => {
 
       {showSwipeInfo && (
         <SwipeInfoToast
-          onClose={() => setShowSwipeInfo(false)}
+          onClose={handleCloseSwipeInfo}
           leftAction={{
             icon: "👈",
             color: "text-red-400",

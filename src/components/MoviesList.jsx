@@ -6,7 +6,7 @@ import MovieDetailModal from "./MovieDetailModal";
 import { SwipeableList, SwipeableListItem } from 'react-swipeable-list';
 import 'react-swipeable-list/dist/styles.css';
 import SwipeableMovieCard from './SwipeableMovieCard';
-import SwipeInfoToast from "./SwipeInfoToast";
+// import SwipeInfoToast from "./SwipeInfoToast";
 
 const MoviesList = () => {
   const [watchedMovies, setWatchedMovies] = useState([]);
@@ -219,7 +219,7 @@ const MoviesList = () => {
         </div>
       )}
 
-      {showSwipeInfo && (
+      {/* {showSwipeInfo && (
         <SwipeInfoToast
           onClose={() => setShowSwipeInfo(false)}
           leftAction={{
@@ -235,7 +235,7 @@ const MoviesList = () => {
             text: "för att lägga tillbaka i favoriter"
           }}
         />
-      )}
+      )} */}
     </div>
   );
 };

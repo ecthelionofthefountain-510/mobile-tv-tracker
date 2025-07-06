@@ -6,7 +6,7 @@ import NotificationModal from "./NotificationModal";
 import FavoriteCard from "./FavoriteCard";
 import ShowCard from "./ShowCard";
 import SwipeableFavoriteCard from './SwipeableFavoriteCard';
-import SwipeInfoToast from "./SwipeInfoToast";
+// import SwipeInfoToast from "./SwipeInfoToast";
 
 const FavoritesList = () => {
   const [favorites, setFavorites] = useState([]);
@@ -368,7 +368,7 @@ const FavoritesList = () => {
       )}
 
       {/* Swipe Info Toast */}
-      {showSwipeInfo && (
+      {/* {showSwipeInfo && (
         <SwipeInfoToast
           onClose={() => setShowSwipeInfo(false)}
           leftAction={{
@@ -384,7 +384,7 @@ const FavoritesList = () => {
             text: "för att ta bort från favoriter"
           }}
         />
-      )}
+      )} */}
     </div>
   );
 };
