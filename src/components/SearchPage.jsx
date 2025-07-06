@@ -14,6 +14,10 @@ const SearchPage = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [trending, setTrending] = useState([]);
   const [isTrendingLoading, setIsTrendingLoading] = useState(false);
+  const [popularMovies, setPopularMovies] = useState([]);
+  const [popularTV, setPopularTV] = useState([]);
+  const [isPopularMoviesLoading, setIsPopularMoviesLoading] = useState(false);
+  const [isPopularTVLoading, setIsPopularTVLoading] = useState(false);
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
@@ -30,27 +34,77 @@ const SearchPage = () => {
     return () => clearTimeout(delayDebounce);
   }, [query, searchType]);
 
+  // Hämta populära filmer
+  const fetchPopularMovies = async () => {
+    setIsPopularMoviesLoading(true);
+    try {
+      const randomPage = Math.floor(Math.random() * 500) + 1;
+      const res = await fetch(`${TMDB_BASE_URL}/movie/popular?api_key=${API_KEY}&page=${randomPage}`);
+      const data = await res.json();
+      setPopularMovies((data.results || []).slice(0, 8));
+    } catch {
+      setPopularMovies([]);
+    } finally {
+      setIsPopularMoviesLoading(false);
+    }
+  };
+
+  // Hämta populära tv-serier
+  const fetchPopularTV = async () => {
+    setIsPopularTVLoading(true);
+    try {
+      const randomPage = Math.floor(Math.random() * 500) + 1;
+      const res = await fetch(`${TMDB_BASE_URL}/tv/popular?api_key=${API_KEY}&page=${randomPage}`);
+      const data = await res.json();
+      setPopularTV((data.results || []).slice(0, 8));
+    } catch {
+      setPopularTV([]);
+    } finally {
+      setIsPopularTVLoading(false);
+    }
+  };
+
+  // Hämta båda när sidan laddas eller blir aktiv
   useEffect(() => {
-    const fetchTrending = async () => {
-      setIsTrendingLoading(true);
-      try {
-        const res = await fetch(`${TMDB_BASE_URL}/trending/all/week?api_key=${API_KEY}`);
-        const data = await res.json();
-        setTrending(
-          (data.results || []).map(item => ({
-            ...item,
-            mediaType: item.media_type,
-            title: item.title || item.name,
-          }))
-        );
-      } catch (err) {
-        setTrending([]);
-      } finally {
-        setIsTrendingLoading(false);
-      }
+    const fetchAll = () => {
+      fetchPopularMovies();
+      fetchPopularTV();
     };
-    fetchTrending();
+    fetchAll();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchAll();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
+
+  const fetchRandomPopular = async () => {
+    setIsTrendingLoading(true);
+    try {
+      const type = Math.random() > 0.5 ? "movie" : "tv";
+      const randomPage = Math.floor(Math.random() * 500) + 1;
+      // Lägg till slumpmässigt år för ännu mer variation
+      const randomYear = 1980 + Math.floor(Math.random() * 44); // 1980-2023
+
+      const url = type === "movie"
+        ? `${TMDB_BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&page=${randomPage}&primary_release_year=${randomYear}`
+        : `${TMDB_BASE_URL}/discover/tv?api_key=${API_KEY}&sort_by=popularity.desc&page=${randomPage}&first_air_date_year=${randomYear}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+      setTrending(
+        (data.results || []).slice(0, 8).map(item => ({
+          ...item,
+          mediaType: type,
+          title: item.title || item.name,
+        }))
+      );
+    } catch (err) {
+      setTrending([]);
+    } finally {
+      setIsTrendingLoading(false);
+    }
+  };
 
   const searchContent = async () => {
     if (!query.trim()) return;
@@ -262,15 +316,41 @@ const SearchPage = () => {
       )}
 
       {!query && (
-        <div>
-          <h2 className="mb-2 text-lg font-bold text-yellow-400">Trending</h2>
-          {isTrendingLoading ? (
-            <div className="py-4 text-yellow-400">Laddar...</div>
-          ) : (
-            <div className="space-y-4">
-              {trending.slice(0, 8).map(item => renderContentItem(item))}
-            </div>
-          )}
+        <div className="space-y-8">
+          {/* Populära filmer */}
+          <div>
+            <h2 className="mb-2 text-lg font-bold text-yellow-400">Populära filmer</h2>
+            {isPopularMoviesLoading ? (
+              <div className="py-4 text-yellow-400">Laddar...</div>
+            ) : (
+              <div className="space-y-4">
+                {popularMovies.map(item =>
+                  renderContentItem({
+                    ...item,
+                    mediaType: "movie",
+                    title: item.title || item.name,
+                  })
+                )}
+              </div>
+            )}
+          </div>
+          {/* Populära tv-serier */}
+          <div>
+            <h2 className="mb-2 text-lg font-bold text-yellow-400">Populära TV-serier</h2>
+            {isPopularTVLoading ? (
+              <div className="py-4 text-yellow-400">Laddar...</div>
+            ) : (
+              <div className="space-y-4">
+                {popularTV.map(item =>
+                  renderContentItem({
+                    ...item,
+                    mediaType: "tv",
+                    title: item.title || item.name,
+                  })
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
