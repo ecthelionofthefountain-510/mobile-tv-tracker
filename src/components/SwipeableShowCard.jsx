@@ -25,7 +25,7 @@ const iconStar = (
 
 const SWIPE_THRESHOLD = 120;
 
-const SwipeableShowCard = ({ show, onSelect, onRemove, onAddToFavorites }) => {
+const SwipeableShowCard = ({ show, onSelect, onRemove, onAddToFavorites, onShowInfo }) => {
   const [deltaX, setDeltaX] = useState(0);
   const [animating, setAnimating] = useState(false);
   const justSwiped = useRef(false);
@@ -64,10 +64,11 @@ const SwipeableShowCard = ({ show, onSelect, onRemove, onAddToFavorites }) => {
       setTimeout(() => { justSwiped.current = false; }, 400);
       if (!animating) setDeltaX(0);
     },
+    axis: "x", // Endast horisontell swipe
     preventScrollOnSwipe: true,
     trackTouch: true,
     trackMouse: true,
-    delta: 10,
+    delta: 30, // Kräver större rörelse för att trigga swipe
   });
 
   let bg = '';
@@ -105,7 +106,8 @@ const SwipeableShowCard = ({ show, onSelect, onRemove, onAddToFavorites }) => {
       >
         <ShowCard
           item={show}
-          onSelect={handleSafeSelect}
+          onSelect={() => onSelect(show)}
+          onShowInfo={onShowInfo}
           onRemove={onRemove}
           showRemoveButton={false}
         />

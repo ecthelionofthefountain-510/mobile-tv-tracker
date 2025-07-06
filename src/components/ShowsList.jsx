@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
-import ShowDetailModal from "./ShowDetailModal";
 import ShowCard from "./ShowCard";
 import SwipeableShowCard from './SwipeableShowCard';
 import SwipeInfoToast from "./SwipeInfoToast";
+import ShowDetailModal from "./ShowDetailModal";
+import MovieDetailModal from "./MovieDetailModal";
+
 
 const ShowsList = () => {
   const [watchedShows, setWatchedShows] = useState([]);
@@ -56,25 +58,32 @@ const ShowsList = () => {
     }
   };
 
+  // För serier
   const fetchShowDetails = async (showId) => {
     try {
-      const response = await fetch(
-        `${TMDB_BASE_URL}/tv/${showId}?api_key=${API_KEY}`
-      );
-      const data = await response.json();
-      setShowDetails(data);
-    } catch (error) {
-      console.error("Error fetching show details:", error);
+      const [details, credits, videos] = await Promise.all([
+        fetch(`${TMDB_BASE_URL}/tv/${showId}?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${TMDB_BASE_URL}/tv/${showId}/credits?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${TMDB_BASE_URL}/tv/${showId}/videos?api_key=${API_KEY}`).then(res => res.json()),
+      ]);
+      setShowDetails({ ...details, credits, videos });
+    } catch (err) {
+      console.error(err);
     }
-  };
-
-  const handleShowSelect = (show) => {
-    setSelectedShow({ ...show });
   };
 
   const handleShowModalSelect = (show) => {
     setShowForModal(show);
     fetchShowDetails(show.id);
+  };
+
+  const handleShowSelect = async (show) => {
+    try {
+      const details = await fetch(`${TMDB_BASE_URL}/tv/${show.id}?api_key=${API_KEY}`).then(res => res.json());
+      setSelectedShow({ ...show, ...details });
+    } catch (err) {
+      console.error("Kunde inte hämta show-detaljer", err);
+    }
   };
 
   const closeShowModal = () => {
@@ -209,18 +218,14 @@ const ShowsList = () => {
             key={show.id}
             show={show}
             onSelect={handleShowSelect}
+            onShowInfo={handleShowModalSelect}
             onRemove={removeShow}
             onAddToFavorites={addToFavorites}
           />
         ))}
       </div>
 
-      {showForModal && showDetails && (
-        <ShowDetailModal
-          show={showDetails}
-          onClose={closeShowModal}
-        />
-      )}
+     
 
       {filteredShows.length === 0 && (
         <div className="py-10 text-center">
@@ -250,6 +255,13 @@ const ShowsList = () => {
             label: "HÖGER",
             text: "för att lägga tillbaka i favoriter"
           }}
+        />
+      )}
+
+      {showForModal && showDetails && (
+        <ShowDetailModal
+          show={showDetails}
+          onClose={closeShowModal}
         />
       )}
     </div>

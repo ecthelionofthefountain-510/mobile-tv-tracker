@@ -1,14 +1,21 @@
 import React from "react";
 import { IMAGE_BASE_URL } from "../config";
 
-const ShowCard = ({ item, onSelect }) => {
+const ShowCard = ({ item, onShowInfo, onSelect }) => {
   return (
     <div
       className="relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg cursor-pointer bg-gray-800/90 border-yellow-900/30 hover:bg-gray-700/90"
-      onClick={() => onSelect(item)}
+      onClick={onSelect}
     >
       <div className="flex h-32 sm:h-40">
-        <div className="flex-shrink-0 w-24 h-full sm:w-28">
+        <div
+          className="flex-shrink-0 w-24 h-full sm:w-28"
+          onClick={(e) => {
+            e.stopPropagation(); // Hindra bubbling till hela kortet
+            onShowInfo(item);
+          }}
+          style={{ cursor: "pointer" }}
+        >
           <img
             src={`${IMAGE_BASE_URL}${item.poster_path}`}
             alt={item.title}
@@ -30,7 +37,8 @@ const ShowCard = ({ item, onSelect }) => {
             </div>
             {item.number_of_seasons && (
               <div className="text-sm text-gray-400">
-                {item.number_of_seasons} {item.number_of_seasons === 1 ? 'Season' : 'Seasons'}
+                {item.number_of_seasons}{" "}
+                {item.number_of_seasons === 1 ? "Season" : "Seasons"}
               </div>
             )}
           </div>

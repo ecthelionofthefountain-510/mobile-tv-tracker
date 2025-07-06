@@ -1,6 +1,7 @@
 // MoviesList.jsx with alphabetical sorting, search, and X button in corner
 import React, { useState, useEffect } from "react";
 import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
+import ShowDetailModal from "./ShowDetailModal";
 import MovieDetailModal from "./MovieDetailModal";
 import { SwipeableList, SwipeableListItem } from 'react-swipeable-list';
 import 'react-swipeable-list/dist/styles.css';
@@ -61,13 +62,14 @@ const MoviesList = () => {
   // Fetch detailed movie information
   const fetchMovieDetails = async (movieId) => {
     try {
-      const response = await fetch(
-        `${TMDB_BASE_URL}/movie/${movieId}?api_key=${API_KEY}`
-      );
-      const data = await response.json();
-      setMovieDetails(data);
-    } catch (error) {
-      console.error("Error fetching movie details:", error);
+      const [details, credits, videos] = await Promise.all([
+        fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${TMDB_BASE_URL}/movie/${movieId}/credits?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${TMDB_BASE_URL}/movie/${movieId}/videos?api_key=${API_KEY}`).then(res => res.json()),
+      ]);
+      setMovieDetails({ ...details, credits, videos });
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -198,8 +200,8 @@ const MoviesList = () => {
 
       {/* Movie Detail Modal */}
       {selectedMovie && movieDetails && (
-        <MovieDetailModal 
-          movie={movieDetails} 
+        <MovieDetailModal
+          movie={movieDetails}
           onClose={closeMovieModal}
         />
       )}

@@ -49,10 +49,11 @@ const SwipeableFavoriteCard = ({
       setTimeout(() => { justSwiped.current = false; }, 400);
       if (!animating) setDeltaX(0);
     },
+    axis: "x", // Endast horisontell swipe
     preventScrollOnSwipe: true,
     trackTouch: true,
     trackMouse: true,
-    delta: 10,
+    delta: 30, // Kräver större rörelse för att trigga swipe
   });
 
   const handleSafeSelect = () => {
