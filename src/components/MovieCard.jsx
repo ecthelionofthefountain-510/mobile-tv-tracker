@@ -101,12 +101,7 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
               </div>
             )}
 
-            {/* Betyg om tillgängligt */}
-            {displayItem.vote_average && displayItem.vote_average > 0 && (
-              <div className="mt-1 text-sm text-gray-300">
-                ⭐ {displayItem.vote_average.toFixed(1)}/10
-              </div>
-            )}
+            
           </div>
           
           {showRemoveButton && (

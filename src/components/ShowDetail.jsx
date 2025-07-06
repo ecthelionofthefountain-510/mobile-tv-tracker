@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import NotificationModal from "./NotificationModal";
+import CongratsToast from "./CongratsToast";
+import ReactConfetti from "react-confetti";
+import { useWindowSize } from "react-use"; // valfritt, för att få rätt storlek
 
 const ShowDetail = ({ show, onBack, onRemove }) => {
   const [seasons, setSeasons] = useState(show.seasons || {});
@@ -17,6 +20,8 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [watchedMovies, setWatchedMovies] = useState([]);
   const [filteredMovies, setFilteredMovies] = useState([]);
   const [selectedEpisode, setSelectedEpisode] = useState(null);
+  const [showCongrats, setShowCongrats] = useState(false);
+  const { width, height } = useWindowSize(); // valfritt
 
   // Calculate progress stats on load and when seasons change
   useEffect(() => {
@@ -29,6 +34,15 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       saveChangesToStorage();
     }
   }, [seasons, hasChanges]);
+
+  // Load progress from localStorage on mount
+  useEffect(() => {
+    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
+    const found = allWatched.find(item => item.id === show.id);
+    if (found && found.seasons) {
+      setSeasons(found.seasons);
+    }
+  }, [show.id]);
 
   // Function to save changes to localStorage
   const saveChangesToStorage = useCallback(() => {
@@ -275,6 +289,9 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       setSeasons(updatedSeasons);
       setHasChanges(true);
       setIsLoading(false);
+      if (watched) {
+        setShowCongrats(true);
+      }
     } catch (error) {
       console.error("Error marking all seasons:", error);
       setIsLoading(false);
@@ -293,7 +310,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     };
     
     setSeasons(updatedSeasons);
-    setHasChanges(true);
+    setHasChanges(true); // <-- Viktigt!
   };
 
   // Sort movies function
@@ -610,6 +627,14 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Congrats Toast and Confetti - when all episodes are marked as watched */}
+      {showCongrats && (
+        <>
+          <CongratsToast onClose={() => setShowCongrats(false)} />
+          <ReactConfetti width={width} height={height} numberOfPieces={180} recycle={false} />
+        </>
       )}
     </div>
   );

@@ -63,12 +63,12 @@ const ShowCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
             className="object-cover w-full h-full border-r border-yellow-900/30"
           />
         </div>
-        <div className="flex flex-col justify-between flex-1 p-3">
+        <div className="flex flex-col justify-between flex-1 min-w-0 p-3">
           <div>
-            <h3 className="text-lg font-semibold text-yellow-400 sm:text-xl line-clamp-1">
+            <h3 className="text-lg font-semibold text-yellow-400 truncate sm:text-xl">
               {displayItem.name}
             </h3>
-            <div className="mt-1 text-sm text-gray-400">
+            <div className="mt-1 text-sm text-gray-400 truncate">
               TV Show
               {displayItem.first_air_date && (
                 <span className="ml-2">
@@ -76,9 +76,8 @@ const ShowCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
                 </span>
               )}
             </div>
-            {/* Genre-visning */}
             {genres.length > 0 && (
-              <div className="mt-1 text-sm text-gray-300">
+              <div className="mt-1 text-sm text-gray-300 truncate">
                 {genres.slice(0, 3).join(", ")}
                 {genres.length > 3 && <span className="text-gray-400"> +{genres.length - 3} more</span>}
               </div>
@@ -89,12 +88,7 @@ const ShowCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
                 {displayItem.number_of_seasons} {displayItem.number_of_seasons === 1 ? 'Season' : 'Seasons'}
               </div>
             )}
-            {/* Betyg om tillgängligt */}
-            {displayItem.vote_average && displayItem.vote_average > 0 && (
-              <div className="mt-1 text-sm text-gray-300">
-                ⭐ {displayItem.vote_average.toFixed(1)}/10
-              </div>
-            )}
+            
           </div>
           {showRemoveButton && (
             <div className="flex justify-end mt-2">
