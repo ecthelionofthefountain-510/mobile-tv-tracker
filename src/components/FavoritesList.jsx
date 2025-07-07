@@ -302,7 +302,7 @@ const FavoritesList = () => {
             className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
           >
             <option value="title">A-Ö</option>
-            <option value="dateAdded">Senast tillagd</option>
+            <option value="dateAdded">Most recent</option>
           </select>
         </div>
         <div className="space-y-4">

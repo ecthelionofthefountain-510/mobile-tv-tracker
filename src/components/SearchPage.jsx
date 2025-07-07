@@ -293,7 +293,7 @@ const SearchPage = () => {
             <div className="relative flex-grow">
               <input
                 type="text"
-                placeholder="Search for movies or TV shows..."
+                placeholder="Search for movies or shows"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="w-full p-2 pl-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
@@ -319,7 +319,7 @@ const SearchPage = () => {
         <div className="space-y-8">
           {/* Populära filmer */}
           <div>
-            <h2 className="mb-2 text-lg font-bold text-yellow-400">Populära filmer</h2>
+            <h2 className="mb-2 text-lg font-bold text-yellow-400">Popular movies</h2>
             {isPopularMoviesLoading ? (
               <div className="py-4 text-yellow-400">Laddar...</div>
             ) : (
@@ -336,7 +336,7 @@ const SearchPage = () => {
           </div>
           {/* Populära tv-serier */}
           <div>
-            <h2 className="mb-2 text-lg font-bold text-yellow-400">Populära TV-serier</h2>
+            <h2 className="mb-2 text-lg font-bold text-yellow-400">Popular shows</h2>
             {isPopularTVLoading ? (
               <div className="py-4 text-yellow-400">Laddar...</div>
             ) : (

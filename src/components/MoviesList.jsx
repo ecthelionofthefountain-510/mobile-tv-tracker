@@ -174,14 +174,14 @@ const MoviesList = () => {
 
       {/* Sorting and title section */}
       <div className="flex items-center justify-between mb-2">
-        <div className="font-semibold text-yellow-400">Your Movies</div>
+        <div className="font-semibold text-yellow-400">Watched Movies</div>
         <select
           value={sortBy}
           onChange={e => setSortBy(e.target.value)}
           className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
         >
           <option value="title">A-Ö</option>
-          <option value="dateAdded">Senast tillagd</option>
+          <option value="dateAdded">Most recent</option>
         </select>
       </div>
 
