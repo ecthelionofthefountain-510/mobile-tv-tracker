@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 const ShowDetailModal = ({ show, onClose }) => {
   // Mock IMAGE_BASE_URL for demonstration
@@ -63,6 +63,36 @@ const ShowDetailModal = ({ show, onClose }) => {
   };
 
   const displayShow = show || mockShow;
+
+  // Ta episodes från displayShow (anpassa om din datastruktur är annorlunda)
+  const episodes = displayShow.episodes || [];
+
+  // Hantera watched-status per user+show i localStorage (enkel implementation)
+  const currentUser = JSON.parse(localStorage.getItem("currentUser")) || "default";
+  const storageKey = `watched_${currentUser}_${displayShow.id || displayShow.name}`;
+  const [watchedSet, setWatchedSet] = useState(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(storageKey)) || [];
+      return new Set(raw);
+    } catch {
+      return new Set();
+    }
+  });
+  
+  useEffect(() => {
+    // spara som array i localStorage när watchedSet ändras
+    localStorage.setItem(storageKey, JSON.stringify(Array.from(watchedSet)));
+  }, [watchedSet, storageKey]);
+  
+  const isEpisodeWatched = (ep) => watchedSet.has(ep.id);
+  const toggleEpisodeWatched = (ep) => {
+    setWatchedSet(prev => {
+      const next = new Set(prev);
+      if (next.has(ep.id)) next.delete(ep.id);
+      else next.add(ep.id);
+      return next;
+    });
+  };
 
   return (
     <div
@@ -133,6 +163,38 @@ const ShowDetailModal = ({ show, onClose }) => {
             <div className="mb-4">
               <h3 className="mb-2 text-lg font-semibold text-yellow-400">Overview</h3>
               <p className="text-gray-300">{displayShow.overview}</p>
+            </div>
+          )}
+          {episodes.length > 0 && (
+            <div className="mb-4">
+              <h3 className="mb-2 text-lg font-semibold text-yellow-400">Episodes</h3>
+              <div className="space-y-2">
+                {episodes.map(ep => (
+                  <div
+                    key={ep.id}
+                    className="flex items-center justify-between p-2 rounded cursor-pointer episode-row hover:bg-gray-700"
+                    onClick={() => openEpisodeModal?.(ep)} // använd din befintliga öppna-funktion
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isEpisodeWatched(ep)}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleEpisodeWatched(ep);
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-200">{ep.name}</div>
+                        <div className="text-xs text-gray-400">{ep.air_date}</div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-400">{/* runtime el. nummer */}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {displayShow.credits && displayShow.credits.cast && (

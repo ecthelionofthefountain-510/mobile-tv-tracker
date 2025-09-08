@@ -545,11 +545,14 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                           </div>
                           
                           <button
-                            onClick={() => updateEpisodeWatched(
-                              seasonNumber,
-                              episode.episode_number,
-                              !isWatched
-                            )}
+                            onClick={(e) => {
+                              e.stopPropagation(); // <-- hindra att onClick på raden körs
+                              updateEpisodeWatched(
+                                seasonNumber,
+                                episode.episode_number,
+                                !isWatched
+                              );
+                            }}
                             className={`w-8 h-8 rounded-full flex items-center justify-center ${
                               isWatched 
                                 ? 'bg-green-600 hover:bg-green-700' 
