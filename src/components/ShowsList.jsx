@@ -3,10 +3,15 @@ import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
 import ShowCard from "./ShowCard";
 import SwipeableShowCard from './SwipeableShowCard';
-// import SwipeInfoToast from "./SwipeInfoToast";
 import ShowDetailModal from "./ShowDetailModal";
 import MovieDetailModal from "./MovieDetailModal";
+import BackupControls from "./BackupControls";
 
+import {
+  loadWatchedAll,
+  saveWatchedAll,
+  ensurePersistentStorage,
+} from "../utils/watchedStorage";
 
 const ShowsList = () => {
   const [watchedShows, setWatchedShows] = useState([]);
@@ -18,19 +23,37 @@ const ShowsList = () => {
   const [sortBy, setSortBy] = useState("title");
   const [showSwipeInfo, setShowSwipeInfo] = useState(false);
 
-  useEffect(() => {
-    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
-    const shows = allWatched.filter(item => item.mediaType === "tv");
-    setWatchedShows(sortShows(shows, sortBy));
-    setFilteredShows(sortShows(shows, sortBy));
-  }, [sortBy]);
+  // Normalisering flyttad till egen funktion som vi kan återanvända
+  const normalizeWatched = (items) => {
+    let changed = false;
 
-  useEffect(() => {
-    // Visa bara om användaren inte sett toasten innan
-    if (!localStorage.getItem("swipeInfoSeen")) {
-      setShowSwipeInfo(true);
-    }
-  }, []);
+    const normalized = items.map(item => {
+      // Om completed redan finns, behåll
+      if (typeof item.completed === "boolean") return item;
+
+      // 1) Har säsonger/avsnitt
+      if (item.seasons && Array.isArray(item.seasons)) {
+        const allSeasonsComplete = item.seasons.every(season =>
+          Array.isArray(season.episodes) && season.episodes.every(ep => !!ep.watched)
+        );
+        const completedFlag = !!allSeasonsComplete;
+        if (completedFlag) changed = true;
+        return { ...item, completed: completedFlag };
+      }
+
+      // 2) Har watchedCount/totalEpisodes
+      if (typeof item.watchedCount === "number" && typeof item.totalEpisodes === "number") {
+        const completedFlag = item.totalEpisodes > 0 && item.watchedCount === item.totalEpisodes;
+        if (completedFlag) changed = true;
+        return { ...item, completed: completedFlag };
+      }
+
+      // 3) Default
+      return { ...item, completed: false };
+    });
+
+    return { normalized, changed };
+  };
 
   const sortShows = (shows, sortBy) => {
     if (sortBy === "title") {
@@ -45,6 +68,41 @@ const ShowsList = () => {
     return shows;
   };
 
+  // Ladda watched shows vid start + när sorteringen ändras
+  useEffect(() => {
+    let isCancelled = false;
+
+    (async () => {
+      await ensurePersistentStorage();
+
+      const allWatchedRaw = await loadWatchedAll();
+      const { normalized, changed } = normalizeWatched(allWatchedRaw);
+
+      if (changed) {
+        await saveWatchedAll(normalized);
+      }
+
+      const shows = normalized.filter(item => item.mediaType === "tv");
+      const sorted = sortShows(shows, sortBy);
+
+      if (!isCancelled) {
+        setWatchedShows(sorted);
+        setFilteredShows(sorted);
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [sortBy]);
+
+  // Swipe-info som innan, detta kan vara kvar i localStorage
+  useEffect(() => {
+    if (!localStorage.getItem("swipeInfoSeen")) {
+      setShowSwipeInfo(true);
+    }
+  }, []);
+
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
@@ -58,7 +116,6 @@ const ShowsList = () => {
     }
   };
 
-  // För serier
   const fetchShowDetails = async (showId) => {
     try {
       const [details, credits, videos] = await Promise.all([
@@ -101,38 +158,42 @@ const ShowsList = () => {
     ));
   };
 
-  const removeShow = (id) => {
-    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
-    const updatedWatched = allWatched.filter(item => item.id !== id);
-    localStorage.setItem("watched", JSON.stringify(updatedWatched));
+  // Uppdaterad removeShow: tar bort både från state och från "säker" lagring
+  const removeShow = async (id) => {
+    const allWatched = await loadWatchedAll();
+    const updatedAll = allWatched.filter(item => item.id !== id);
+    await saveWatchedAll(updatedAll);
+
     const updatedShows = watchedShows.filter(show => show.id !== id);
     setWatchedShows(updatedShows);
     setFilteredShows(updatedShows.filter(show =>
       show.title.toLowerCase().includes(searchTerm.toLowerCase())
     ));
+
     if (showForModal && showForModal.id === id) {
       closeShowModal();
     }
     setSelectedShow(null);
   };
 
-  // Lägg till i favoriter-funktion (dummy)
-  const addToFavorites = (show) => {
-    // Hämta nuvarande favoriter
+  // Favoriter kan fortfarande ligga i localStorage, det är mindre kritiskt
+  const addToFavorites = async (show) => {
     const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
-    // Lägg bara till om den inte redan finns
     if (favorites.some(fav => fav.id === show.id)) return;
 
     const updatedFavorites = [...favorites, { ...show, dateAdded: new Date().toISOString() }];
     localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
 
-    // Ta bort show från watchedShows
+    // Ta bort från watched
+    const allWatched = await loadWatchedAll();
+    const updatedAll = allWatched.filter(item => item.id !== show.id);
+    await saveWatchedAll(updatedAll);
+
     const updatedWatched = watchedShows.filter(s => s.id !== show.id);
     setWatchedShows(updatedWatched);
     setFilteredShows(updatedWatched.filter(s =>
       s.title.toLowerCase().includes(searchTerm.toLowerCase())
     ));
-    localStorage.setItem("watchedShows", JSON.stringify(updatedWatched));
   };
 
   const handleCloseSwipeInfo = () => {
@@ -140,19 +201,32 @@ const ShowsList = () => {
     localStorage.setItem("swipeInfoSeen", "true");
   };
 
+  const refreshWatchedFromStorage = async () => {
+    const allWatchedRaw = await loadWatchedAll();
+    const { normalized, changed } = normalizeWatched(allWatchedRaw);
+    if (changed) {
+      await saveWatchedAll(normalized);
+    }
+
+    const shows = normalized.filter(item => item.mediaType === "tv");
+    const sorted = sortShows(shows, sortBy);
+
+    setWatchedShows(sorted);
+    setFilteredShows(sorted.filter(s =>
+      s.title.toLowerCase().includes(searchTerm.toLowerCase())
+    ));
+  };
+
   if (selectedShow) {
     return (
       <ShowDetail
         show={selectedShow}
         onBack={() => {
-          const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
-          const updatedShow = allWatched.find(item => item.id === selectedShow.id);
-          if (updatedShow) {
-            handleShowUpdated(updatedShow);
-          }
+          refreshWatchedFromStorage();
           setSelectedShow(null);
         }}
         onRemove={removeShow}
+        onWatchedChanged={refreshWatchedFromStorage}
       />
     );
   }
@@ -231,8 +305,6 @@ const ShowsList = () => {
         ))}
       </div>
 
-     
-
       {filteredShows.length === 0 && (
         <div className="py-10 text-center">
           {watchedShows.length === 0 ? (
@@ -267,9 +339,12 @@ const ShowsList = () => {
       {showForModal && showDetails && (
         <ShowDetailModal
           show={showDetails}
-          onClose={closeShowModal}
+          onClose={() => { closeShowModal(); refreshWatchedFromStorage(); }}
+          onWatchedChanged={refreshWatchedFromStorage}
         />
       )}
+      {/* Backup/restore-knappar */}
+      <BackupControls onRestore={refreshWatchedFromStorage} />
     </div>
   );
 };

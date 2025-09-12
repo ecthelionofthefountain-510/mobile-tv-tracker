@@ -48,18 +48,31 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const saveChangesToStorage = useCallback(() => {
     console.log("Saving changes to storage");
     const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
+
+    // Räkna totala episoder och sedda episoder för att avgöra "completed"
+    let totalEpisodes = 0;
+    let watchedCount = 0;
+    Object.keys(episodesData).forEach(seasonNum => {
+      const episodesList = episodesData[seasonNum] || [];
+      totalEpisodes += episodesList.length;
+      const watchedEpisodes = seasons[seasonNum]?.watchedEpisodes || [];
+      watchedCount += watchedEpisodes.length;
+    });
+    const isCompleted = totalEpisodes > 0 && watchedCount === totalEpisodes;
+
     const updatedWatched = allWatched.map(item => {
       if (item.id === show.id) {
         return {
           ...item,
-          seasons: seasons
+          seasons: seasons,
+          completed: isCompleted
         };
       }
       return item;
     });
     localStorage.setItem("watched", JSON.stringify(updatedWatched));
     setHasChanges(false);
-  }, [seasons, show.id]);
+  }, [seasons, show.id, episodesData]);
 
   // Modified onBack handler to ensure changes are saved
   const handleBack = () => {

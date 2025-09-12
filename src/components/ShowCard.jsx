@@ -69,6 +69,11 @@ const ShowCard = ({ item, onSelect, onRemove, onShowInfo, showRemoveButton = tru
             alt={displayItem.name}
             className="object-cover w-full h-full border-r border-yellow-900/30"
           />
+          {displayItem.completed && (
+            <div className="absolute z-20 flex items-center justify-center text-white bg-green-600 rounded-full shadow top-2 right-2 w-7 h-7">
+              ✓
+            </div>
+          )}
         </div>
         <div className="flex flex-col justify-between flex-1 min-w-0 p-3">
           <div>

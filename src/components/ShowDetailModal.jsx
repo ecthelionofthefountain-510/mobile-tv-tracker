@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const ShowDetailModal = ({ show, onClose }) => {
+const ShowDetailModal = ({ show, onClose, onWatchedChanged }) => {
   // Mock IMAGE_BASE_URL for demonstration
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
@@ -92,6 +92,25 @@ const ShowDetailModal = ({ show, onClose }) => {
       else next.add(ep.id);
       return next;
     });
+  };
+
+  const markAllWatched = () => {
+    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
+    const idx = allWatched.findIndex(s => s.id === show.id);
+    if (idx !== -1) {
+      // uppdatera episodes/flagga enligt din datastruktur
+      allWatched[idx] = {
+        ...allWatched[idx],
+        completed: true,
+        // exempel: markera alla episoder watched om du sparar dem
+        seasons: allWatched[idx].seasons?.map(season => ({
+          ...season,
+          episodes: season.episodes?.map(ep => ({ ...ep, watched: true })) || []
+        })) || allWatched[idx].seasons
+      };
+      localStorage.setItem("watched", JSON.stringify(allWatched));
+      onWatchedChanged && onWatchedChanged();
+    }
   };
 
   return (
