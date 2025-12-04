@@ -4,16 +4,26 @@ import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 
+import { createWatchedShow, createWatchedMovie } from "../utils/watchedMapper";
+import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+
 const SearchPage = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
-  const [watched, setWatched] = useState(() => JSON.parse(localStorage.getItem("watched")) || []);
-  const [favorites, setFavorites] = useState(() => JSON.parse(localStorage.getItem("favorites")) || []);
+
+  // watched/favorites
+  const [watched, setWatched] = useState([]);
+  const [favorites, setFavorites] = useState(
+    () => JSON.parse(localStorage.getItem("favorites")) || []
+  );
+
   const [searchType, setSearchType] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+
   const [trending, setTrending] = useState([]);
   const [isTrendingLoading, setIsTrendingLoading] = useState(false);
+
   const [popularMovies, setPopularMovies] = useState([]);
   const [popularTV, setPopularTV] = useState([]);
   const [isPopularMoviesLoading, setIsPopularMoviesLoading] = useState(false);
@@ -22,6 +32,15 @@ const SearchPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
 
+  // Ladda watched från gemensam storage när sidan laddas
+  useEffect(() => {
+    (async () => {
+      const allWatched = await loadWatchedAll();
+      setWatched(allWatched);
+    })();
+  }, []);
+
+  // Debounce-sök
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
       if (query.trim().length > 1) {
@@ -39,7 +58,9 @@ const SearchPage = () => {
     setIsPopularMoviesLoading(true);
     try {
       const randomPage = Math.floor(Math.random() * 500) + 1;
-      const res = await fetch(`${TMDB_BASE_URL}/movie/popular?api_key=${API_KEY}&page=${randomPage}`);
+      const res = await fetch(
+        `${TMDB_BASE_URL}/movie/popular?api_key=${API_KEY}&page=${randomPage}`
+      );
       const data = await res.json();
       setPopularMovies((data.results || []).slice(0, 8));
     } catch {
@@ -54,7 +75,9 @@ const SearchPage = () => {
     setIsPopularTVLoading(true);
     try {
       const randomPage = Math.floor(Math.random() * 500) + 1;
-      const res = await fetch(`${TMDB_BASE_URL}/tv/popular?api_key=${API_KEY}&page=${randomPage}`);
+      const res = await fetch(
+        `${TMDB_BASE_URL}/tv/popular?api_key=${API_KEY}&page=${randomPage}`
+      );
       const data = await res.json();
       setPopularTV((data.results || []).slice(0, 8));
     } catch {
@@ -75,7 +98,8 @@ const SearchPage = () => {
       if (document.visibilityState === "visible") fetchAll();
     };
     document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
 
   const fetchRandomPopular = async () => {
@@ -83,17 +107,17 @@ const SearchPage = () => {
     try {
       const type = Math.random() > 0.5 ? "movie" : "tv";
       const randomPage = Math.floor(Math.random() * 500) + 1;
-      // Lägg till slumpmässigt år för ännu mer variation
       const randomYear = 1980 + Math.floor(Math.random() * 44); // 1980-2023
 
-      const url = type === "movie"
-        ? `${TMDB_BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&page=${randomPage}&primary_release_year=${randomYear}`
-        : `${TMDB_BASE_URL}/discover/tv?api_key=${API_KEY}&sort_by=popularity.desc&page=${randomPage}&first_air_date_year=${randomYear}`;
+      const url =
+        type === "movie"
+          ? `${TMDB_BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&page=${randomPage}&primary_release_year=${randomYear}`
+          : `${TMDB_BASE_URL}/discover/tv?api_key=${API_KEY}&sort_by=popularity.desc&page=${randomPage}&first_air_date_year=${randomYear}`;
 
       const res = await fetch(url);
       const data = await res.json();
       setTrending(
-        (data.results || []).slice(0, 8).map(item => ({
+        (data.results || []).slice(0, 8).map((item) => ({
           ...item,
           mediaType: type,
           title: item.title || item.name,
@@ -115,40 +139,52 @@ const SearchPage = () => {
 
     try {
       if (searchType === "all" || searchType === "movies") {
-        const movieResponse = await fetch(`${TMDB_BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}`);
+        const movieResponse = await fetch(
+          `${TMDB_BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(
+            query
+          )}`
+        );
         const movieData = await movieResponse.json();
-        const movieResults = (movieData.results || []).map(item => ({
+        const movieResults = (movieData.results || []).map((item) => ({
           ...item,
-          mediaType: 'movie'
+          mediaType: "movie",
         }));
         combinedResults = [...combinedResults, ...movieResults];
       }
 
       if (searchType === "all" || searchType === "tv") {
-        const tvResponse = await fetch(`${TMDB_BASE_URL}/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(query)}`);
+        const tvResponse = await fetch(
+          `${TMDB_BASE_URL}/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(
+            query
+          )}`
+        );
         const tvData = await tvResponse.json();
 
-        const tvResults = await Promise.all((tvData.results || []).map(async (item) => {
-          try {
-            const detailsResponse = await fetch(`${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`);
-            const tvDetails = await detailsResponse.json();
+        const tvResults = await Promise.all(
+          (tvData.results || []).map(async (item) => {
+            try {
+              const detailsResponse = await fetch(
+                `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
+              );
+              const tvDetails = await detailsResponse.json();
 
-            return {
-              ...item,
-              title: item.name,
-              number_of_seasons: tvDetails.number_of_seasons,
-              mediaType: 'tv',
-              seasons: {}
-            };
-          } catch {
-            return {
-              ...item,
-              title: item.name,
-              mediaType: 'tv',
-              seasons: {}
-            };
-          }
-        }));
+              return {
+                ...item,
+                title: item.name,
+                number_of_seasons: tvDetails.number_of_seasons,
+                mediaType: "tv",
+                seasons: {},
+              };
+            } catch {
+              return {
+                ...item,
+                title: item.name,
+                mediaType: "tv",
+                seasons: {},
+              };
+            }
+          })
+        );
 
         combinedResults = [...combinedResults, ...tvResults];
       }
@@ -163,39 +199,64 @@ const SearchPage = () => {
     }
   };
 
+  // Normaliserad addToWatched som går via watchedStorage
   const addToWatched = async (item, e) => {
     e.stopPropagation();
-    if (!watched.find((w) => w.id === item.id)) {
-      let itemToAdd = { ...item, dateAdded: new Date().toISOString() };
 
-      if (item.mediaType === 'tv') {
-        try {
-          if (!item.number_of_seasons) {
-            const detailsResponse = await fetch(`${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`);
-            const tvDetails = await detailsResponse.json();
-            itemToAdd.number_of_seasons = tvDetails.number_of_seasons;
-          }
+    // Från lagringen, inte bara lokala state
+    const allWatched = await loadWatchedAll();
 
-          itemToAdd.seasons = {};
-          for (let i = 1; i <= itemToAdd.number_of_seasons; i++) {
-            itemToAdd.seasons[i] = { watchedEpisodes: [] };
-          }
-        } catch (error) {
-          console.error("Error fetching TV show details:", error);
-        }
-      }
+    const alreadyExists = allWatched.some((w) => w.id === item.id);
+    if (alreadyExists) return;
 
-      const updatedList = [...watched, itemToAdd];
-      setWatched(updatedList);
-      localStorage.setItem("watched", JSON.stringify(updatedList));
+    let base;
+    if (item.mediaType === "tv") {
+      base = createWatchedShow(item);
+    } else {
+      base = createWatchedMovie(item);
     }
+
+    // Extra seasons-logik för tv, ovanpå basobjektet
+    if (item.mediaType === "tv") {
+      try {
+        const numberOfSeasons =
+          item.number_of_seasons ?? base.number_of_seasons;
+        let finalSeasons = base.seasons;
+
+        if (!numberOfSeasons) {
+          const detailsResponse = await fetch(
+            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
+          );
+          const tvDetails = await detailsResponse.json();
+          finalSeasons = {};
+          for (let i = 1; i <= tvDetails.number_of_seasons; i++) {
+            finalSeasons[i] = { watchedEpisodes: [] };
+          }
+          base.number_of_seasons = tvDetails.number_of_seasons;
+        } else {
+          finalSeasons = {};
+          for (let i = 1; i <= numberOfSeasons; i++) {
+            finalSeasons[i] = { watchedEpisodes: [] };
+          }
+          base.number_of_seasons = numberOfSeasons;
+        }
+
+        base.seasons = finalSeasons;
+      } catch (error) {
+        console.error("Error fetching TV show details:", error);
+      }
+    }
+
+    const updatedAll = [...allWatched, base];
+    await saveWatchedAll(updatedAll);
+    setWatched(updatedAll);
   };
 
   const toggleFavorite = (item, e) => {
     e.stopPropagation();
-    const isFavorited = favorites.some(fav => fav.id === item.id);
+    const isFavorited = favorites.some((fav) => fav.id === item.id);
     const updatedFavorites = isFavorited
-      ? favorites.filter(fav => fav.id !== item.id)
+      ? favorites.filter((fav) => fav.id !== item.id)
       : [...favorites, item];
     setFavorites(updatedFavorites);
     localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
@@ -204,13 +265,19 @@ const SearchPage = () => {
   const viewDetails = async (item) => {
     setSelectedItem(item);
     setIsLoading(true);
-    const endpoint = item.mediaType === 'tv' ? 'tv' : 'movie';
+    const endpoint = item.mediaType === "tv" ? "tv" : "movie";
 
     try {
       const [details, credits, videos] = await Promise.all([
-        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`).then(res => res.json()),
-        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`).then(res => res.json()),
-        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`).then(res => res.json()),
+        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`).then(
+          (res) => res.json()
+        ),
+        fetch(
+          `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`
+        ).then((res) => res.json()),
+        fetch(
+          `${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`
+        ).then((res) => res.json()),
       ]);
       setItemDetails({ ...details, credits, videos });
     } catch (err) {
@@ -230,33 +297,59 @@ const SearchPage = () => {
     const isFavorited = favorites.some((f) => f.id === item.id);
 
     return (
-      <div key={item.id} onClick={() => viewDetails(item)} className="relative mb-4 overflow-hidden bg-gray-900 border border-gray-700 rounded-lg cursor-pointer">
+      <div
+        key={item.id}
+        onClick={() => viewDetails(item)}
+        className="relative mb-4 overflow-hidden bg-gray-900 border border-gray-700 rounded-lg cursor-pointer"
+      >
         <div className="flex">
           <div className="flex-shrink-0 w-16 p-1 sm:w-20">
             {item.poster_path ? (
-              <img src={`${IMAGE_BASE_URL}${item.poster_path}`} alt={item.title} className="object-cover w-full h-full" />
+              <img
+                src={`${IMAGE_BASE_URL}${item.poster_path}`}
+                alt={item.title}
+                className="object-cover w-full h-full"
+              />
             ) : (
-              <div className="flex items-center justify-center w-full h-full text-gray-600 bg-gray-800">No Image</div>
+              <div className="flex items-center justify-center w-full h-full text-gray-600 bg-gray-800">
+                No Image
+              </div>
             )}
           </div>
           <div className="flex-1 pl-2 pr-2 py-1.5 flex flex-col">
-            <h3 className="text-base font-bold text-yellow-500 sm:text-lg">{item.title?.toUpperCase()}</h3>
+            <h3 className="text-base font-bold text-yellow-500 sm:text-lg">
+              {item.title?.toUpperCase()}
+            </h3>
             <div className="text-gray-400 text-xs mt-0.5">
               <div>
-                {item.mediaType === 'tv' ? 'TV SHOW' : 'MOVIE'}
-                {item.mediaType === 'tv' && item.number_of_seasons && ` • ${item.number_of_seasons} SEASON${item.number_of_seasons > 1 ? 'S' : ''}`}
+                {item.mediaType === "tv" ? "TV SHOW" : "MOVIE"}
+                {item.mediaType === "tv" &&
+                  item.number_of_seasons &&
+                  ` • ${item.number_of_seasons} SEASON${
+                    item.number_of_seasons > 1 ? "S" : ""
+                  }`}
               </div>
-              {item.release_date && <div>RELEASED: {new Date(item.release_date).getFullYear()}</div>}
-              {item.first_air_date && <div>FIRST AIRED: {new Date(item.first_air_date).getFullYear()}</div>}
+              {item.release_date && (
+                <div>
+                  RELEASED: {new Date(item.release_date).getFullYear()}
+                </div>
+              )}
+              {item.first_air_date && (
+                <div>
+                  FIRST AIRED: {new Date(item.first_air_date).getFullYear()}
+                </div>
+              )}
             </div>
             <div className="flex gap-2 mt-2">
               <button
                 className={`px-3 py-1 text-xs font-semibold rounded transition
-                  ${isWatched
-                    ? "bg-green-600 text-white cursor-default"
-                    : "bg-yellow-500 text-gray-900 hover:bg-yellow-600"}
+                  ${
+                    isWatched
+                      ? "bg-green-600 text-white cursor-default"
+                      : "bg-yellow-500 text-gray-900 hover:bg-yellow-600"
+                  }
                 `}
-                onClick={e => {
+                onClick={(e) => {
                   if (!isWatched) addToWatched(item, e);
                   e.stopPropagation();
                 }}
@@ -266,11 +359,13 @@ const SearchPage = () => {
               </button>
               <button
                 className={`px-3 py-1 text-xs font-semibold rounded transition
-                  ${isFavorited
-                    ? "bg-yellow-400 text-gray-900 cursor-default"
-                    : "bg-gray-700 text-yellow-400 hover:bg-yellow-600 hover:text-gray-900"}
+                  ${
+                    isFavorited
+                      ? "bg-yellow-400 text-gray-900 cursor-default"
+                      : "bg-gray-700 text-yellow-400 hover:bg-yellow-600 hover:text-gray-900"
+                  }
                 `}
-                onClick={e => {
+                onClick={(e) => {
                   if (!isFavorited) toggleFavorite(item, e);
                   e.stopPropagation();
                 }}
@@ -298,9 +393,14 @@ const SearchPage = () => {
                 onChange={(e) => setQuery(e.target.value)}
                 className="w-full p-2 pl-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
               />
-              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">🔍</div>
+              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                🔍
+              </div>
             </div>
-            <button onClick={searchContent} className="p-2 font-bold text-gray-900 transition-all bg-yellow-500 rounded-lg hover:bg-yellow-600">
+            <button
+              onClick={searchContent}
+              className="p-2 font-bold text-gray-900 transition-all bg-yellow-500 rounded-lg hover:bg-yellow-600"
+            >
               GO!
             </button>
           </div>
@@ -312,19 +412,23 @@ const SearchPage = () => {
       ) : results.length > 0 ? (
         <div className="space-y-4">{results.map(renderContentItem)}</div>
       ) : (
-        <div className="py-10 text-center text-gray-400">Start typing to search for content.</div>
+        <div className="py-10 text-center text-gray-400">
+          Start typing to search for content.
+        </div>
       )}
 
       {!query && (
         <div className="space-y-8">
           {/* Populära filmer */}
           <div>
-            <h2 className="mb-2 text-lg font-bold text-yellow-400">Popular movies</h2>
+            <h2 className="mb-2 text-lg font-bold text-yellow-400">
+              Popular movies
+            </h2>
             {isPopularMoviesLoading ? (
               <div className="py-4 text-yellow-400">Laddar...</div>
             ) : (
               <div className="space-y-4">
-                {popularMovies.map(item =>
+                {popularMovies.map((item) =>
                   renderContentItem({
                     ...item,
                     mediaType: "movie",
@@ -336,12 +440,14 @@ const SearchPage = () => {
           </div>
           {/* Populära tv-serier */}
           <div>
-            <h2 className="mb-2 text-lg font-bold text-yellow-400">Popular shows</h2>
+            <h2 className="mb-2 text-lg font-bold text-yellow-400">
+              Popular shows
+            </h2>
             {isPopularTVLoading ? (
               <div className="py-4 text-yellow-400">Laddar...</div>
             ) : (
               <div className="space-y-4">
-                {popularTV.map(item =>
+                {popularTV.map((item) =>
                   renderContentItem({
                     ...item,
                     mediaType: "tv",
@@ -355,7 +461,7 @@ const SearchPage = () => {
       )}
 
       {selectedItem && !isLoading && itemDetails && (
-        selectedItem.mediaType === 'tv' ? (
+        selectedItem.mediaType === "tv" ? (
           <ShowDetailModal show={itemDetails} onClose={closeModal} />
         ) : (
           <MovieDetailModal movie={itemDetails} onClose={closeModal} />
@@ -365,7 +471,10 @@ const SearchPage = () => {
       {!isSearching && results.length === 0 && query && (
         <div className="flex flex-col items-center py-10 text-center text-gray-400">
           <span className="mb-2 text-5xl">🤔</span>
-          <span>No results found for <span className="text-yellow-400">{query}</span></span>
+          <span>
+            No results found for{" "}
+            <span className="text-yellow-400">{query}</span>
+          </span>
         </div>
       )}
     </div>
