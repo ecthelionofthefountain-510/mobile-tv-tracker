@@ -10,3 +10,13 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/mobile-tv-tracker/sw.js")
+      .catch((err) => {
+        console.warn("Service worker registration failed:", err);
+      });
+  });
+}
