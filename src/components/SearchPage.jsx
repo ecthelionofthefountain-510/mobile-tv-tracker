@@ -1,5 +1,5 @@
 // SearchPage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
@@ -7,11 +7,36 @@ import ShowDetailModal from "./ShowDetailModal";
 import { createWatchedShow, createWatchedMovie } from "../utils/watchedMapper";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 
+const genreMap = {
+  28: "Action",
+  12: "Adventure",
+  16: "Animation",
+  35: "Comedy",
+  80: "Crime",
+  99: "Documentary",
+  18: "Drama",
+  10751: "Family",
+  14: "Fantasy",
+  36: "History",
+  27: "Horror",
+  10402: "Music",
+  9648: "Mystery",
+  10749: "Romance",
+  878: "Sci-Fi",
+  10770: "TV Movie",
+  53: "Thriller",
+  10752: "War",
+  37: "Western",
+};
+
+const ALLOWED_LANGS = ["en", "sv", "de", "da"];
+
+const POPULAR_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minuter
+
 const SearchPage = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
 
-  // watched/favorites
   const [watched, setWatched] = useState([]);
   const [favorites, setFavorites] = useState(
     () => JSON.parse(localStorage.getItem("favorites")) || []
@@ -28,6 +53,8 @@ const SearchPage = () => {
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
+
+  const lastPopularFetchRef = useRef(0);
 
   // Ladda watched från gemensam storage när sidan laddas
   useEffect(() => {
@@ -51,58 +78,99 @@ const SearchPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, searchType]);
 
-  // Hämta populära filmer
+  // Hämta populära filmer (discover + språkfilter)
   const fetchPopularMovies = async () => {
     setIsPopularMoviesLoading(true);
     try {
-      const res = await fetch(
-        `${TMDB_BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&region=SE&page=1`
+      const pages = [1, 2, 3]; // top ~60, men filtrerar sen
+      const responses = await Promise.all(
+        pages.map((page) =>
+          fetch(
+            `${TMDB_BASE_URL}/discover/movie?` +
+              `api_key=${API_KEY}` +
+              `&language=en-US` +
+              `&sort_by=popularity.desc` +
+              `&with_original_language=${ALLOWED_LANGS.join("|")}` +
+              `&page=${page}` +
+              `&region=SE`
+          )
+        )
       );
-      const data = await res.json();
 
-      const popular = (data.results || [])
-        .filter((item) => (item.vote_count || 0) >= 200) // släng skräpet
-        .slice(0, 8);
+      const allResults = (
+        await Promise.all(responses.map((res) => res.json()))
+      ).flatMap((data) => data.results || []);
 
-      setPopularMovies(popular);
-    } catch {
+      // extra safeguard if TMDB ändå skickar annat
+      const filtered = allResults.filter((item) =>
+        ALLOWED_LANGS.includes(item.original_language)
+      );
+
+      const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+      setPopularMovies(shuffled.slice(0, 8));
+    } catch (err) {
+      console.error("Error fetching popular movies", err);
       setPopularMovies([]);
     } finally {
       setIsPopularMoviesLoading(false);
     }
   };
 
-  // Hämta populära tv-serier
+  // Hämta populära tv-serier (discover + språkfilter)
   const fetchPopularTV = async () => {
     setIsPopularTVLoading(true);
     try {
-      const res = await fetch(
-        `${TMDB_BASE_URL}/tv/popular?api_key=${API_KEY}&language=en-US&page=1`
+      const pages = [1, 2, 3];
+      const responses = await Promise.all(
+        pages.map((page) =>
+          fetch(
+            `${TMDB_BASE_URL}/discover/tv?` +
+              `api_key=${API_KEY}` +
+              `&language=en-US` +
+              `&sort_by=popularity.desc` +
+              `&with_original_language=${ALLOWED_LANGS.join("|")}` +
+              `&page=${page}`
+          )
+        )
       );
-      const data = await res.json();
 
-      const popular = (data.results || [])
-        .filter((item) => (item.vote_count || 0) >= 200)
-        .slice(0, 8);
+      const allResults = (
+        await Promise.all(responses.map((res) => res.json()))
+      ).flatMap((data) => data.results || []);
 
-      setPopularTV(popular);
-    } catch {
+      const filtered = allResults.filter((item) =>
+        ALLOWED_LANGS.includes(item.original_language)
+      );
+
+      const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+      setPopularTV(shuffled.slice(0, 8));
+    } catch (err) {
+      console.error("Error fetching popular tv", err);
       setPopularTV([]);
     } finally {
       setIsPopularTVLoading(false);
     }
   };
 
-  // Hämta båda när sidan laddas eller blir aktiv
+  // Hämta båda när sidan laddas eller blir aktiv (med cooldown)
   useEffect(() => {
-    const fetchAll = () => {
-      fetchPopularMovies();
-      fetchPopularTV();
+    const fetchAll = async () => {
+      await Promise.all([fetchPopularMovies(), fetchPopularTV()]);
+      lastPopularFetchRef.current = Date.now();
     };
+
+    // direkt vid load
     fetchAll();
+
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") fetchAll();
+      if (document.visibilityState === "visible") {
+        const now = Date.now();
+        if (now - lastPopularFetchRef.current > POPULAR_REFRESH_INTERVAL) {
+          fetchAll();
+        }
+      }
     };
+
     document.addEventListener("visibilitychange", handleVisibility);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibility);
@@ -137,7 +205,7 @@ const SearchPage = () => {
             query
           )}`
         );
-        const tvData = await tvResponse.json(); 
+        const tvData = await tvResponse.json();
 
         const tvResults = await Promise.all(
           (tvData.results || []).map(async (item) => {
@@ -178,12 +246,10 @@ const SearchPage = () => {
     }
   };
 
-  // Normaliserad addToWatched som går via watchedStorage
   const addToWatched = async (item, e) => {
     e.stopPropagation();
 
     const allWatched = await loadWatchedAll();
-
     const alreadyExists = allWatched.some((w) => w.id === item.id);
     if (alreadyExists) return;
 
@@ -298,13 +364,24 @@ const SearchPage = () => {
               {item.title?.toUpperCase()}
             </h3>
             <div className="text-gray-400 text-xs mt-0.5">
-              <div>
-                {item.mediaType === "tv" ? "TV SHOW" : "MOVIE"}
-                {item.mediaType === "tv" &&
-                  item.number_of_seasons &&
-                  ` • ${item.number_of_seasons} SEASON${
-                    item.number_of_seasons > 1 ? "S" : ""
-                  }`}
+              <div className="text-gray-300 text-xs mt-0.5 space-x-1">
+                {item.vote_average && (
+                  <span>⭐ {item.vote_average.toFixed(1)}</span>
+                )}
+
+                {item.genre_ids && item.genre_ids.length > 0 && (
+                  <span>
+                    •{" "}
+                    {item.genre_ids
+                      .slice(0, 2) // max två genres
+                      .map((id) => genreMap[id])
+                      .join(", ")}
+                  </span>
+                )}
+
+                {item.mediaType === "tv" && item.number_of_seasons && (
+                  <span>• {item.number_of_seasons} seasons</span>
+                )}
               </div>
               {item.release_date && (
                 <div>RELEASED: {new Date(item.release_date).getFullYear()}</div>
@@ -368,13 +445,9 @@ const SearchPage = () => {
                 onChange={(e) => setQuery(e.target.value)}
                 className="w-full p-2 pl-8 pr-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
               />
-
-              {/* Search icon (vänster) */}
               <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
                 🔍
               </div>
-
-              {/* Clear X (höger) */}
               {query && (
                 <button
                   type="button"
@@ -397,7 +470,6 @@ const SearchPage = () => {
             </button>
           </div>
 
-          {/* NY RAD: filter-knappar */}
           <div className="flex justify-center gap-2 text-xs sm:text-sm">
             <button
               type="button"
@@ -435,6 +507,7 @@ const SearchPage = () => {
           </div>
         </div>
       </div>
+
       {isSearching ? (
         <div className="py-12 text-center text-yellow-400">Searching...</div>
       ) : results.length > 0 ? (
@@ -444,9 +517,9 @@ const SearchPage = () => {
           Start typing to search for content.
         </div>
       )}
+
       {!query && (
         <div className="space-y-8">
-          {/* Populära filmer */}
           <div>
             <h2 className="mb-2 text-lg font-bold text-yellow-400">
               Popular movies
@@ -465,7 +538,6 @@ const SearchPage = () => {
               </div>
             )}
           </div>
-          {/* Populära tv-serier */}
           <div>
             <h2 className="mb-2 text-lg font-bold text-yellow-400">
               Popular shows
@@ -486,6 +558,7 @@ const SearchPage = () => {
           </div>
         </div>
       )}
+
       {selectedItem &&
         !isLoading &&
         itemDetails &&
@@ -494,6 +567,7 @@ const SearchPage = () => {
         ) : (
           <MovieDetailModal movie={itemDetails} onClose={closeModal} />
         ))}
+
       {!isSearching && results.length === 0 && query && (
         <div className="flex flex-col items-center py-10 text-center text-gray-400">
           <span className="mb-2 text-5xl">🤔</span>
