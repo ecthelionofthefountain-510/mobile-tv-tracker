@@ -21,9 +21,6 @@ const SearchPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
-  const [trending, setTrending] = useState([]);
-  const [isTrendingLoading, setIsTrendingLoading] = useState(false);
-
   const [popularMovies, setPopularMovies] = useState([]);
   const [popularTV, setPopularTV] = useState([]);
   const [isPopularMoviesLoading, setIsPopularMoviesLoading] = useState(false);
@@ -51,18 +48,23 @@ const SearchPage = () => {
     }, 400);
 
     return () => clearTimeout(delayDebounce);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, searchType]);
 
   // Hämta populära filmer
   const fetchPopularMovies = async () => {
     setIsPopularMoviesLoading(true);
     try {
-      const randomPage = Math.floor(Math.random() * 500) + 1;
       const res = await fetch(
-        `${TMDB_BASE_URL}/movie/popular?api_key=${API_KEY}&page=${randomPage}`
+        `${TMDB_BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&region=SE&page=1`
       );
       const data = await res.json();
-      setPopularMovies((data.results || []).slice(0, 8));
+
+      const popular = (data.results || [])
+        .filter((item) => (item.vote_count || 0) >= 200) // släng skräpet
+        .slice(0, 8);
+
+      setPopularMovies(popular);
     } catch {
       setPopularMovies([]);
     } finally {
@@ -74,12 +76,16 @@ const SearchPage = () => {
   const fetchPopularTV = async () => {
     setIsPopularTVLoading(true);
     try {
-      const randomPage = Math.floor(Math.random() * 500) + 1;
       const res = await fetch(
-        `${TMDB_BASE_URL}/tv/popular?api_key=${API_KEY}&page=${randomPage}`
+        `${TMDB_BASE_URL}/tv/popular?api_key=${API_KEY}&language=en-US&page=1`
       );
       const data = await res.json();
-      setPopularTV((data.results || []).slice(0, 8));
+
+      const popular = (data.results || [])
+        .filter((item) => (item.vote_count || 0) >= 200)
+        .slice(0, 8);
+
+      setPopularTV(popular);
     } catch {
       setPopularTV([]);
     } finally {
@@ -100,35 +106,8 @@ const SearchPage = () => {
     document.addEventListener("visibilitychange", handleVisibility);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibility);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const fetchRandomPopular = async () => {
-    setIsTrendingLoading(true);
-    try {
-      const type = Math.random() > 0.5 ? "movie" : "tv";
-      const randomPage = Math.floor(Math.random() * 500) + 1;
-      const randomYear = 1980 + Math.floor(Math.random() * 44); // 1980-2023
-
-      const url =
-        type === "movie"
-          ? `${TMDB_BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&page=${randomPage}&primary_release_year=${randomYear}`
-          : `${TMDB_BASE_URL}/discover/tv?api_key=${API_KEY}&sort_by=popularity.desc&page=${randomPage}&first_air_date_year=${randomYear}`;
-
-      const res = await fetch(url);
-      const data = await res.json();
-      setTrending(
-        (data.results || []).slice(0, 8).map((item) => ({
-          ...item,
-          mediaType: type,
-          title: item.title || item.name,
-        }))
-      );
-    } catch (err) {
-      setTrending([]);
-    } finally {
-      setIsTrendingLoading(false);
-    }
-  };
 
   const searchContent = async () => {
     if (!query.trim()) return;
@@ -158,7 +137,7 @@ const SearchPage = () => {
             query
           )}`
         );
-        const tvData = await tvResponse.json();
+        const tvData = await tvResponse.json(); 
 
         const tvResults = await Promise.all(
           (tvData.results || []).map(async (item) => {
@@ -203,7 +182,6 @@ const SearchPage = () => {
   const addToWatched = async (item, e) => {
     e.stopPropagation();
 
-    // Från lagringen, inte bara lokala state
     const allWatched = await loadWatchedAll();
 
     const alreadyExists = allWatched.some((w) => w.id === item.id);
@@ -216,7 +194,6 @@ const SearchPage = () => {
       base = createWatchedMovie(item);
     }
 
-    // Extra seasons-logik för tv, ovanpå basobjektet
     if (item.mediaType === "tv") {
       try {
         const numberOfSeasons =
@@ -269,9 +246,9 @@ const SearchPage = () => {
 
     try {
       const [details, credits, videos] = await Promise.all([
-        fetch(`${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`).then(
-          (res) => res.json()
-        ),
+        fetch(
+          `${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`
+        ).then((res) => res.json()),
         fetch(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`
         ).then((res) => res.json()),
@@ -330,9 +307,7 @@ const SearchPage = () => {
                   }`}
               </div>
               {item.release_date && (
-                <div>
-                  RELEASED: {new Date(item.release_date).getFullYear()}
-                </div>
+                <div>RELEASED: {new Date(item.release_date).getFullYear()}</div>
               )}
               {item.first_air_date && (
                 <div>
@@ -391,12 +366,29 @@ const SearchPage = () => {
                 placeholder="Search for movies or shows"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full p-2 pl-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
+                className="w-full p-2 pl-8 pr-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
               />
+
+              {/* Search icon (vänster) */}
               <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
                 🔍
               </div>
+
+              {/* Clear X (höger) */}
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    setResults([]);
+                  }}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-lg text-gray-300 hover:text-white"
+                >
+                  ✖
+                </button>
+              )}
             </div>
+
             <button
               onClick={searchContent}
               className="p-2 font-bold text-gray-900 transition-all bg-yellow-500 rounded-lg hover:bg-yellow-600"
@@ -404,9 +396,45 @@ const SearchPage = () => {
               GO!
             </button>
           </div>
+
+          {/* NY RAD: filter-knappar */}
+          <div className="flex justify-center gap-2 text-xs sm:text-sm">
+            <button
+              type="button"
+              onClick={() => setSearchType("all")}
+              className={`px-3 py-1 rounded-full border ${
+                searchType === "all"
+                  ? "bg-yellow-500 text-gray-900 border-yellow-400"
+                  : "bg-gray-800 text-gray-300 border-gray-700"
+              }`}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchType("movies")}
+              className={`px-3 py-1 rounded-full border ${
+                searchType === "movies"
+                  ? "bg-yellow-500 text-gray-900 border-yellow-400"
+                  : "bg-gray-800 text-gray-300 border-gray-700"
+              }`}
+            >
+              Movies
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchType("tv")}
+              className={`px-3 py-1 rounded-full border ${
+                searchType === "tv"
+                  ? "bg-yellow-500 text-gray-900 border-yellow-400"
+                  : "bg-gray-800 text-gray-300 border-gray-700"
+              }`}
+            >
+              Shows
+            </button>
+          </div>
         </div>
       </div>
-
       {isSearching ? (
         <div className="py-12 text-center text-yellow-400">Searching...</div>
       ) : results.length > 0 ? (
@@ -416,7 +444,6 @@ const SearchPage = () => {
           Start typing to search for content.
         </div>
       )}
-
       {!query && (
         <div className="space-y-8">
           {/* Populära filmer */}
@@ -459,15 +486,14 @@ const SearchPage = () => {
           </div>
         </div>
       )}
-
-      {selectedItem && !isLoading && itemDetails && (
-        selectedItem.mediaType === "tv" ? (
+      {selectedItem &&
+        !isLoading &&
+        itemDetails &&
+        (selectedItem.mediaType === "tv" ? (
           <ShowDetailModal show={itemDetails} onClose={closeModal} />
         ) : (
           <MovieDetailModal movie={itemDetails} onClose={closeModal} />
-        )
-      )}
-
+        ))}
       {!isSearching && results.length === 0 && query && (
         <div className="flex flex-col items-center py-10 text-center text-gray-400">
           <span className="mb-2 text-5xl">🤔</span>

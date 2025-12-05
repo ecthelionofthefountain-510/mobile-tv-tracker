@@ -1,28 +1,30 @@
 // MoviesList.jsx
 import React, { useState, useEffect } from "react";
-import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
+import { API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import { SwipeableList } from "react-swipeable-list";
 import "react-swipeable-list/dist/styles.css";
 import SwipeableMovieCard from "./SwipeableMovieCard";
+import { useWatchedList } from "../hooks/useWatchedList";
 // import SwipeInfoToast from "./SwipeInfoToast";
 
-import {
-  loadWatchedAll,
-  saveWatchedAll,
-  ensurePersistentStorage,
-} from "../utils/watchedStorage";
-
 const MoviesList = () => {
-  const [watchedMovies, setWatchedMovies] = useState([]);
   const [filteredMovies, setFilteredMovies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
-  const [sortBy, setSortBy] = useState("title"); // "title" eller "dateAdded"
+  const [sortBy, setSortBy] = useState("title"); // "title" | "dateAdded"
+  const [showSwipeInfo, setShowSwipeInfo] = useState(false);
 
-  // ---------- Helpers ----------
+  // Här behöver vi ingen normalize-funktion – filmer är alltid “klara”
+  const {
+    items: watchedMoviesRaw,
+    loading,
+    refresh,
+    remove,
+  } = useWatchedList("movie");
 
+  // Sorteringsfunktion
   const sortMovies = (movies, sortBy) => {
     if (sortBy === "title") {
       return [...movies].sort((a, b) =>
@@ -38,51 +40,39 @@ const MoviesList = () => {
     return movies;
   };
 
+  // Filtrering + sök
   const filterMovies = (movies, search) => {
-    if (!search.trim()) return movies;
+    let filtered = [...movies];
 
-    const q = search.toLowerCase();
-    return movies.filter((m) =>
-      (m.title || "").toLowerCase().includes(q)
-    );
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      filtered = filtered.filter((m) =>
+        (m.title || "").toLowerCase().includes(q)
+      );
+    }
+
+    return filtered;
   };
 
-  // ---------- Effects ----------
-
-  // Ladda watched movies + sortering
+  // Bygg filteredMovies varje gång basdata eller filter ändras
   useEffect(() => {
-    let isCancelled = false;
+    const sorted = sortMovies(watchedMoviesRaw, sortBy);
+    const filtered = filterMovies(sorted, searchTerm);
+    setFilteredMovies(filtered);
+  }, [watchedMoviesRaw, sortBy, searchTerm]);
 
-    (async () => {
-      await ensurePersistentStorage();
-
-      const allWatched = await loadWatchedAll();
-      const movies = allWatched.filter((item) => item.mediaType === "movie");
-      const sorted = sortMovies(movies, sortBy);
-
-      if (!isCancelled) {
-        setWatchedMovies(sorted);
-      }
-    })();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [sortBy]);
-
-  // Håll filteredMovies i sync med watchedMovies + search
+  // Swipe-info (valfritt, samma som på shows)
   useEffect(() => {
-    setFilteredMovies(filterMovies(watchedMovies, searchTerm));
-  }, [watchedMovies, searchTerm]);
+    if (!localStorage.getItem("swipeInfoMoviesSeen")) {
+      setShowSwipeInfo(true);
+    }
+  }, []);
 
-  // ---------- Handlers ----------
-
-  const handleSearch = (eOrValue) => {
-    const value =
-      typeof eOrValue === "string" ? eOrValue : eOrValue.target.value;
-    setSearchTerm(value);
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
   };
 
+  // Hämta detaljinformation för film
   const fetchMovieDetails = async (movieId) => {
     try {
       const [details, credits, videos] = await Promise.all([
@@ -113,16 +103,7 @@ const MoviesList = () => {
   };
 
   const removeMovie = async (id) => {
-    // Ta bort från global watched-storage
-    const allWatched = await loadWatchedAll();
-    const updatedAll = allWatched.filter(
-      (item) => !(item.mediaType === "movie" && item.id === id)
-    );
-    await saveWatchedAll(updatedAll);
-
-    // Uppdatera state
-    const updatedMovies = watchedMovies.filter((movie) => movie.id !== id);
-    setWatchedMovies(updatedMovies);
+    await remove(id);
 
     if (selectedMovie && selectedMovie.id === id) {
       closeMovieModal();
@@ -141,25 +122,16 @@ const MoviesList = () => {
     ];
     localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
 
-    // Ta bort filmen från watched (globalt)
-    const allWatched = await loadWatchedAll();
-    const updatedAll = allWatched.filter(
-      (item) => !(item.mediaType === "movie" && item.id === movie.id)
-    );
-    await saveWatchedAll(updatedAll);
-
-    // Ta bort filmen från lokala listan
-    const updatedMovies = watchedMovies.filter((m) => m.id !== movie.id);
-    setWatchedMovies(updatedMovies);
+    await removeMovie(movie.id);
   };
 
-  // Mest för att SwipeableMovieCard förväntar sig prop:en,
-  // men du använder Search-sidan för att lägga till filmer.
+  // Just nu har du nog ändå aldrig “lägg tillbaka i watched” från movies,
+  // så vi behåller en enkel placeholder här.
   const addToWatched = (movie) => {
     alert(`"${movie.title}" is already in your watched list.`);
   };
 
-  // ---------- Render ----------
+  const moviesCount = watchedMoviesRaw.length;
 
   return (
     <div className="min-h-screen p-4 pb-20">
@@ -175,7 +147,7 @@ const MoviesList = () => {
                 onChange={handleSearch}
                 onKeyPress={(e) => {
                   if (e.key === "Enter") {
-                    handleSearch(e);
+                    handleSearch({ target: { value: searchTerm } });
                   }
                 }}
                 className="w-full p-2 pl-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
@@ -193,7 +165,9 @@ const MoviesList = () => {
               )}
             </div>
             <button
-              onClick={() => handleSearch(searchTerm)}
+              onClick={() =>
+                handleSearch({ target: { value: searchTerm } })
+              }
               className="p-2 font-bold text-gray-900 transition duration-300 bg-yellow-500 rounded-md hover:bg-yellow-600"
             >
               GO!
@@ -209,9 +183,11 @@ const MoviesList = () => {
         </div>
       </div>
 
-      {/* Sorting */}
+      {/* Sorting + title */}
       <div className="flex items-center justify-between mb-2">
-        <div className="font-semibold text-yellow-400">Watched Movies</div>
+        <div className="font-semibold text-yellow-400">
+          Watched Movies ({moviesCount})
+        </div>
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
@@ -222,7 +198,7 @@ const MoviesList = () => {
         </select>
       </div>
 
-      {/* Lista */}
+      {/* List with swipe-cards */}
       <SwipeableList swipeStartThreshold={30}>
         {filteredMovies.map((movie) => (
           <SwipeableMovieCard
@@ -243,7 +219,7 @@ const MoviesList = () => {
 
       {filteredMovies.length === 0 && (
         <div className="py-10 text-center">
-          {watchedMovies.length === 0 ? (
+          {watchedMoviesRaw.length === 0 ? (
             <>
               <p className="text-gray-400">No movies in your watched list</p>
               <p className="mt-2 text-yellow-500">Start adding some movies!</p>
@@ -254,27 +230,26 @@ const MoviesList = () => {
         </div>
       )}
 
-      {/* Om du vill återaktivera swipe-info någon gång:
-      
-      {showSwipeInfo && (
+      {/* {showSwipeInfo && (
         <SwipeInfoToast
-          onClose={() => setShowSwipeInfo(false)}
+          onClose={() => {
+            setShowSwipeInfo(false);
+            localStorage.setItem("swipeInfoMoviesSeen", "1");
+          }}
           leftAction={{
             icon: "👈",
             color: "text-red-400",
             label: "LEFT",
-            text: "to remove from list",
+            text: "to remove from list"
           }}
           rightAction={{
             icon: "👉",
             color: "text-yellow-400",
             label: "RIGHT",
-            text: "to move to favorites",
+            text: "to add to favorites"
           }}
         />
-      )}
-      
-      */}
+      )} */}
     </div>
   );
 };

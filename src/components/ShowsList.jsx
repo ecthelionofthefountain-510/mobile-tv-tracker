@@ -5,16 +5,12 @@ import ShowDetail from "./ShowDetail";
 import SwipeableShowCard from "./SwipeableShowCard";
 import ShowDetailModal from "./ShowDetailModal";
 import BackupControls from "./BackupControls";
-import SwipeInfoToast from "./SwipeInfoToast";
+import { useWatchedList } from "../hooks/useWatchedList";
 
-import {
-  loadWatchedAll,
-  saveWatchedAll,
-  ensurePersistentStorage,
-} from "../utils/watchedStorage";
+// ev. SwipeInfoToast om du har den
+// import SwipeInfoToast from "./SwipeInfoToast";
 
 const ShowsList = () => {
-  const [watchedShows, setWatchedShows] = useState([]);
   const [filteredShows, setFilteredShows] = useState([]);
   const [selectedShow, setSelectedShow] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,45 +18,50 @@ const ShowsList = () => {
   const [showDetails, setShowDetails] = useState(null);
   const [sortBy, setSortBy] = useState("title");
   const [showSwipeInfo, setShowSwipeInfo] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("all"); // "all" | "inProgress" | "done"
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "inProgress", "done"
 
-  // ---------------- Helpers ----------------
-
-  const normalizeWatched = (items) => {
+  // Normalisering flyttad hit och används av hooken
+  const normalizeShows = (items) => {
     let changed = false;
 
     const normalized = items.map((item) => {
+      if (item.mediaType !== "tv") return item;
       if (typeof item.completed === "boolean") return item;
 
-      // 1) Har säsonger/avsnitt
+      // 1) Säsonger och avsnitt
       if (item.seasons && Array.isArray(item.seasons)) {
-        const allSeasonsComplete = item.seasons.every((season) =>
-          Array.isArray(season.episodes) &&
-          season.episodes.every((ep) => !!ep.watched)
+        const allSeasonsComplete = item.seasons.every(
+          (season) =>
+            Array.isArray(season.episodes) &&
+            season.episodes.every((ep) => !!ep.watched)
         );
         const completedFlag = !!allSeasonsComplete;
         if (completedFlag) changed = true;
         return { ...item, completed: completedFlag };
       }
 
-      // 2) Har watchedCount/totalEpisodes
+      // 2) watchedCount/totalEpisodes
       if (
         typeof item.watchedCount === "number" &&
         typeof item.totalEpisodes === "number"
       ) {
         const completedFlag =
-          item.totalEpisodes > 0 &&
-          item.watchedCount === item.totalEpisodes;
+          item.totalEpisodes > 0 && item.watchedCount === item.totalEpisodes;
         if (completedFlag) changed = true;
         return { ...item, completed: completedFlag };
       }
 
-      // 3) Default
+      // 3) default
       return { ...item, completed: false };
     });
 
     return { normalized, changed };
   };
+
+  const { items: watchedShowsRaw, loading, refresh, remove } = useWatchedList(
+    "tv",
+    { normalize: normalizeShows }
+  );
 
   const sortShows = (shows, sortBy) => {
     if (sortBy === "title") {
@@ -96,52 +97,22 @@ const ShowsList = () => {
     return filtered;
   };
 
-  // ---------------- Effects ----------------
-
-  // Ladda watched shows vid start + när sorteringen ändras
+  // Bygg filteredShows varje gång basdata eller filter ändras
   useEffect(() => {
-    let isCancelled = false;
+    const sorted = sortShows(watchedShowsRaw, sortBy);
+    const filtered = filterShows(sorted, searchTerm, statusFilter);
+    setFilteredShows(filtered);
+  }, [watchedShowsRaw, sortBy, searchTerm, statusFilter]);
 
-    (async () => {
-      await ensurePersistentStorage();
-
-      const allWatchedRaw = await loadWatchedAll();
-      const { normalized, changed } = normalizeWatched(allWatchedRaw);
-
-      if (changed) {
-        await saveWatchedAll(normalized);
-      }
-
-      const shows = normalized.filter((item) => item.mediaType === "tv");
-      const sorted = sortShows(shows, sortBy);
-
-      if (!isCancelled) {
-        setWatchedShows(sorted);
-      }
-    })();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [sortBy]);
-
-  // Håll filteredShows i sync med watchedShows + search + statusFilter
-  useEffect(() => {
-    setFilteredShows(filterShows(watchedShows, searchTerm, statusFilter));
-  }, [watchedShows, searchTerm, statusFilter]);
-
-  // Swipe-info som innan, detta kan vara kvar i localStorage
+  // Swipe-info som innan
   useEffect(() => {
     if (!localStorage.getItem("swipeInfoSeen")) {
       setShowSwipeInfo(true);
     }
   }, []);
 
-  // ---------------- Handlers ----------------
-
   const handleSearch = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
+    setSearchTerm(e.target.value);
   };
 
   const fetchShowDetails = async (showId) => {
@@ -184,25 +155,15 @@ const ShowsList = () => {
     setShowDetails(null);
   };
 
-  const handleShowUpdated = (updatedShow) => {
-    const updatedShows = watchedShows.map((show) =>
-      show.id === updatedShow.id ? updatedShow : show
-    );
-    setWatchedShows(updatedShows);
-  };
-
   const removeShow = async (id) => {
-    const allWatched = await loadWatchedAll();
-    const updatedAll = allWatched.filter((item) => item.id !== id);
-    await saveWatchedAll(updatedAll);
-
-    const updatedShows = watchedShows.filter((show) => show.id !== id);
-    setWatchedShows(updatedShows);
+    await remove(id);
 
     if (showForModal && showForModal.id === id) {
       closeShowModal();
     }
-    setSelectedShow(null);
+    if (selectedShow && selectedShow.id === id) {
+      setSelectedShow(null);
+    }
   };
 
   const addToFavorites = async (show) => {
@@ -215,13 +176,7 @@ const ShowsList = () => {
     ];
     localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
 
-    // Ta bort från watched
-    const allWatched = await loadWatchedAll();
-    const updatedAll = allWatched.filter((item) => item.id !== show.id);
-    await saveWatchedAll(updatedAll);
-
-    const updatedWatched = watchedShows.filter((s) => s.id !== show.id);
-    setWatchedShows(updatedWatched);
+    await removeShow(show.id);
   };
 
   const handleCloseSwipeInfo = () => {
@@ -230,19 +185,10 @@ const ShowsList = () => {
   };
 
   const refreshWatchedFromStorage = async () => {
-    const allWatchedRaw = await loadWatchedAll();
-    const { normalized, changed } = normalizeWatched(allWatchedRaw);
-    if (changed) {
-      await saveWatchedAll(normalized);
-    }
-
-    const shows = normalized.filter((item) => item.mediaType === "tv");
-    const sorted = sortShows(shows, sortBy);
-
-    setWatchedShows(sorted);
+    await refresh();
   };
 
-  // ---------------- Detail view ----------------
+  const watchedCount = watchedShowsRaw.length;
 
   if (selectedShow) {
     return (
@@ -258,11 +204,9 @@ const ShowsList = () => {
     );
   }
 
-  // ---------------- Render list ----------------
-
   return (
     <div className="min-h-screen p-4 pb-20">
-      {/* Search-baren */}
+      {/* Search */}
       <div className="sticky top-0 z-10 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900/95 backdrop-blur-md">
         <div className="p-1">
           <div className="flex items-center space-x-2">
@@ -274,7 +218,7 @@ const ShowsList = () => {
                 onChange={handleSearch}
                 onKeyPress={(e) => {
                   if (e.key === "Enter") {
-                    handleSearch(e);
+                    handleSearch({ target: { value: searchTerm } });
                   }
                 }}
                 className="w-full p-2 pl-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
@@ -292,7 +236,9 @@ const ShowsList = () => {
               )}
             </div>
             <button
-              onClick={handleSearch}
+              onClick={() =>
+                handleSearch({ target: { value: searchTerm } })
+              }
               className="p-2 font-bold text-gray-900 transition duration-300 bg-yellow-500 rounded-md hover:bg-yellow-600"
             >
               GO!
@@ -307,19 +253,12 @@ const ShowsList = () => {
         </div>
       </div>
 
-      {/* Header med sort + statusfilter */}
+      {/* Sort + filterrad */}
       <div className="flex items-center justify-between mb-2">
-        <div className="font-semibold text-yellow-400">Watched Shows</div>
-        <div className="flex items-center gap-2">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
-          >
-            <option value="title">A-Ö</option>
-            <option value="dateAdded">Most recent</option>
-          </select>
-
+        <div className="font-semibold text-yellow-400">
+          Watched Shows ({watchedCount})
+        </div>
+        <div className="flex gap-2">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -329,10 +268,18 @@ const ShowsList = () => {
             <option value="inProgress">In progress</option>
             <option value="done">Done</option>
           </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
+          >
+            <option value="title">A-Ö</option>
+            <option value="dateAdded">Most recent</option>
+          </select>
         </div>
       </div>
 
-      {/* Lista */}
+      {/* Listan */}
       <div className="space-y-4">
         {filteredShows.map((show) => (
           <SwipeableShowCard
@@ -349,7 +296,7 @@ const ShowsList = () => {
 
       {filteredShows.length === 0 && (
         <div className="py-10 text-center">
-          {watchedShows.length === 0 ? (
+          {watchedShowsRaw.length === 0 ? (
             <>
               <p className="text-gray-400">No shows in your watched list</p>
               <p className="mt-2 text-yellow-500">Start adding some shows!</p>
@@ -360,23 +307,23 @@ const ShowsList = () => {
         </div>
       )}
 
-      {showSwipeInfo && (
+      {/* {showSwipeInfo && (
         <SwipeInfoToast
           onClose={handleCloseSwipeInfo}
           leftAction={{
             icon: "👈",
             color: "text-red-400",
             label: "VÄNSTER",
-            text: "för att ta bort från listan",
+            text: "för att ta bort från listan"
           }}
           rightAction={{
             icon: "👉",
             color: "text-yellow-400",
             label: "HÖGER",
-            text: "för att lägga tillbaka i favoriter",
+            text: "för att lägga tillbaka i favoriter"
           }}
         />
-      )}
+      )} */}
 
       {showForModal && showDetails && (
         <ShowDetailModal
