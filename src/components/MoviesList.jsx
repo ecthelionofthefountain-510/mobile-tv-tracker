@@ -186,7 +186,7 @@ const MoviesList = () => {
       {/* Sorting + title */}
       <div className="flex items-center justify-between mb-2">
         <div className="font-semibold text-yellow-400">
-          Watched Movies ({moviesCount})
+          Watched ({moviesCount})
         </div>
         <select
           value={sortBy}

@@ -58,10 +58,12 @@ const ShowsList = () => {
     return { normalized, changed };
   };
 
-  const { items: watchedShowsRaw, loading, refresh, remove } = useWatchedList(
-    "tv",
-    { normalize: normalizeShows }
-  );
+  const {
+    items: watchedShowsRaw,
+    loading,
+    refresh,
+    remove,
+  } = useWatchedList("tv", { normalize: normalizeShows });
 
   const sortShows = (shows, sortBy) => {
     if (sortBy === "title") {
@@ -121,12 +123,12 @@ const ShowsList = () => {
         fetch(`${TMDB_BASE_URL}/tv/${showId}?api_key=${API_KEY}`).then((res) =>
           res.json()
         ),
-        fetch(
-          `${TMDB_BASE_URL}/tv/${showId}/credits?api_key=${API_KEY}`
-        ).then((res) => res.json()),
-        fetch(
-          `${TMDB_BASE_URL}/tv/${showId}/videos?api_key=${API_KEY}`
-        ).then((res) => res.json()),
+        fetch(`${TMDB_BASE_URL}/tv/${showId}/credits?api_key=${API_KEY}`).then(
+          (res) => res.json()
+        ),
+        fetch(`${TMDB_BASE_URL}/tv/${showId}/videos?api_key=${API_KEY}`).then(
+          (res) => res.json()
+        ),
       ]);
       setShowDetails({ ...details, credits, videos });
     } catch (err) {
@@ -236,9 +238,7 @@ const ShowsList = () => {
               )}
             </div>
             <button
-              onClick={() =>
-                handleSearch({ target: { value: searchTerm } })
-              }
+              onClick={() => handleSearch({ target: { value: searchTerm } })}
               className="p-2 font-bold text-gray-900 transition duration-300 bg-yellow-500 rounded-md hover:bg-yellow-600"
             >
               GO!
@@ -254,9 +254,9 @@ const ShowsList = () => {
       </div>
 
       {/* Sort + filterrad */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <div className="font-semibold text-yellow-400">
-          Watched Shows ({watchedCount})
+          Watched ({watchedCount})
         </div>
         <div className="flex gap-2">
           <select
@@ -268,10 +268,11 @@ const ShowsList = () => {
             <option value="inProgress">In progress</option>
             <option value="done">Done</option>
           </select>
+
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
+            className="w-24 px-2 py-1 text-sm text-yellow-400 bg-gray-800 border border-gray-700 rounded-lg"
           >
             <option value="title">A-Ö</option>
             <option value="dateAdded">Most recent</option>
