@@ -42,6 +42,12 @@ const OverviewPage = () => {
   const [itemDetails, setItemDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Recommendations
+  const [recommendations, setRecommendations] = useState([]);
+  const [recContext, setRecContext] = useState(null);
+  const [isRecLoading, setIsRecLoading] = useState(false);
+
+  // Ladda watched + favorites
   useEffect(() => {
     (async () => {
       const allWatched = await loadWatchedAll();
@@ -72,13 +78,17 @@ const OverviewPage = () => {
   // Genre-statistik
   const genreCounts = {};
   watched.forEach((item) => {
-    // Försök först med fulla genre-objekt (från detaljer)
-    let genreNames =
-      item.genres?.map((g) => g.name) ||
-      item.genre_ids?.map((id) => GENRE_MAP[id]).filter(Boolean) ||
-      [];
+    let genreNames = [];
 
-    // Undvik att räkna samma titel flera gånger per genre om du har dubbletter
+    if (Array.isArray(item.genres) && item.genres.length > 0) {
+      genreNames = item.genres.map((g) => g.name).filter(Boolean);
+    } else if (Array.isArray(item.genre_ids) && item.genre_ids.length > 0) {
+      genreNames = item.genre_ids
+        .map((id) => GENRE_MAP[id])
+        .filter(Boolean);
+    }
+
+    // undvik dubbletter i samma titel
     genreNames = Array.from(new Set(genreNames));
 
     genreNames.forEach((name) => {
@@ -88,12 +98,11 @@ const OverviewPage = () => {
 
   const topGenres = Object.entries(genreCounts)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5); // topp 5 genrer
+    .slice(0, 5);
 
   const recentWatched = [...watched].slice(-5).reverse();
   const recentFavorites = [...favorites].slice(-5).reverse();
 
-  // TMDB-detaljer (som på SearchPage)
   const openDetails = async (item) => {
     const mediaType = item.mediaType || (item.seasons ? "tv" : "movie");
 
@@ -140,7 +149,7 @@ const OverviewPage = () => {
         (item.seasons ? Object.keys(item.seasons).length : null)
       : null;
 
-  // --- Highlight-hjälpare ---
+  // Highlight-hjälpare
   const topRatedMovie =
     watchedMovies.length > 0
       ? watchedMovies.reduce((best, curr) =>
@@ -164,7 +173,70 @@ const OverviewPage = () => {
         })
       : null;
 
-  const renderSmallCard = (label, item) => {
+  // Because you watched...
+  const fetchRecommendations = async () => {
+    if (!watched || watched.length === 0) return;
+
+    const candidates = watched.filter(
+      (i) => Array.isArray(i.genre_ids) && i.genre_ids.length > 0
+    );
+
+    if (candidates.length === 0) {
+      setRecommendations([]);
+      setRecContext(null);
+      return;
+    }
+
+    const seed = candidates[Math.floor(Math.random() * candidates.length)];
+    const genreIds = seed.genre_ids;
+    const chosenGenreId =
+      genreIds[Math.floor(Math.random() * genreIds.length)];
+
+    const mediaType = isShow(seed) ? "tv" : "movie";
+    const endpoint = mediaType === "tv" ? "tv" : "movie";
+
+    setIsRecLoading(true);
+    setRecContext({
+      title: seed.title || seed.name || "",
+      mediaType,
+    });
+
+    try {
+      const res = await fetch(
+        `${TMDB_BASE_URL}/discover/${endpoint}?api_key=${API_KEY}&with_genres=${chosenGenreId}&sort_by=popularity.desc`
+      );
+      const data = await res.json();
+      const all = data.results || [];
+
+      const watchedIds = new Set(watched.map((w) => w.id));
+
+      const cleaned = all
+        .filter((item) => !watchedIds.has(item.id))
+        .slice(0, 8)
+        .map((item) => ({
+          ...item,
+          mediaType,
+          title: item.title || item.name,
+        }));
+
+      setRecommendations(cleaned);
+    } catch (err) {
+      console.error("Failed to fetch recommendations", err);
+      setRecommendations([]);
+    } finally {
+      setIsRecLoading(false);
+    }
+  };
+
+  // Trigga recommendations när watched uppdateras
+  useEffect(() => {
+    if (watched.length > 0) {
+      fetchRecommendations();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watched]);
+
+  const renderSmallCard = (label, item, key) => {
     if (!item) return null;
 
     const year = getYear(item);
@@ -176,6 +248,7 @@ const OverviewPage = () => {
 
     return (
       <button
+        key={key}
         type="button"
         onClick={() => openDetails(item)}
         className="flex w-full overflow-hidden text-left transition border border-gray-800 rounded-lg bg-gray-900/80 hover:border-yellow-500/80 hover:bg-gray-900"
@@ -214,11 +287,10 @@ const OverviewPage = () => {
                   {seasonsCount} SEASON{seasonsCount > 1 ? "S" : ""}{" "}
                 </>
               )}
+              {rating && <> ⭐ {rating}</>}
             </div>
 
-            <div>{rating && <> ⭐ {rating}</>}</div>
-
-            {/* Rad 3: genres (om du vill) */}
+            {/* Rad 3: genres */}
             {item.genres && item.genres.length > 0 && (
               <div className="mt-0.5 text-[10px] text-gray-400">
                 {item.genres.map((g) => g.name).join(" • ")}
@@ -348,23 +420,19 @@ const OverviewPage = () => {
                       {(item.title || item.name || "").toUpperCase()}
                     </div>
                     <div className="mt-0.5 text-xs text-gray-300">
-                      {/* Rad 1: typ + år */}
                       <div>
                         {item.mediaType === "tv" ? "TV SHOW" : "MOVIE"}
                         {year && <> • {year}</>}
                       </div>
-
-                      {/* Rad 2: säsonger + betyg */}
                       <div>
                         {seasonsCount && (
                           <>
-                            {seasonsCount} SEASON{seasonsCount > 1 ? "S" : ""}{" "}
+                            {seasonsCount} SEASON
+                            {seasonsCount > 1 ? "S" : ""}{" "}
                           </>
                         )}
                         {rating && <> ⭐ {rating}</>}
                       </div>
-
-                      {/* Rad 3: genres (om du vill) */}
                       {item.genres && item.genres.length > 0 && (
                         <div className="mt-0.5 text-[10px] text-gray-400">
                           {item.genres.map((g) => g.name).join(" • ")}
@@ -386,10 +454,41 @@ const OverviewPage = () => {
             Highlights from your collection
           </h2>
           <div className="space-y-3">
-            {renderSmallCard("Top rated movie", topRatedMovie)}
-            {renderSmallCard("Top rated show", topRatedShow)}
-            {renderSmallCard("Longest running show", longestShow)}
+            {renderSmallCard("Top rated movie", topRatedMovie, "top-movie")}
+            {renderSmallCard("Top rated show", topRatedShow, "top-show")}
+            {renderSmallCard(
+              "Longest running show",
+              longestShow,
+              "longest-show"
+            )}
           </div>
+        </section>
+      )}
+
+      {/* Because you watched ... */}
+      {(isRecLoading || recommendations.length > 0) && (
+        <section className="mt-8">
+          <h2 className="mb-2 text-xl font-bold tracking-wide text-yellow-400 uppercase">
+            Because you watched{" "}
+            {recContext?.title
+              ? recContext.title.toUpperCase()
+              : "one of your shows"}
+          </h2>
+
+          {isRecLoading && (
+            <div className="py-4 text-sm text-yellow-400">
+              Finding similar{" "}
+              {recContext?.mediaType === "tv" ? "shows" : "movies"}...
+            </div>
+          )}
+
+          {!isRecLoading && recommendations.length > 0 && (
+            <div className="space-y-3">
+              {recommendations.map((item) =>
+                renderSmallCard("Recommended", item, item.id)
+              )}
+            </div>
+          )}
         </section>
       )}
 
@@ -420,7 +519,6 @@ const OverviewPage = () => {
                   onClick={() => openDetails(item)}
                   className="flex w-full overflow-hidden text-left transition border border-gray-800 rounded-lg bg-gray-900/80 hover:border-yellow-500/80 hover:bg-gray-900"
                 >
-                  {/* Poster */}
                   <div className="flex-shrink-0 w-16 sm:w-20">
                     {item.poster_path ? (
                       <img
@@ -435,29 +533,24 @@ const OverviewPage = () => {
                     )}
                   </div>
 
-                  {/* Text-info */}
                   <div className="flex-1 px-3 py-2">
                     <div className="text-sm font-bold text-yellow-300 sm:text-base">
                       {(item.title || item.name || "").toUpperCase()}
                     </div>
                     <div className="mt-0.5 text-xs text-gray-300">
-                      {/* Rad 1: typ + år */}
                       <div>
                         {item.mediaType === "tv" ? "TV SHOW" : "MOVIE"}
                         {year && <> • {year}</>}
                       </div>
-
-                      {/* Rad 2: säsonger + betyg */}
                       <div>
                         {seasonsCount && (
                           <>
-                            {seasonsCount} SEASON{seasonsCount > 1 ? "S" : ""}{" "}
+                            {seasonsCount} SEASON
+                            {seasonsCount > 1 ? "S" : ""}{" "}
                           </>
                         )}
                         {rating && <> ⭐ {rating}</>}
                       </div>
-
-                      {/* Rad 3: genres (om du vill) */}
                       {item.genres && item.genres.length > 0 && (
                         <div className="mt-0.5 text-[10px] text-gray-400">
                           {item.genres.map((g) => g.name).join(" • ")}
