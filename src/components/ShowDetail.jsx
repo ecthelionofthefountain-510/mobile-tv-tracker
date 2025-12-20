@@ -389,7 +389,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   return (
     <div className="min-h-screen p-4 pb-20 bg-gray-900">
       {/* Header with progress bar */}
-      <div className="sticky top-0 z-20 pt-2 pb-4 bg-gray-900/95 backdrop-blur-sm">
+      <div className="sticky top-0 z-20 pt-2 pb-4 bg-gray-900">
         <div className="flex items-center justify-between mb-3">
           <button
             onClick={handleBack}

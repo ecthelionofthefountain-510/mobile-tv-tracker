@@ -6,6 +6,7 @@ import SwipeableShowCard from "./SwipeableShowCard";
 import ShowDetailModal from "./ShowDetailModal";
 import BackupControls from "./BackupControls";
 import { useWatchedList } from "../hooks/useWatchedList";
+import { cachedFetchJson } from "../utils/tmdbCache";
 
 // ev. SwipeInfoToast om du har den
 // import SwipeInfoToast from "./SwipeInfoToast";
@@ -120,14 +121,16 @@ const ShowsList = () => {
   const fetchShowDetails = async (showId) => {
     try {
       const [details, credits, videos] = await Promise.all([
-        fetch(`${TMDB_BASE_URL}/tv/${showId}?api_key=${API_KEY}`).then((res) =>
-          res.json()
+        cachedFetchJson(`${TMDB_BASE_URL}/tv/${showId}?api_key=${API_KEY}`, {
+          ttlMs: 6 * 60 * 60 * 1000,
+        }),
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/tv/${showId}/credits?api_key=${API_KEY}`,
+          { ttlMs: 24 * 60 * 60 * 1000 }
         ),
-        fetch(`${TMDB_BASE_URL}/tv/${showId}/credits?api_key=${API_KEY}`).then(
-          (res) => res.json()
-        ),
-        fetch(`${TMDB_BASE_URL}/tv/${showId}/videos?api_key=${API_KEY}`).then(
-          (res) => res.json()
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/tv/${showId}/videos?api_key=${API_KEY}`,
+          { ttlMs: 24 * 60 * 60 * 1000 }
         ),
       ]);
       setShowDetails({ ...details, credits, videos });
@@ -143,9 +146,10 @@ const ShowsList = () => {
 
   const handleShowSelect = async (show) => {
     try {
-      const details = await fetch(
-        `${TMDB_BASE_URL}/tv/${show.id}?api_key=${API_KEY}`
-      ).then((res) => res.json());
+      const details = await cachedFetchJson(
+        `${TMDB_BASE_URL}/tv/${show.id}?api_key=${API_KEY}`,
+        { ttlMs: 6 * 60 * 60 * 1000 }
+      );
       setSelectedShow({ ...show, ...details });
     } catch (err) {
       console.error("Kunde inte hämta show-detaljer", err);
@@ -207,9 +211,9 @@ const ShowsList = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 pb-20">
+    <div className="min-h-screen p-4 pb-20 bg-gray-900">
       {/* Search */}
-      <div className="sticky top-0 z-10 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900/95 backdrop-blur-md">
+      <div className="sticky top-0 z-20 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900">
         <div className="p-1">
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">

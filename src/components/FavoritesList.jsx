@@ -265,9 +265,9 @@ const FavoritesList = () => {
   };
 
   return (
-    <div className="min-h-screen p-4 pb-20">
+    <div className="min-h-screen p-4 pb-20 bg-gray-900">
       {/* Header with search section - enhanced background */}
-      <div className="sticky top-0 z-10 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900/95 backdrop-blur-md ">
+      <div className="sticky top-0 z-20 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900">
         <div className="p-1">
           {/* Search input */}
           <div className="flex items-center space-x-2">

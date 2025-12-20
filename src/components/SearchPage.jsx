@@ -420,30 +420,30 @@ const SearchPage = () => {
     return (
       <div
         key={`${item.mediaType}-${item.id}`}
-        className="mb-4 relative overflow-hidden rounded-lg border border-yellow-900/30 group cursor-pointer"
+        className="relative mb-4 overflow-hidden border rounded-lg cursor-pointer border-yellow-900/30 group"
         onClick={() => viewDetails(item)}
       >
-        <div className="absolute inset-0 bg-gray-900/95" />
+        <div className="absolute inset-0 bg-gray-900" />
 
-        <div className="flex p-3 relative z-10">
-          <div className="w-24 h-36 flex-shrink-0">
+        <div className="relative z-10 flex p-3">
+          <div className="flex-shrink-0 w-24 h-36">
             {item.poster_path ? (
               <img
                 src={`${IMAGE_BASE_URL}${item.poster_path}`}
                 alt={item.title || item.name}
-                className="w-full h-full object-cover rounded-md shadow-lg border-2 border-yellow-600/30"
+                className="object-cover w-full h-full border-2 rounded-md shadow-lg border-yellow-600/30"
               />
             ) : (
-              <div className="w-full h-full rounded-md bg-gray-800 border-2 border-yellow-600/30" />
+              <div className="w-full h-full bg-gray-800 border-2 rounded-md border-yellow-600/30" />
             )}
           </div>
 
-          <div className="ml-4 flex-1">
-            <h3 className="text-xl font-bold text-yellow-400 mb-1">
+          <div className="flex-1 min-w-0 ml-4">
+            <h3 className="mb-1 text-xl font-bold text-yellow-400 truncate">
               {item.title || item.name}
             </h3>
 
-            <div className="text-sm text-yellow-300/70 mb-1">
+            <div className="mb-1 text-sm text-yellow-300/70">
               {item.mediaType === "tv" ? "TV SERIES" : "MOVIE"}
             </div>
 
@@ -526,9 +526,9 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="min-h-screen p-4 pb-20">
+    <div className="min-h-screen p-4 pb-20 bg-gray-900">
       {showToast && (
-        <div className="fixed left-1/2 bottom-24 z-50 -translate-x-1/2">
+        <div className="fixed z-50 -translate-x-1/2 left-1/2 bottom-24">
           <button
             type="button"
             onClick={() => setShowToast(false)}
@@ -539,7 +539,7 @@ const SearchPage = () => {
         </div>
       )}
 
-      <div className="sticky top-0 z-10 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900/95 backdrop-blur-md">
+      <div className="sticky top-0 z-20 mb-4 bg-gray-900 border border-gray-800 rounded-lg shadow-lg">
         <div className="p-1 space-y-3">
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">
@@ -613,7 +613,7 @@ const SearchPage = () => {
         </div>
       </div>
 
-      {isSearching ? (
+      {/* {isSearching ? (
         <div className="py-12 text-center text-yellow-400">Searching...</div>
       ) : results.length > 0 ? (
         <div className="space-y-4">{results.map(renderContentItem)}</div>
@@ -621,7 +621,7 @@ const SearchPage = () => {
         <div className="py-10 text-center text-gray-400">
           Start typing to search for content.
         </div>
-      )}
+      )} */}
 
       {!query && (
         <div className="space-y-8">

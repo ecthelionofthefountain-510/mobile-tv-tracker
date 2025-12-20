@@ -110,12 +110,12 @@ const ShowCard = ({
 
   return (
     <div
-      className={`relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg cursor-pointer bg-gray-800/90 border-yellow-900/30 hover:bg-gray-700/90 ring-1 ring-inset ${ringClass}`}
+      className={`relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg cursor-pointer bg-gray-800 border-yellow-900/30 hover:bg-gray-700 ring-1 ring-inset ${ringClass}`}
       onClick={onSelect ? () => onSelect(displayItem) : undefined}
     >
-      <div className="flex h-32 sm:h-40">
+      <div className="flex">
         <div
-          className="flex-shrink-0 w-24 h-full sm:w-28"
+          className="flex-shrink-0 w-24 self-stretch min-h-[8rem] sm:w-28 sm:min-h-[10rem]"
           onClick={(e) => {
             e.stopPropagation(); // Hindra att kortets onClick triggas
             if (onShowInfo) onShowInfo(displayItem);
