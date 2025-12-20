@@ -4,6 +4,7 @@ import NotificationModal from "./NotificationModal";
 import CongratsToast from "./CongratsToast";
 import ReactConfetti from "react-confetti";
 import { useWindowSize } from "react-use"; // valfritt, för att få rätt storlek
+import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 
 const ShowDetail = ({ show, onBack, onRemove }) => {
   const [seasons, setSeasons] = useState(show.seasons || {});
@@ -12,7 +13,10 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
   const [sortOption, setSortOption] = useState("episode_asc");
-  const [notification, setNotification] = useState({ show: false, message: "" });
+  const [notification, setNotification] = useState({
+    show: false,
+    message: "",
+  });
   const [stats, setStats] = useState({ total: 0, watched: 0 });
   const [hasChanges, setHasChanges] = useState(false);
   const [sortBy, setSortBy] = useState("title"); // "title" eller "dateAdded"
@@ -31,28 +35,30 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   // Save changes to localStorage whenever seasons data changes
   useEffect(() => {
     if (hasChanges) {
-      saveChangesToStorage();
+      void saveChangesToStorage();
     }
   }, [seasons, hasChanges]);
 
   // Load progress from localStorage on mount
   useEffect(() => {
-    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
-    const found = allWatched.find(item => item.id === show.id);
-    if (found && found.seasons) {
-      setSeasons(found.seasons);
-    }
+    (async () => {
+      const allWatched = await loadWatchedAll();
+      const found = allWatched.find((item) => item.id === show.id);
+      if (found && found.seasons) {
+        setSeasons(found.seasons);
+      }
+    })();
   }, [show.id]);
 
   // Function to save changes to localStorage
-  const saveChangesToStorage = useCallback(() => {
+  const saveChangesToStorage = useCallback(async () => {
     console.log("Saving changes to storage");
-    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
+    const allWatched = await loadWatchedAll();
 
     // Räkna totala episoder och sedda episoder för att avgöra "completed"
     let totalEpisodes = 0;
     let watchedCount = 0;
-    Object.keys(episodesData).forEach(seasonNum => {
+    Object.keys(episodesData).forEach((seasonNum) => {
       const episodesList = episodesData[seasonNum] || [];
       totalEpisodes += episodesList.length;
       const watchedEpisodes = seasons[seasonNum]?.watchedEpisodes || [];
@@ -60,26 +66,26 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     });
     const isCompleted = totalEpisodes > 0 && watchedCount === totalEpisodes;
 
-    const updatedWatched = allWatched.map(item => {
+    const updatedWatched = allWatched.map((item) => {
       if (item.id === show.id) {
         return {
           ...item,
           seasons: seasons,
-          completed: isCompleted
+          completed: isCompleted,
         };
       }
       return item;
     });
-    localStorage.setItem("watched", JSON.stringify(updatedWatched));
+    await saveWatchedAll(updatedWatched);
     setHasChanges(false);
   }, [seasons, show.id, episodesData]);
 
   // Modified onBack handler to ensure changes are saved
   const handleBack = () => {
     if (hasChanges) {
-      saveChangesToStorage();
+      void saveChangesToStorage();
     }
-    
+
     // Trigger the onBack callback to navigate back
     onBack();
   };
@@ -88,15 +94,15 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const calculateStats = () => {
     let totalEpisodes = 0;
     let watchedCount = 0;
-    
-    Object.keys(episodesData).forEach(seasonNum => {
+
+    Object.keys(episodesData).forEach((seasonNum) => {
       const episodesList = episodesData[seasonNum] || [];
       totalEpisodes += episodesList.length;
-      
+
       const watchedEpisodes = seasons[seasonNum]?.watchedEpisodes || [];
       watchedCount += watchedEpisodes.length;
     });
-    
+
     setStats({ total: totalEpisodes, watched: watchedCount });
   };
 
@@ -106,12 +112,12 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       try {
         setIsLoading(true);
         setLoadingText("Loading all seasons...");
-        
+
         const promises = [];
         for (let i = 1; i <= show.number_of_seasons; i++) {
           promises.push(fetchSeasonEpisodes(i));
         }
-        
+
         await Promise.all(promises);
         setIsLoading(false);
       } catch (error) {
@@ -120,7 +126,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
         showNotification("Failed to load all seasons. Please try again.");
       }
     };
-    
+
     fetchAllSeasons();
   }, [show.id]);
 
@@ -128,7 +134,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const showNotification = (message) => {
     setNotification({
       show: true,
-      message
+      message,
     });
   };
 
@@ -136,7 +142,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const closeNotification = () => {
     setNotification({
       show: false,
-      message: ""
+      message: "",
     });
   };
 
@@ -146,18 +152,18 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       const response = await fetch(
         `${TMDB_BASE_URL}/tv/${show.id}/season/${seasonNumber}?api_key=${API_KEY}`
       );
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch season ${seasonNumber}`);
       }
-      
+
       const data = await response.json();
-      
-      setEpisodesData(prev => ({
+
+      setEpisodesData((prev) => ({
         ...prev,
-        [seasonNumber]: data.episodes
+        [seasonNumber]: data.episodes,
       }));
-      
+
       return data;
     } catch (error) {
       console.error(`Error fetching season ${seasonNumber} episodes:`, error);
@@ -173,14 +179,18 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   // Get sorted episodes based on current sort option
   const getSortedEpisodes = (episodes) => {
     if (!episodes) return [];
-    
+
     const sortedEpisodes = [...episodes];
-    
+
     switch (sortOption) {
       case "episode_asc":
-        return sortedEpisodes.sort((a, b) => a.episode_number - b.episode_number);
+        return sortedEpisodes.sort(
+          (a, b) => a.episode_number - b.episode_number
+        );
       case "episode_desc":
-        return sortedEpisodes.sort((a, b) => b.episode_number - a.episode_number);
+        return sortedEpisodes.sort(
+          (a, b) => b.episode_number - a.episode_number
+        );
       case "name_asc":
         return sortedEpisodes.sort((a, b) => a.name.localeCompare(b.name));
       case "name_desc":
@@ -190,9 +200,13 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       case "rating_desc":
         return sortedEpisodes.sort((a, b) => b.vote_average - a.vote_average);
       case "air_date_asc":
-        return sortedEpisodes.sort((a, b) => new Date(a.air_date || 0) - new Date(b.air_date || 0));
+        return sortedEpisodes.sort(
+          (a, b) => new Date(a.air_date || 0) - new Date(b.air_date || 0)
+        );
       case "air_date_desc":
-        return sortedEpisodes.sort((a, b) => new Date(b.air_date || 0) - new Date(a.air_date || 0));
+        return sortedEpisodes.sort(
+          (a, b) => new Date(b.air_date || 0) - new Date(a.air_date || 0)
+        );
       default:
         return sortedEpisodes;
     }
@@ -217,54 +231,61 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     if (!episodes || episodes.length === 0) return;
 
     const currentSeason = seasons[seasonNumber] || { watchedEpisodes: [] };
-    const allEpisodes = episodes.map(ep => ep.episode_number);
-    const isAllWatched = allEpisodes.every(epNum => 
+    const allEpisodes = episodes.map((ep) => ep.episode_number);
+    const isAllWatched = allEpisodes.every((epNum) =>
       currentSeason.watchedEpisodes?.includes(epNum)
     );
 
     updateSeasonsInState(seasonNumber, isAllWatched ? [] : allEpisodes);
   };
-  
+
   // Toggle episodes with filter
-  const toggleFilteredEpisodes = async (seasonNumber, episodes, watched, filter) => {
+  const toggleFilteredEpisodes = async (
+    seasonNumber,
+    episodes,
+    watched,
+    filter
+  ) => {
     const currentSeason = seasons[seasonNumber] || { watchedEpisodes: [] };
     let updatedWatchedEpisodes = new Set(currentSeason.watchedEpisodes || []);
-    
+
     // Filter episodes based on criteria
     let targetEpisodes = [];
     switch (filter) {
       case "all":
-        targetEpisodes = episodes.map(ep => ep.episode_number);
+        targetEpisodes = episodes.map((ep) => ep.episode_number);
         break;
       case "first-half":
         const midpoint = Math.ceil(episodes.length / 2);
-        targetEpisodes = episodes.slice(0, midpoint).map(ep => ep.episode_number);
+        targetEpisodes = episodes
+          .slice(0, midpoint)
+          .map((ep) => ep.episode_number);
         break;
       case "second-half":
         const mid = Math.ceil(episodes.length / 2);
-        targetEpisodes = episodes.slice(mid).map(ep => ep.episode_number);
+        targetEpisodes = episodes.slice(mid).map((ep) => ep.episode_number);
         break;
       case "unseen":
         targetEpisodes = episodes
-          .filter(ep => !updatedWatchedEpisodes.has(ep.episode_number))
-          .map(ep => ep.episode_number);
+          .filter((ep) => !updatedWatchedEpisodes.has(ep.episode_number))
+          .map((ep) => ep.episode_number);
         break;
       case "seen":
         targetEpisodes = episodes
-          .filter(ep => updatedWatchedEpisodes.has(ep.episode_number))
-          .map(ep => ep.episode_number);
+          .filter((ep) => updatedWatchedEpisodes.has(ep.episode_number))
+          .map((ep) => ep.episode_number);
         break;
       default:
-        targetEpisodes = episodes.map(ep => ep.episode_number);
+        targetEpisodes = episodes.map((ep) => ep.episode_number);
     }
-    
+
     // Update the watched status
     if (watched) {
-      targetEpisodes.forEach(epNum => updatedWatchedEpisodes.add(epNum));
+      targetEpisodes.forEach((epNum) => updatedWatchedEpisodes.add(epNum));
     } else {
-      targetEpisodes.forEach(epNum => updatedWatchedEpisodes.delete(epNum));
+      targetEpisodes.forEach((epNum) => updatedWatchedEpisodes.delete(epNum));
     }
-    
+
     updateSeasonsInState(seasonNumber, Array.from(updatedWatchedEpisodes));
   };
 
@@ -272,32 +293,34 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const markAllSeasonsAs = async (watched) => {
     try {
       setIsLoading(true);
-      setLoadingText(`Marking all episodes as ${watched ? 'watched' : 'unwatched'}...`);
-      
+      setLoadingText(
+        `Marking all episodes as ${watched ? "watched" : "unwatched"}...`
+      );
+
       const updatedSeasons = {};
-      
+
       // Process each season
       for (let i = 1; i <= show.number_of_seasons; i++) {
         // Make sure we have the episodes data
         if (!episodesData[i]) {
           await fetchSeasonEpisodes(i);
         }
-        
+
         const episodes = episodesData[i] || [];
-        
+
         if (watched) {
           // Mark all as watched
           updatedSeasons[i] = {
-            watchedEpisodes: episodes.map(ep => ep.episode_number)
+            watchedEpisodes: episodes.map((ep) => ep.episode_number),
           };
         } else {
           // Mark all as unwatched
           updatedSeasons[i] = {
-            watchedEpisodes: []
+            watchedEpisodes: [],
           };
         }
       }
-      
+
       // Update state
       setSeasons(updatedSeasons);
       setHasChanges(true);
@@ -310,7 +333,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       setIsLoading(false);
     }
   };
-  
+
   // Helper to update seasons in state (and mark that changes exist)
   const updateSeasonsInState = (seasonNumber, watchedEpisodes) => {
     // Update local state
@@ -318,10 +341,10 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       ...seasons,
       [seasonNumber]: {
         ...seasons[seasonNumber],
-        watchedEpisodes
-      }
+        watchedEpisodes,
+      },
     };
-    
+
     setSeasons(updatedSeasons);
     setHasChanges(true); // <-- Viktigt!
   };
@@ -333,8 +356,8 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
         a.title.toLowerCase().localeCompare(b.title.toLowerCase())
       );
     } else if (sortBy === "dateAdded") {
-      return [...movies].sort((a, b) =>
-        new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0)
+      return [...movies].sort(
+        (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0)
       );
     }
     return movies;
@@ -342,10 +365,12 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
   // When loading movies
   useEffect(() => {
-    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
-    const movies = allWatched.filter(item => item.mediaType === "movie");
-    setWatchedMovies(sortMovies(movies, sortBy));
-    setFilteredMovies(sortMovies(movies, sortBy));
+    (async () => {
+      const allWatched = await loadWatchedAll();
+      const movies = allWatched.filter((item) => item.mediaType === "movie");
+      setWatchedMovies(sortMovies(movies, sortBy));
+      setFilteredMovies(sortMovies(movies, sortBy));
+    })();
   }, [sortBy]);
 
   const handleSearch = (e) => {
@@ -354,7 +379,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
     let filtered = watchedMovies;
     if (value.trim() !== "") {
-      filtered = watchedMovies.filter(movie =>
+      filtered = watchedMovies.filter((movie) =>
         movie.title.toLowerCase().includes(value.toLowerCase())
       );
     }
@@ -382,23 +407,31 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
             Remove
           </button>
         </div>
-        
+
         {/* Overall progress bar */}
         <div className="mb-4">
           <div className="flex justify-between mb-1 text-sm">
-            <span className="text-gray-300">Overall Progress</span>
+            <span className="text-gray-300">Episodes</span>
             <span className="text-yellow-400">
-              {stats.watched}/{stats.total} ({stats.total > 0 ? Math.round((stats.watched / stats.total) * 100) : 0}%)
+              {stats.watched}/{stats.total} (
+              {stats.total > 0
+                ? Math.round((stats.watched / stats.total) * 100)
+                : 0}
+              %)
             </span>
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2.5">
-            <div 
-              className="bg-yellow-500 h-2.5 rounded-full" 
-              style={{ width: `${stats.total > 0 ? (stats.watched / stats.total) * 100 : 0}%` }}
+            <div
+              className="bg-yellow-500 h-2.5 rounded-full"
+              style={{
+                width: `${
+                  stats.total > 0 ? (stats.watched / stats.total) * 100 : 0
+                }%`,
+              }}
             ></div>
           </div>
         </div>
-        
+
         {/* Global actions - optimized for small screens */}
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
@@ -415,7 +448,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
               MARK ALL UNWATCHED
             </button>
           </div>
-          
+
           {/* Sort options */}
           <select
             value={sortOption}
@@ -433,7 +466,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           </select>
         </div>
       </div>
-      
+
       {/* Seasons list */}
       <div className="space-y-4">
         {[...Array(show.number_of_seasons)].map((_, idx) => {
@@ -444,16 +477,19 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           const watchedCount = season.watchedEpisodes?.length || 0;
           const totalEpisodes = episodes.length || 0;
           const isExpanded = expandedSeason === seasonNumber;
-          const progressPercent = totalEpisodes > 0 ? (watchedCount / totalEpisodes) * 100 : 0;
+          const progressPercent =
+            totalEpisodes > 0 ? (watchedCount / totalEpisodes) * 100 : 0;
 
           return (
-            <div key={seasonNumber} className="overflow-hidden border rounded-lg border-yellow-900/20 bg-gray-800/40">
+            <div
+              key={seasonNumber}
+              className="overflow-hidden border rounded-lg border-yellow-900/20 bg-gray-800/40"
+            >
               {/* Season header */}
-              <div 
+              <div
                 onClick={() => toggleSeason(seasonNumber)}
                 className="p-3 transition-colors cursor-pointer bg-gray-800/90 hover:bg-gray-700/90"
               >
-                
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
                     <span className="mr-2 font-medium text-yellow-400">
@@ -471,24 +507,24 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                       }}
                       className={`px-2 py-1 text-xs rounded-md border ${
                         watchedCount === totalEpisodes && totalEpisodes > 0
-                          ? 'bg-green-600 text-white border-green-700'
-                          : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
+                          ? "bg-green-600 text-white border-green-700"
+                          : "bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600"
                       }`}
                     >
                       {watchedCount === totalEpisodes && totalEpisodes > 0
-                        ? 'Watched'
-                        : 'Mark All'}
+                        ? "Watched"
+                        : "Mark All"}
                     </button>
                     <span className="text-yellow-400 transition-transform duration-300 transform">
-                      {isExpanded ? '▼' : '▶'}
+                      {isExpanded ? "▼" : "▶"}
                     </span>
                   </div>
                 </div>
-                
+
                 {/* Progress bar */}
                 <div className="w-full bg-gray-700 rounded-full h-1.5">
-                  <div 
-                    className="bg-yellow-500 h-1.5 rounded-full transition-all duration-500" 
+                  <div
+                    className="bg-yellow-500 h-1.5 rounded-full transition-all duration-500"
                     style={{ width: `${progressPercent}%` }}
                   ></div>
                 </div>
@@ -499,46 +535,64 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                 <div className="p-3 bg-gray-800/50">
                   {/* Simplified batch operations - optimized for mobile with separated controls */}
                   <div className="flex justify-between mb-3">
-                    <button 
-                      onClick={() => toggleFilteredEpisodes(seasonNumber, episodes, true, "unseen")}
+                    <button
+                      onClick={() =>
+                        toggleFilteredEpisodes(
+                          seasonNumber,
+                          episodes,
+                          true,
+                          "unseen"
+                        )
+                      }
                       className="px-2 py-1 text-xs text-white rounded-md bg-green-700/70 hover:bg-green-700"
                     >
                       Mark Unseen
                     </button>
-                    <button 
-                      onClick={() => toggleFilteredEpisodes(seasonNumber, episodes, false, "seen")}
+                    <button
+                      onClick={() =>
+                        toggleFilteredEpisodes(
+                          seasonNumber,
+                          episodes,
+                          false,
+                          "seen"
+                        )
+                      }
                       className="px-2 py-1 text-xs text-white rounded-md bg-gray-700/70 hover:bg-gray-700"
                     >
                       Unmark Seen
                     </button>
                   </div>
-                  
+
                   {/* Episodes grid for larger screens, list for mobile */}
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {sortedEpisodes.map(episode => {
-                      const isWatched = season.watchedEpisodes?.includes(episode.episode_number);
-                      const airDate = episode.air_date ? new Date(episode.air_date) : null;
-                      
+                    {sortedEpisodes.map((episode) => {
+                      const isWatched = season.watchedEpisodes?.includes(
+                        episode.episode_number
+                      );
+                      const airDate = episode.air_date
+                        ? new Date(episode.air_date)
+                        : null;
+
                       return (
-                        <div 
+                        <div
                           key={episode.id}
                           className={`p-3 rounded-md flex items-center justify-between cursor-pointer ${
-                            isWatched 
-                              ? 'bg-green-800/20 border border-green-800/30' 
-                              : 'bg-gray-700/30 border border-gray-700/30'
+                            isWatched
+                              ? "bg-green-800/20 border border-green-800/30"
+                              : "bg-gray-700/30 border border-gray-700/30"
                           }`}
                           onClick={() => setSelectedEpisode(episode)}
                         >
                           <div className="flex items-center space-x-3">
                             {/* Episode Image (if available) */}
                             {episode.still_path && (
-                              <img 
-                                src={`${IMAGE_BASE_URL}${episode.still_path}`} 
+                              <img
+                                src={`${IMAGE_BASE_URL}${episode.still_path}`}
                                 alt={episode.name}
                                 className="object-cover w-12 h-8 border-0 rounded"
                               />
                             )}
-                            
+
                             <div>
                               <div className="text-sm text-yellow-400">
                                 Episode {episode.episode_number}
@@ -548,7 +602,9 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm font-medium text-gray-300">{episode.name}</div>
+                              <div className="text-sm font-medium text-gray-300">
+                                {episode.name}
+                              </div>
                               {airDate && (
                                 <div className="text-xs text-gray-400">
                                   {airDate.toLocaleDateString()}
@@ -556,7 +612,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                               )}
                             </div>
                           </div>
-                          
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation(); // <-- hindra att onClick på raden körs
@@ -567,9 +623,9 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                               );
                             }}
                             className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              isWatched 
-                                ? 'bg-green-600 hover:bg-green-700' 
-                                : 'bg-gray-600 hover:bg-gray-700'
+                              isWatched
+                                ? "bg-green-600 hover:bg-green-700"
+                                : "bg-gray-600 hover:bg-gray-700"
                             }`}
                           >
                             {isWatched && <span className="text-white">✓</span>}
@@ -584,7 +640,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           );
         })}
       </div>
-      
+
       {/* Loading Indicator */}
       {isLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
@@ -594,7 +650,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           </div>
         </div>
       )}
-      
+
       {/* Notification Modal - only used for errors now */}
       {notification.show && (
         <NotificationModal
@@ -619,7 +675,8 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
               {selectedEpisode.name}
             </h3>
             <div className="mb-2 text-gray-400">
-              Säsong {selectedEpisode.season_number}, Avsnitt {selectedEpisode.episode_number}
+              Säsong {selectedEpisode.season_number}, Avsnitt{" "}
+              {selectedEpisode.episode_number}
             </div>
             {selectedEpisode.still_path && (
               <img
@@ -638,7 +695,8 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
             )}
             {selectedEpisode.air_date && (
               <div className="text-xs text-gray-400">
-                Sändes: {new Date(selectedEpisode.air_date).toLocaleDateString()}
+                Sändes:{" "}
+                {new Date(selectedEpisode.air_date).toLocaleDateString()}
               </div>
             )}
           </div>
@@ -649,7 +707,12 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       {showCongrats && (
         <>
           <CongratsToast onClose={() => setShowCongrats(false)} />
-          <ReactConfetti width={width} height={height} numberOfPieces={180} recycle={false} />
+          <ReactConfetti
+            width={width}
+            height={height}
+            numberOfPieces={180}
+            recycle={false}
+          />
         </>
       )}
     </div>

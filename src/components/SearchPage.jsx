@@ -6,6 +6,7 @@ import ShowDetailModal from "./ShowDetailModal";
 
 import { createWatchedShow, createWatchedMovie } from "../utils/watchedMapper";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+import { cachedFetchJson } from "../utils/tmdbCache";
 
 const genreMap = {
   28: "Action",
@@ -286,22 +287,54 @@ const SearchPage = () => {
           item.number_of_seasons ?? base.number_of_seasons;
         let finalSeasons = base.seasons;
 
-        if (!numberOfSeasons) {
+        // För progress i listvyn: säkerställ att vi sparar totalavsnitt om möjligt
+        if (
+          typeof base.number_of_episodes !== "number" ||
+          base.number_of_episodes <= 0
+        ) {
+          if (
+            typeof item.number_of_episodes === "number" &&
+            item.number_of_episodes > 0
+          ) {
+            base.number_of_episodes = item.number_of_episodes;
+          }
+        }
+
+        const needsDetailsFetch =
+          !numberOfSeasons ||
+          typeof base.number_of_episodes !== "number" ||
+          base.number_of_episodes <= 0;
+
+        let tvDetails = null;
+        if (needsDetailsFetch) {
           const detailsResponse = await fetch(
             `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
           );
-          const tvDetails = await detailsResponse.json();
+          tvDetails = await detailsResponse.json();
+        }
+
+        if (!numberOfSeasons) {
+          const seasonsCount = tvDetails?.number_of_seasons || 0;
           finalSeasons = {};
-          for (let i = 1; i <= tvDetails.number_of_seasons; i++) {
+          for (let i = 1; i <= seasonsCount; i++) {
             finalSeasons[i] = { watchedEpisodes: [] };
           }
-          base.number_of_seasons = tvDetails.number_of_seasons;
+          base.number_of_seasons = seasonsCount;
         } else {
           finalSeasons = {};
           for (let i = 1; i <= numberOfSeasons; i++) {
             finalSeasons[i] = { watchedEpisodes: [] };
           }
           base.number_of_seasons = numberOfSeasons;
+        }
+
+        if (
+          (typeof base.number_of_episodes !== "number" ||
+            base.number_of_episodes <= 0) &&
+          typeof tvDetails?.number_of_episodes === "number" &&
+          tvDetails.number_of_episodes > 0
+        ) {
+          base.number_of_episodes = tvDetails.number_of_episodes;
         }
 
         base.seasons = finalSeasons;
@@ -354,15 +387,18 @@ const SearchPage = () => {
 
     try {
       const [details, credits, videos] = await Promise.all([
-        fetch(
-          `${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`
-        ).then((res) => res.json()),
-        fetch(
-          `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`
-        ).then((res) => res.json()),
-        fetch(
-          `${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`
-        ).then((res) => res.json()),
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`,
+          { ttlMs: 6 * 60 * 60 * 1000 }
+        ),
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`,
+          { ttlMs: 24 * 60 * 60 * 1000 }
+        ),
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`,
+          { ttlMs: 24 * 60 * 60 * 1000 }
+        ),
       ]);
       setItemDetails({ ...details, credits, videos });
     } catch (err) {
