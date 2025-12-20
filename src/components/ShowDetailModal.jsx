@@ -1,6 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 
-const ShowDetailModal = ({ show, onClose, onWatchedChanged }) => {
+const ShowDetailModal = ({
+  show,
+  onClose,
+  showActions = false,
+  isWatched = false,
+  isFavorited = false,
+  onAddToWatched,
+  onAddToFavorites,
+}) => {
   // Mock IMAGE_BASE_URL for demonstration
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
@@ -64,60 +72,6 @@ const ShowDetailModal = ({ show, onClose, onWatchedChanged }) => {
 
   const displayShow = show || mockShow;
 
-  // Ta episodes från displayShow (anpassa om din datastruktur är annorlunda)
-  const episodes = displayShow.episodes || [];
-
-  // Hantera watched-status per user+show i localStorage (enkel implementation)
-  const currentUser =
-    JSON.parse(localStorage.getItem("currentUser")) || "default";
-  const storageKey = `watched_${currentUser}_${
-    displayShow.id || displayShow.name
-  }`;
-  const [watchedSet, setWatchedSet] = useState(() => {
-    try {
-      const raw = JSON.parse(localStorage.getItem(storageKey)) || [];
-      return new Set(raw);
-    } catch {
-      return new Set();
-    }
-  });
-
-  useEffect(() => {
-    // spara som array i localStorage när watchedSet ändras
-    localStorage.setItem(storageKey, JSON.stringify(Array.from(watchedSet)));
-  }, [watchedSet, storageKey]);
-
-  const isEpisodeWatched = (ep) => watchedSet.has(ep.id);
-  const toggleEpisodeWatched = (ep) => {
-    setWatchedSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(ep.id)) next.delete(ep.id);
-      else next.add(ep.id);
-      return next;
-    });
-  };
-
-  const markAllWatched = () => {
-    const allWatched = JSON.parse(localStorage.getItem("watched")) || [];
-    const idx = allWatched.findIndex((s) => s.id === show.id);
-    if (idx !== -1) {
-      // uppdatera episodes/flagga enligt din datastruktur
-      allWatched[idx] = {
-        ...allWatched[idx],
-        completed: true,
-        // exempel: markera alla episoder watched om du sparar dem
-        seasons:
-          allWatched[idx].seasons?.map((season) => ({
-            ...season,
-            episodes:
-              season.episodes?.map((ep) => ({ ...ep, watched: true })) || [],
-          })) || allWatched[idx].seasons,
-      };
-      localStorage.setItem("watched", JSON.stringify(allWatched));
-      onWatchedChanged && onWatchedChanged();
-    }
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-0 bg-black bg-opacity-75 sm:p-4"
@@ -159,7 +113,7 @@ const ShowDetailModal = ({ show, onClose, onWatchedChanged }) => {
             </button>
           </div>
         )}
-        <div className="relative z-10 flex justify-center mb-4 -mt-16">
+        <div className="relative z-10 flex flex-col items-center mb-4 -mt-16">
           <img
             src={
               displayShow.poster_path
@@ -169,6 +123,40 @@ const ShowDetailModal = ({ show, onClose, onWatchedChanged }) => {
             alt={displayShow.title || displayShow.name}
             className="bg-gray-900 border-2 rounded-md shadow-lg w-28 sm:w-32 md:w-40 border-yellow-600/30"
           />
+
+          {showActions && (
+            <div className="flex gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => onAddToWatched?.(displayShow)}
+                disabled={!onAddToWatched}
+                className={`px-3 py-2 text-xs font-semibold rounded transition
+                  ${
+                    isWatched
+                      ? "bg-green-600 text-white cursor-default"
+                      : "bg-yellow-500 text-gray-900 hover:bg-yellow-600"
+                  }
+                `}
+              >
+                {isWatched ? "Remove Watched" : "Add to Watched"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onAddToFavorites?.(displayShow)}
+                disabled={!onAddToFavorites}
+                className={`px-3 py-2 text-xs font-semibold rounded transition
+                  ${
+                    isFavorited
+                      ? "bg-yellow-400 text-gray-900 cursor-default"
+                      : "bg-gray-700 text-yellow-400 hover:bg-yellow-600 hover:text-gray-900"
+                  }
+                `}
+              >
+                {isFavorited ? "Unfavorite" : "Favorite"}
+              </button>
+            </div>
+          )}
         </div>
         <div className="px-6 mt-2 text-left">
           <h2 className="mb-1 text-3xl font-bold text-yellow-400">
@@ -224,46 +212,6 @@ const ShowDetailModal = ({ show, onClose, onWatchedChanged }) => {
                 Overview
               </h3>
               <p className="text-gray-300">{displayShow.overview}</p>
-            </div>
-          )}
-          {episodes.length > 0 && (
-            <div className="mb-4">
-              <h3 className="mb-2 text-lg font-semibold text-yellow-400">
-                Episodes
-              </h3>
-              <div className="space-y-2">
-                {episodes.map((ep) => (
-                  <div
-                    key={ep.id}
-                    className="flex items-center justify-between p-2 rounded cursor-pointer episode-row hover:bg-gray-700"
-                    onClick={() => openEpisodeModal?.(ep)} // använd din befintliga öppna-funktion
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={isEpisodeWatched(ep)}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          toggleEpisodeWatched(ep);
-                        }}
-                        className="w-4 h-4"
-                      />
-                      <div>
-                        <div className="font-medium text-gray-200">
-                          {ep.name}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {ep.air_date}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-400">
-                      {/* runtime el. nummer */}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
           {displayShow.credits && displayShow.credits.cast && (

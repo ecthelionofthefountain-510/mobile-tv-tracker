@@ -1,6 +1,14 @@
 import React, { useRef } from "react";
 
-const MovieDetailModal = ({ movie, onClose }) => {
+const MovieDetailModal = ({
+  movie,
+  onClose,
+  showActions = false,
+  isWatched = false,
+  isFavorited = false,
+  onAddToWatched,
+  onAddToFavorites,
+}) => {
   // Mock IMAGE_BASE_URL for demonstration
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
@@ -57,7 +65,7 @@ const MovieDetailModal = ({ movie, onClose }) => {
     },
   };
 
-  const displayMovie = movie || mockMovie;
+  const displayMovie = movie ?? mockMovie;
 
   return (
     <div
@@ -103,7 +111,7 @@ const MovieDetailModal = ({ movie, onClose }) => {
         )}
 
         {/* Poster centrerad */}
-        <div className="relative z-10 flex justify-center mb-4 -mt-16">
+        <div className="relative z-10 flex flex-col items-center mb-4 -mt-16">
           <img
             src={
               displayMovie.poster_path
@@ -113,6 +121,40 @@ const MovieDetailModal = ({ movie, onClose }) => {
             alt={displayMovie.title}
             className="bg-gray-900 border-2 rounded-md shadow-lg w-28 sm:w-32 md:w-40 border-yellow-600/30"
           />
+
+          {showActions && (
+            <div className="flex gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => onAddToWatched?.(displayMovie)}
+                disabled={!onAddToWatched}
+                className={`px-3 py-2 text-xs font-semibold rounded transition
+                  ${
+                    isWatched
+                      ? "bg-green-600 text-white cursor-default"
+                      : "bg-yellow-500 text-gray-900 hover:bg-yellow-600"
+                  }
+                `}
+              >
+                {isWatched ? "Remove Watched" : "Add to Watched"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onAddToFavorites?.(displayMovie)}
+                disabled={!onAddToFavorites}
+                className={`px-3 py-2 text-xs font-semibold rounded transition
+                  ${
+                    isFavorited
+                      ? "bg-yellow-400 text-gray-900 cursor-default"
+                      : "bg-gray-700 text-yellow-400 hover:bg-yellow-600 hover:text-gray-900"
+                  }
+                `}
+              >
+                {isFavorited ? "Unfavorite" : "Favorite"}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* All info/text under postern */}

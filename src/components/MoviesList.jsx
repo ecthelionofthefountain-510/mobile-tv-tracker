@@ -125,12 +125,6 @@ const MoviesList = () => {
     await removeMovie(movie.id);
   };
 
-  // Just nu har du nog ändå aldrig “lägg tillbaka i watched” från movies,
-  // så vi behåller en enkel placeholder här.
-  const addToWatched = (movie) => {
-    alert(`"${movie.title}" is already in your watched list.`);
-  };
-
   const moviesCount = watchedMoviesRaw.length;
 
   return (
@@ -165,9 +159,7 @@ const MoviesList = () => {
               )}
             </div>
             <button
-              onClick={() =>
-                handleSearch({ target: { value: searchTerm } })
-              }
+              onClick={() => handleSearch({ target: { value: searchTerm } })}
               className="p-2 font-bold text-gray-900 transition duration-300 bg-yellow-500 rounded-md hover:bg-yellow-600"
             >
               GO!
@@ -206,7 +198,6 @@ const MoviesList = () => {
             movie={movie}
             onSelect={handleMovieSelect}
             onRemove={removeMovie}
-            onAddToWatched={addToWatched}
             onAddToFavorites={addToFavorites}
           />
         ))}

@@ -9,7 +9,7 @@
 /* 🌍 Anpassa sidan för mobil */
 body {
   @apply text-gray-300 bg-gray-900 font-lotr;
-  background-image: url('/img/background2.png');
+  background-image: url("/img/background2.png");
   background-size: cover;
   background-attachment: fixed;
   background-position: center;
@@ -81,14 +81,18 @@ nav {
 
 .nav-text {
   @apply text-xs font-medium tracking-wide transition-all duration-300 opacity-90;
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
   letter-spacing: 0.03em;
 }
 
 /* Glow effect for icons */
 .nav-glow {
   @apply absolute transition-all duration-300 rounded-full opacity-0;
-  background: radial-gradient(circle, rgba(250, 204, 21, 0.3) 0%, rgba(250, 204, 21, 0) 70%);
+  background: radial-gradient(
+    circle,
+    rgba(250, 204, 21, 0.3) 0%,
+    rgba(250, 204, 21, 0) 70%
+  );
   height: 100%;
   width: 100%;
   top: 0;
@@ -146,17 +150,19 @@ nav {
   padding-bottom: 80px; /* Adjusted for the taller navbar */
 }
 
-/* Lägg till i head-taggen i index.html */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&display=swap');
-
 .font-cinzel {
-  font-family: 'Cinzel', serif;
+  font-family: "Cinzel", serif;
 }
 
 /* Animerad pulseffekt för trender-rubriken */
 @keyframes gentle-pulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Snygga animationer för sökresultat */
@@ -171,7 +177,9 @@ nav {
 
 /* Loading animation för trending-innehåll */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-spin {
@@ -180,8 +188,14 @@ nav {
 
 /* Fade-in animation för kort */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -191,9 +205,10 @@ nav {
 /* Stiliserad divider för sektioner */
 .divider {
   height: 1px;
-  background: linear-gradient(to right, 
-    transparent, 
-    rgba(217, 119, 6, 0.5), 
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(217, 119, 6, 0.5),
     transparent
   );
   margin: 1.5rem 0;
@@ -202,8 +217,8 @@ nav {
 /* Parchment-stil för tips-sektionen */
 .parchment {
   background-image: linear-gradient(
-    to bottom right, 
-    rgba(255, 251, 235, 0.05), 
+    to bottom right,
+    rgba(255, 251, 235, 0.05),
     rgba(120, 53, 15, 0.1)
   );
   border: 1px solid rgba(217, 119, 6, 0.2);
@@ -248,10 +263,12 @@ nav {
   background: transparent !important;
 }
 
-html, body, #root, .main-content {
+html,
+body,
+#root,
+.main-content {
   overflow-x: visible !important;
   overflow-y: visible !important;
   touch-action: pan-x pan-y !important;
   pointer-events: auto !important;
 }
-

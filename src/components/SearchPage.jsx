@@ -54,6 +54,20 @@ const SearchPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
 
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    if (!showToast) return;
+    const t = setTimeout(() => setShowToast(false), 2200);
+    return () => clearTimeout(t);
+  }, [showToast]);
+
+  const notify = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+  };
+
   const lastPopularFetchRef = useRef(0);
 
   // Ladda watched från gemensam storage när sidan laddas
@@ -240,18 +254,24 @@ const SearchPage = () => {
       setResults(combinedResults);
     } catch (error) {
       console.error("Error searching content:", error);
-      alert(`Search error: ${error.message}`);
+      notify(`Search error: ${error.message}`);
     } finally {
       setIsSearching(false);
     }
   };
 
-  const addToWatched = async (item, e) => {
-    e.stopPropagation();
+  const toggleWatched = async (item, e) => {
+    e?.stopPropagation?.();
 
     const allWatched = await loadWatchedAll();
     const alreadyExists = allWatched.some((w) => w.id === item.id);
-    if (alreadyExists) return;
+    if (alreadyExists) {
+      const updatedAll = allWatched.filter((w) => w.id !== item.id);
+      await saveWatchedAll(updatedAll);
+      setWatched(updatedAll);
+      notify(`"${item.title || item.name}" removed from watched.`);
+      return;
+    }
 
     let base;
     if (item.mediaType === "tv") {
@@ -293,16 +313,38 @@ const SearchPage = () => {
     const updatedAll = [...allWatched, base];
     await saveWatchedAll(updatedAll);
     setWatched(updatedAll);
+    notify(`"${item.title || item.name}" added to watched.`);
   };
 
   const toggleFavorite = (item, e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
     const isFavorited = favorites.some((fav) => fav.id === item.id);
     const updatedFavorites = isFavorited
       ? favorites.filter((fav) => fav.id !== item.id)
       : [...favorites, item];
+
     setFavorites(updatedFavorites);
     localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+    notify(
+      isFavorited
+        ? `"${item.title || item.name}" removed from favorites.`
+        : `"${item.title || item.name}" added to favorites.`
+    );
+  };
+
+  const getActionItem = () => {
+    if (!selectedItem || !itemDetails) return null;
+
+    const title =
+      selectedItem.title || itemDetails.title || itemDetails.name || "";
+
+    return {
+      ...selectedItem,
+      ...itemDetails,
+      mediaType: selectedItem.mediaType,
+      title,
+      name: itemDetails.name || selectedItem.name,
+    };
   };
 
   const viewDetails = async (item) => {
@@ -341,89 +383,104 @@ const SearchPage = () => {
 
     return (
       <div
-        key={item.id}
+        key={`${item.mediaType}-${item.id}`}
+        className="mb-4 relative overflow-hidden rounded-lg border border-yellow-900/30 group cursor-pointer"
         onClick={() => viewDetails(item)}
-        className="relative mb-4 overflow-hidden bg-gray-900 border border-gray-700 rounded-lg cursor-pointer"
       >
-        <div className="flex">
-          <div className="flex-shrink-0 w-16 p-1 sm:w-20">
+        <div className="absolute inset-0 bg-gray-900/95" />
+
+        <div className="flex p-3 relative z-10">
+          <div className="w-24 h-36 flex-shrink-0">
             {item.poster_path ? (
               <img
                 src={`${IMAGE_BASE_URL}${item.poster_path}`}
-                alt={item.title}
-                className="object-cover w-full h-full"
+                alt={item.title || item.name}
+                className="w-full h-full object-cover rounded-md shadow-lg border-2 border-yellow-600/30"
               />
             ) : (
-              <div className="flex items-center justify-center w-full h-full text-gray-600 bg-gray-800">
-                No Image
-              </div>
+              <div className="w-full h-full rounded-md bg-gray-800 border-2 border-yellow-600/30" />
             )}
           </div>
-          <div className="flex-1 pl-2 pr-2 py-1.5 flex flex-col">
-            <h3 className="text-base font-bold text-yellow-500 sm:text-lg">
-              {item.title?.toUpperCase()}
+
+          <div className="ml-4 flex-1">
+            <h3 className="text-xl font-bold text-yellow-400 mb-1">
+              {item.title || item.name}
             </h3>
-            <div className="text-gray-400 text-xs mt-0.5">
-              <div className="text-gray-300 text-xs mt-0.5 space-x-1">
-                {item.vote_average && (
-                  <span>⭐ {item.vote_average.toFixed(1)}</span>
+
+            <div className="text-sm text-yellow-300/70 mb-1">
+              {item.mediaType === "tv" ? "TV SERIES" : "MOVIE"}
+            </div>
+
+            <div className="text-gray-300 text-xs mt-0.5 space-x-1">
+              {typeof item.vote_average === "number" &&
+                item.vote_average > 0 && (
+                  <span>⭐ {Number(item.vote_average).toFixed(1)}</span>
                 )}
 
-                {item.genre_ids && item.genre_ids.length > 0 && (
-                  <span>
-                    •{" "}
-                    {item.genre_ids
-                      .slice(0, 2) // max två genres
-                      .map((id) => genreMap[id])
-                      .join(", ")}
-                  </span>
-                )}
-
-                {item.mediaType === "tv" && item.number_of_seasons && (
-                  <span>• {item.number_of_seasons} seasons</span>
-                )}
-              </div>
-              {item.release_date && (
-                <div>RELEASED: {new Date(item.release_date).getFullYear()}</div>
+              {Array.isArray(item.genre_ids) && item.genre_ids.length > 0 && (
+                <span>
+                  •{" "}
+                  {item.genre_ids
+                    .slice(0, 2)
+                    .map((id) => genreMap[id])
+                    .filter(Boolean)
+                    .join(", ")}
+                </span>
               )}
-              {item.first_air_date && (
-                <div>
-                  FIRST AIRED: {new Date(item.first_air_date).getFullYear()}
-                </div>
+
+              {item.mediaType === "tv" && item.number_of_seasons && (
+                <span>• {item.number_of_seasons} seasons</span>
               )}
             </div>
+
+            {(item.release_date || item.first_air_date) && (
+              <div className="text-gray-400 text-xs mt-0.5">
+                {item.release_date && (
+                  <div>
+                    RELEASED: {new Date(item.release_date).getFullYear()}
+                  </div>
+                )}
+                {item.first_air_date && (
+                  <div>
+                    FIRST AIRED: {new Date(item.first_air_date).getFullYear()}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-2 mt-2">
               <button
+                type="button"
                 className={`px-3 py-1 text-xs font-semibold rounded transition
                   ${
                     isWatched
-                      ? "bg-green-600 text-white cursor-default"
+                      ? "bg-green-600 text-white"
                       : "bg-yellow-500 text-gray-900 hover:bg-yellow-600"
                   }
                 `}
                 onClick={(e) => {
-                  if (!isWatched) addToWatched(item, e);
                   e.stopPropagation();
+                  toggleWatched(item, e);
                 }}
-                disabled={isWatched}
               >
-                {isWatched ? "Added" : "Add to Watched"}
+                {isWatched ? "Remove Watched" : "Add to Watched"}
               </button>
+
               <button
+                type="button"
                 className={`px-3 py-1 text-xs font-semibold rounded transition
                   ${
                     isFavorited
-                      ? "bg-yellow-400 text-gray-900 cursor-default"
+                      ? "bg-yellow-400 text-gray-900"
                       : "bg-gray-700 text-yellow-400 hover:bg-yellow-600 hover:text-gray-900"
                   }
                 `}
                 onClick={(e) => {
-                  if (!isFavorited) toggleFavorite(item, e);
                   e.stopPropagation();
+                  toggleFavorite(item, e);
                 }}
-                disabled={isFavorited}
               >
-                {isFavorited ? "Favorited" : "Favorite"}
+                {isFavorited ? "Unfavorite" : "Favorite"}
               </button>
             </div>
           </div>
@@ -434,6 +491,18 @@ const SearchPage = () => {
 
   return (
     <div className="min-h-screen p-4 pb-20">
+      {showToast && (
+        <div className="fixed left-1/2 bottom-24 z-50 -translate-x-1/2">
+          <button
+            type="button"
+            onClick={() => setShowToast(false)}
+            className="px-4 py-2 text-sm text-gray-100 border border-gray-700 rounded-lg shadow-lg bg-gray-900/95"
+          >
+            {toastMessage}
+          </button>
+        </div>
+      )}
+
       <div className="sticky top-0 z-10 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900/95 backdrop-blur-md">
         <div className="p-1 space-y-3">
           <div className="flex items-center space-x-2">
@@ -563,9 +632,37 @@ const SearchPage = () => {
         !isLoading &&
         itemDetails &&
         (selectedItem.mediaType === "tv" ? (
-          <ShowDetailModal show={itemDetails} onClose={closeModal} />
+          <ShowDetailModal
+            show={itemDetails}
+            onClose={closeModal}
+            showActions
+            isWatched={watched.some((w) => w.id === selectedItem.id)}
+            isFavorited={favorites.some((f) => f.id === selectedItem.id)}
+            onAddToWatched={(show) => {
+              const actionItem = getActionItem();
+              if (actionItem) toggleWatched({ ...actionItem, ...show });
+            }}
+            onAddToFavorites={(show) => {
+              const actionItem = getActionItem();
+              if (actionItem) toggleFavorite({ ...actionItem, ...show });
+            }}
+          />
         ) : (
-          <MovieDetailModal movie={itemDetails} onClose={closeModal} />
+          <MovieDetailModal
+            movie={itemDetails}
+            onClose={closeModal}
+            showActions
+            isWatched={watched.some((w) => w.id === selectedItem.id)}
+            isFavorited={favorites.some((f) => f.id === selectedItem.id)}
+            onAddToWatched={(movie) => {
+              const actionItem = getActionItem();
+              if (actionItem) toggleWatched({ ...actionItem, ...movie });
+            }}
+            onAddToFavorites={(movie) => {
+              const actionItem = getActionItem();
+              if (actionItem) toggleFavorite({ ...actionItem, ...movie });
+            }}
+          />
         ))}
 
       {!isSearching && results.length === 0 && query && (

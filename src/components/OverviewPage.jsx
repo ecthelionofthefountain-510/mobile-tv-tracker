@@ -1,7 +1,8 @@
 // OverviewPage.jsx
 import React, { useEffect, useState } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
-import { loadWatchedAll } from "../utils/watchedStorage";
+import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+import { createWatchedMovie, createWatchedShow } from "../utils/watchedMapper";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 
@@ -41,6 +42,20 @@ const OverviewPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    if (!showToast) return;
+    const t = setTimeout(() => setShowToast(false), 2200);
+    return () => clearTimeout(t);
+  }, [showToast]);
+
+  const notify = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+  };
 
   // Recommendations
   const [recommendations, setRecommendations] = useState([]);
@@ -83,9 +98,7 @@ const OverviewPage = () => {
     if (Array.isArray(item.genres) && item.genres.length > 0) {
       genreNames = item.genres.map((g) => g.name).filter(Boolean);
     } else if (Array.isArray(item.genre_ids) && item.genre_ids.length > 0) {
-      genreNames = item.genre_ids
-        .map((id) => GENRE_MAP[id])
-        .filter(Boolean);
+      genreNames = item.genre_ids.map((id) => GENRE_MAP[id]).filter(Boolean);
     }
 
     // undvik dubbletter i samma titel
@@ -102,6 +115,90 @@ const OverviewPage = () => {
 
   const recentWatched = [...watched].slice(-5).reverse();
   const recentFavorites = [...favorites].slice(-5).reverse();
+
+  const toggleFavorite = (item) => {
+    const exists = favorites.some((f) => f.id === item.id);
+    const updated = exists
+      ? favorites.filter((f) => f.id !== item.id)
+      : [...favorites, item];
+
+    setFavorites(updated);
+    localStorage.setItem("favorites", JSON.stringify(updated));
+    notify(
+      exists
+        ? `"${item.title || item.name}" removed from favorites.`
+        : `"${item.title || item.name}" added to favorites.`
+    );
+  };
+
+  const toggleWatched = async (item) => {
+    const allWatched = await loadWatchedAll();
+    const alreadyExists = allWatched.some((w) => w.id === item.id);
+    if (alreadyExists) {
+      const updatedAll = allWatched.filter((w) => w.id !== item.id);
+      await saveWatchedAll(updatedAll);
+      setWatched(updatedAll);
+      notify(`"${item.title || item.name}" removed from watched.`);
+      return;
+    }
+
+    let base;
+    if (item.mediaType === "tv") {
+      base = createWatchedShow(item);
+    } else {
+      base = createWatchedMovie(item);
+    }
+
+    if (item.mediaType === "tv") {
+      try {
+        const numberOfSeasons =
+          item.number_of_seasons ?? base.number_of_seasons;
+        let finalSeasons = base.seasons;
+
+        if (!numberOfSeasons) {
+          const detailsResponse = await fetch(
+            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
+          );
+          const tvDetails = await detailsResponse.json();
+          finalSeasons = {};
+          for (let i = 1; i <= (tvDetails.number_of_seasons || 0); i++) {
+            finalSeasons[i] = { watchedEpisodes: [] };
+          }
+          base.number_of_seasons = tvDetails.number_of_seasons;
+        } else {
+          finalSeasons = {};
+          for (let i = 1; i <= numberOfSeasons; i++) {
+            finalSeasons[i] = { watchedEpisodes: [] };
+          }
+          base.number_of_seasons = numberOfSeasons;
+        }
+
+        base.seasons = finalSeasons;
+      } catch (error) {
+        console.error("Error fetching TV show details:", error);
+      }
+    }
+
+    const updatedAll = [...allWatched, base];
+    await saveWatchedAll(updatedAll);
+    setWatched(updatedAll);
+    notify(`"${item.title || item.name}" added to watched.`);
+  };
+
+  const getActionItem = () => {
+    if (!selectedItem || !itemDetails) return null;
+
+    const title =
+      selectedItem.title || itemDetails.title || itemDetails.name || "";
+
+    return {
+      ...selectedItem,
+      ...itemDetails,
+      mediaType: selectedItem.mediaType,
+      title,
+      name: itemDetails.name || selectedItem.name,
+    };
+  };
 
   const openDetails = async (item) => {
     const mediaType = item.mediaType || (item.seasons ? "tv" : "movie");
@@ -189,8 +286,7 @@ const OverviewPage = () => {
 
     const seed = candidates[Math.floor(Math.random() * candidates.length)];
     const genreIds = seed.genre_ids;
-    const chosenGenreId =
-      genreIds[Math.floor(Math.random() * genreIds.length)];
+    const chosenGenreId = genreIds[Math.floor(Math.random() * genreIds.length)];
 
     const mediaType = isShow(seed) ? "tv" : "movie";
     const endpoint = mediaType === "tv" ? "tv" : "movie";
@@ -304,6 +400,18 @@ const OverviewPage = () => {
 
   return (
     <div className="min-h-screen p-4 pb-20">
+      {showToast && (
+        <div className="fixed left-1/2 bottom-24 z-50 -translate-x-1/2">
+          <button
+            type="button"
+            onClick={() => setShowToast(false)}
+            className="px-4 py-2 text-sm text-gray-100 border border-gray-700 rounded-lg shadow-lg bg-gray-900/95"
+          >
+            {toastMessage}
+          </button>
+        </div>
+      )}
+
       <h1 className="mb-4 text-2xl font-bold text-yellow-400">Overview</h1>
 
       {/* Snabba siffror */}
@@ -570,9 +678,37 @@ const OverviewPage = () => {
         !isLoading &&
         itemDetails &&
         (selectedItem.mediaType === "tv" ? (
-          <ShowDetailModal show={itemDetails} onClose={closeModal} />
+          <ShowDetailModal
+            show={itemDetails}
+            onClose={closeModal}
+            showActions
+            isWatched={watched.some((w) => w.id === selectedItem.id)}
+            isFavorited={favorites.some((f) => f.id === selectedItem.id)}
+            onAddToWatched={(show) => {
+              const actionItem = getActionItem();
+              if (actionItem) toggleWatched({ ...actionItem, ...show });
+            }}
+            onAddToFavorites={(show) => {
+              const actionItem = getActionItem();
+              if (actionItem) toggleFavorite({ ...actionItem, ...show });
+            }}
+          />
         ) : (
-          <MovieDetailModal movie={itemDetails} onClose={closeModal} />
+          <MovieDetailModal
+            movie={itemDetails}
+            onClose={closeModal}
+            showActions
+            isWatched={watched.some((w) => w.id === selectedItem.id)}
+            isFavorited={favorites.some((f) => f.id === selectedItem.id)}
+            onAddToWatched={(movie) => {
+              const actionItem = getActionItem();
+              if (actionItem) toggleWatched({ ...actionItem, ...movie });
+            }}
+            onAddToFavorites={(movie) => {
+              const actionItem = getActionItem();
+              if (actionItem) toggleFavorite({ ...actionItem, ...movie });
+            }}
+          />
         ))}
     </div>
   );
