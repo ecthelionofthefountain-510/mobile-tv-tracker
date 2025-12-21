@@ -6,6 +6,7 @@ import { SwipeableList } from "react-swipeable-list";
 import "react-swipeable-list/dist/styles.css";
 import SwipeableMovieCard from "./SwipeableMovieCard";
 import { useWatchedList } from "../hooks/useWatchedList";
+import { cachedFetchJson } from "../utils/tmdbCache";
 // import SwipeInfoToast from "./SwipeInfoToast";
 
 const MoviesList = () => {
@@ -76,15 +77,18 @@ const MoviesList = () => {
   const fetchMovieDetails = async (movieId) => {
     try {
       const [details, credits, videos] = await Promise.all([
-        fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${API_KEY}`).then(
-          (res) => res.json()
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/movie/${movieId}?api_key=${API_KEY}`,
+          { ttlMs: 6 * 60 * 60 * 1000 }
         ),
-        fetch(
-          `${TMDB_BASE_URL}/movie/${movieId}/credits?api_key=${API_KEY}`
-        ).then((res) => res.json()),
-        fetch(
-          `${TMDB_BASE_URL}/movie/${movieId}/videos?api_key=${API_KEY}`
-        ).then((res) => res.json()),
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/movie/${movieId}/credits?api_key=${API_KEY}`,
+          { ttlMs: 24 * 60 * 60 * 1000 }
+        ),
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/movie/${movieId}/videos?api_key=${API_KEY}`,
+          { ttlMs: 24 * 60 * 60 * 1000 }
+        ),
       ]);
       setMovieDetails({ ...details, credits, videos });
     } catch (err) {

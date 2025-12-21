@@ -176,10 +176,10 @@ const OverviewPage = () => {
 
         let tvDetails = null;
         if (needsDetailsFetch) {
-          const detailsResponse = await fetch(
-            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
+          tvDetails = await cachedFetchJson(
+            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`,
+            { ttlMs: 6 * 60 * 60 * 1000 }
           );
-          tvDetails = await detailsResponse.json();
         }
 
         if (!numberOfSeasons) {
@@ -441,7 +441,7 @@ const OverviewPage = () => {
           <button
             type="button"
             onClick={() => setShowToast(false)}
-            className="px-4 py-2 text-sm text-gray-100 border border-gray-700 rounded-lg shadow-lg bg-gray-900/95"
+            className="px-4 py-2 text-sm text-gray-100 border border-gray-700 rounded-lg shadow-lg bg-gray-900"
           >
             {toastMessage}
           </button>

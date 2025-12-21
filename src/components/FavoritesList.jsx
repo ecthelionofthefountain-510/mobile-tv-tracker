@@ -7,6 +7,7 @@ import FavoriteCard from "./FavoriteCard";
 import ShowCard from "./ShowCard";
 import SwipeableFavoriteCard from "./SwipeableFavoriteCard";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+import { cachedFetchJson } from "../utils/tmdbCache";
 // import SwipeInfoToast from "./SwipeInfoToast";
 
 const FavoritesList = () => {
@@ -176,15 +177,10 @@ const FavoritesList = () => {
       if (item.mediaType === "tv") {
         // If number_of_seasons or number_of_episodes is not available, fetch it
         if (!item.number_of_seasons || !item.number_of_episodes) {
-          const response = await fetch(
-            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
+          const tvDetails = await cachedFetchJson(
+            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`,
+            { ttlMs: 6 * 60 * 60 * 1000 }
           );
-
-          if (!response.ok) {
-            throw new Error(`Failed to fetch TV details: ${response.status}`);
-          }
-
-          const tvDetails = await response.json();
           itemToAdd.number_of_seasons =
             itemToAdd.number_of_seasons || tvDetails.number_of_seasons;
           itemToAdd.number_of_episodes =

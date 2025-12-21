@@ -5,6 +5,7 @@ import CongratsToast from "./CongratsToast";
 import ReactConfetti from "react-confetti";
 import { useWindowSize } from "react-use"; // valfritt, för att få rätt storlek
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+import { cachedFetchJson } from "../utils/tmdbCache";
 
 const ShowDetail = ({ show, onBack, onRemove }) => {
   const [seasons, setSeasons] = useState(show.seasons || {});
@@ -149,15 +150,10 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   // Fetch season episodes data
   const fetchSeasonEpisodes = async (seasonNumber) => {
     try {
-      const response = await fetch(
-        `${TMDB_BASE_URL}/tv/${show.id}/season/${seasonNumber}?api_key=${API_KEY}`
+      const data = await cachedFetchJson(
+        `${TMDB_BASE_URL}/tv/${show.id}/season/${seasonNumber}?api_key=${API_KEY}`,
+        { ttlMs: 24 * 60 * 60 * 1000 }
       );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch season ${seasonNumber}`);
-      }
-
-      const data = await response.json();
 
       setEpisodesData((prev) => ({
         ...prev,
@@ -483,12 +479,12 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           return (
             <div
               key={seasonNumber}
-              className="overflow-hidden border rounded-lg border-yellow-900/20 bg-gray-800/40"
+              className="overflow-hidden border rounded-lg border-yellow-900/20 bg-gray-800"
             >
               {/* Season header */}
               <div
                 onClick={() => toggleSeason(seasonNumber)}
-                className="p-3 transition-colors cursor-pointer bg-gray-800/90 hover:bg-gray-700/90"
+                className="p-3 transition-colors cursor-pointer bg-gray-800 hover:bg-gray-700"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
@@ -532,7 +528,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
               {/* Episodes list - only show when expanded */}
               {isExpanded && (
-                <div className="p-3 bg-gray-800/50">
+                <div className="p-3 bg-gray-800">
                   {/* Simplified batch operations - optimized for mobile with separated controls */}
                   <div className="flex justify-between mb-3">
                     <button

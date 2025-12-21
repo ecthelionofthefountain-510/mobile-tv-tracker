@@ -222,31 +222,14 @@ const SearchPage = () => {
         );
         const tvData = await tvResponse.json();
 
-        const tvResults = await Promise.all(
-          (tvData.results || []).map(async (item) => {
-            try {
-              const detailsResponse = await fetch(
-                `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
-              );
-              const tvDetails = await detailsResponse.json();
-
-              return {
-                ...item,
-                title: item.name,
-                number_of_seasons: tvDetails.number_of_seasons,
-                mediaType: "tv",
-                seasons: {},
-              };
-            } catch {
-              return {
-                ...item,
-                title: item.name,
-                mediaType: "tv",
-                seasons: {},
-              };
-            }
-          })
-        );
+        // Undvik N+1: hämta inte tv-detaljer per sökträff.
+        // Detaljer hämtas när man öppnar modal eller när "Add to watched" behöver totaldata.
+        const tvResults = (tvData.results || []).map((item) => ({
+          ...item,
+          title: item.name,
+          mediaType: "tv",
+          seasons: {},
+        }));
 
         combinedResults = [...combinedResults, ...tvResults];
       }
@@ -307,10 +290,10 @@ const SearchPage = () => {
 
         let tvDetails = null;
         if (needsDetailsFetch) {
-          const detailsResponse = await fetch(
-            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`
+          tvDetails = await cachedFetchJson(
+            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`,
+            { ttlMs: 6 * 60 * 60 * 1000 }
           );
-          tvDetails = await detailsResponse.json();
         }
 
         if (!numberOfSeasons) {
@@ -420,12 +403,10 @@ const SearchPage = () => {
     return (
       <div
         key={`${item.mediaType}-${item.id}`}
-        className="relative mb-4 overflow-hidden border rounded-lg cursor-pointer border-yellow-900/30 group"
+        className="relative mb-4 overflow-hidden transition-colors duration-200 bg-gray-800 border rounded-lg cursor-pointer border-yellow-900/30 hover:bg-gray-700 group"
         onClick={() => viewDetails(item)}
       >
-        <div className="absolute inset-0 bg-gray-900" />
-
-        <div className="relative z-10 flex p-3">
+        <div className="flex p-3">
           <div className="flex-shrink-0 w-24 h-36">
             {item.poster_path ? (
               <img
@@ -532,7 +513,7 @@ const SearchPage = () => {
           <button
             type="button"
             onClick={() => setShowToast(false)}
-            className="px-4 py-2 text-sm text-gray-100 border border-gray-700 rounded-lg shadow-lg bg-gray-900/95"
+            className="px-4 py-2 text-sm text-gray-100 border border-gray-700 rounded-lg shadow-lg bg-gray-900"
           >
             {toastMessage}
           </button>
@@ -545,7 +526,7 @@ const SearchPage = () => {
             <div className="relative flex-grow">
               <input
                 type="text"
-                placeholder="Search for movies or shows"
+                placeholder="Search content ..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="w-full p-2 pl-8 pr-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
@@ -575,41 +556,48 @@ const SearchPage = () => {
             </button>
           </div>
 
-          <div className="flex justify-center gap-2 text-xs sm:text-sm">
-            <button
-              type="button"
-              onClick={() => setSearchType("all")}
-              className={`px-3 py-1 rounded-full border ${
-                searchType === "all"
-                  ? "bg-yellow-500 text-gray-900 border-yellow-400"
-                  : "bg-gray-800 text-gray-300 border-gray-700"
-              }`}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => setSearchType("movies")}
-              className={`px-3 py-1 rounded-full border ${
-                searchType === "movies"
-                  ? "bg-yellow-500 text-gray-900 border-yellow-400"
-                  : "bg-gray-800 text-gray-300 border-gray-700"
-              }`}
-            >
-              Movies
-            </button>
-            <button
-              type="button"
-              onClick={() => setSearchType("tv")}
-              className={`px-3 py-1 rounded-full border ${
-                searchType === "tv"
-                  ? "bg-yellow-500 text-gray-900 border-yellow-400"
-                  : "bg-gray-800 text-gray-300 border-gray-700"
-              }`}
-            >
-              Shows
-            </button>
-          </div>
+          {/* <div className="pt-2 border-t border-gray-800">
+            <div className="flex justify-center">
+              <div className="inline-flex overflow-hidden bg-gray-800 border border-gray-700 rounded-full">
+                <button
+                  type="button"
+                  onClick={() => setSearchType("all")}
+                  className={`px-4 py-1.5 text-xs sm:text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/60 focus-visible:ring-inset ${
+                    searchType === "all"
+                      ? "bg-yellow-500 text-gray-900"
+                      : "text-gray-300 hover:bg-gray-700"
+                  }`}
+                  aria-pressed={searchType === "all"}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchType("movies")}
+                  className={`px-4 py-1.5 text-xs sm:text-sm font-semibold transition border-l border-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/60 focus-visible:ring-inset ${
+                    searchType === "movies"
+                      ? "bg-yellow-500 text-gray-900"
+                      : "text-gray-300 hover:bg-gray-700"
+                  }`}
+                  aria-pressed={searchType === "movies"}
+                >
+                  Movies
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchType("tv")}
+                  className={`px-4 py-1.5 text-xs sm:text-sm font-semibold transition border-l border-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/60 focus-visible:ring-inset ${
+                    searchType === "tv"
+                      ? "bg-yellow-500 text-gray-900"
+                      : "text-gray-300 hover:bg-gray-700"
+                  }`}
+                  aria-pressed={searchType === "tv"}
+                >
+                  Shows
+                </button>
+              </div>
+            </div>
+          </div> */}
         </div>
       </div>
 
