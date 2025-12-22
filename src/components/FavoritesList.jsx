@@ -154,9 +154,14 @@ const FavoritesList = () => {
 
   // Add an item to watched list and remove from favorites
   const addToWatched = async (item, e) => {
+    e?.stopPropagation?.();
+
+    const sameId = (a, b) => String(a) === String(b);
+    const mediaType = item.mediaType || (item.first_air_date ? "tv" : "movie");
+
     // Check if already in watched list
-    const isAlreadyWatched = watched.some(
-      (watchedItem) => watchedItem.id === item.id
+    const isAlreadyWatched = watched.some((watchedItem) =>
+      sameId(watchedItem.id, item.id)
     );
 
     if (isAlreadyWatched) {
@@ -170,11 +175,12 @@ const FavoritesList = () => {
       // Create item to add with proper structure
       let itemToAdd = {
         ...item,
+        mediaType,
         dateAdded: new Date().toISOString(),
       };
 
       // For TV shows, set up seasons structure
-      if (item.mediaType === "tv") {
+      if (mediaType === "tv") {
         // If number_of_seasons or number_of_episodes is not available, fetch it
         if (!item.number_of_seasons || !item.number_of_episodes) {
           const tvDetails = await cachedFetchJson(

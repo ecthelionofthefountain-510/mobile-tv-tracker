@@ -21,7 +21,12 @@ export function useWatchedList(mediaType, options = {}) {
   const refresh = useCallback(async () => {
     setLoading(true);
 
-    await ensurePersistentStorage();
+    // Best effort: får inte blocka UI/laddning
+    try {
+      void ensurePersistentStorage();
+    } catch (_) {
+      // ignore
+    }
 
     let all = await loadWatchedAll();
 
@@ -46,11 +51,12 @@ export function useWatchedList(mediaType, options = {}) {
   }, [refresh]);
 
   const remove = useCallback(async (id) => {
+    const sameId = (a, b) => String(a) === String(b);
     let all = await loadWatchedAll();
-    all = all.filter((item) => item.id !== id);
+    all = all.filter((item) => !sameId(item.id, id));
     await saveWatchedAll(all);
 
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    setItems((prev) => prev.filter((item) => !sameId(item.id, id)));
   }, []);
 
   return {

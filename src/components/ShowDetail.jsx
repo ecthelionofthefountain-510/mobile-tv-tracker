@@ -8,7 +8,10 @@ import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
 
 const ShowDetail = ({ show, onBack, onRemove }) => {
-  const [seasons, setSeasons] = useState(show.seasons || {});
+  const [seasons, setSeasons] = useState(() => {
+    if (show?.seasons && !Array.isArray(show.seasons)) return show.seasons;
+    return {};
+  });
   const [expandedSeason, setExpandedSeason] = useState(null);
   const [episodesData, setEpisodesData] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -28,6 +31,8 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [showCongrats, setShowCongrats] = useState(false);
   const { width, height } = useWindowSize(); // valfritt
 
+  const sameId = (a, b) => String(a) === String(b);
+
   // Calculate progress stats on load and when seasons change
   useEffect(() => {
     calculateStats();
@@ -44,47 +49,90 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   useEffect(() => {
     (async () => {
       const allWatched = await loadWatchedAll();
-      const found = allWatched.find((item) => item.id === show.id);
-      if (found && found.seasons) {
+      const found = allWatched.find((item) => sameId(item.id, show.id));
+      if (found && found.seasons && !Array.isArray(found.seasons)) {
         setSeasons(found.seasons);
       }
     })();
   }, [show.id]);
 
-  // Function to save changes to localStorage
+  const computeCompletion = useCallback(
+    (nextSeasons) => {
+      const watchedCount = Object.values(nextSeasons || {}).reduce(
+        (sum, season) => sum + (season?.watchedEpisodes?.length || 0),
+        0
+      );
+
+      const totalFromEpisodesData = Object.keys(episodesData).reduce(
+        (sum, seasonNum) => sum + ((episodesData[seasonNum] || []).length || 0),
+        0
+      );
+
+      const totalEpisodes =
+        typeof show?.number_of_episodes === "number" &&
+        show.number_of_episodes > 0
+          ? show.number_of_episodes
+          : totalFromEpisodesData;
+
+      return totalEpisodes > 0 && watchedCount === totalEpisodes;
+    },
+    [episodesData, show?.number_of_episodes]
+  );
+
+  // Function to save changes to storage (robust: upsert + id-typ-säker)
   const saveChangesToStorage = useCallback(async () => {
-    console.log("Saving changes to storage");
     const allWatched = await loadWatchedAll();
+    const isCompleted = computeCompletion(seasons);
 
-    // Räkna totala episoder och sedda episoder för att avgöra "completed"
-    let totalEpisodes = 0;
-    let watchedCount = 0;
-    Object.keys(episodesData).forEach((seasonNum) => {
-      const episodesList = episodesData[seasonNum] || [];
-      totalEpisodes += episodesList.length;
-      const watchedEpisodes = seasons[seasonNum]?.watchedEpisodes || [];
-      watchedCount += watchedEpisodes.length;
-    });
-    const isCompleted = totalEpisodes > 0 && watchedCount === totalEpisodes;
+    const idx = allWatched.findIndex((item) => sameId(item.id, show.id));
+    let updatedAll;
 
-    const updatedWatched = allWatched.map((item) => {
-      if (item.id === show.id) {
-        return {
-          ...item,
-          seasons: seasons,
-          completed: isCompleted,
-        };
-      }
-      return item;
-    });
-    await saveWatchedAll(updatedWatched);
+    if (idx >= 0) {
+      updatedAll = allWatched.map((item) =>
+        sameId(item.id, show.id)
+          ? {
+              ...item,
+              mediaType: "tv",
+              seasons,
+              completed: isCompleted,
+            }
+          : item
+      );
+    } else {
+      const toAdd = {
+        id: show.id,
+        mediaType: "tv",
+        title: show.title || show.name || "",
+        name: show.name,
+        poster_path: show.poster_path ?? null,
+        posterPath: show.poster_path ?? null,
+        number_of_seasons: show.number_of_seasons,
+        number_of_episodes: show.number_of_episodes,
+        seasons,
+        completed: isCompleted,
+        dateAdded: new Date().toISOString(),
+      };
+      updatedAll = [...allWatched, toAdd];
+    }
+
+    await saveWatchedAll(updatedAll);
     setHasChanges(false);
-  }, [seasons, show.id, episodesData]);
+  }, [
+    computeCompletion,
+    sameId,
+    seasons,
+    show.id,
+    show.name,
+    show.number_of_episodes,
+    show.number_of_seasons,
+    show.poster_path,
+    show.title,
+  ]);
 
   // Modified onBack handler to ensure changes are saved
-  const handleBack = () => {
+  const handleBack = async () => {
     if (hasChanges) {
-      void saveChangesToStorage();
+      await saveChangesToStorage();
     }
 
     // Trigger the onBack callback to navigate back
@@ -297,12 +345,13 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
       // Process each season
       for (let i = 1; i <= show.number_of_seasons; i++) {
-        // Make sure we have the episodes data
-        if (!episodesData[i]) {
-          await fetchSeasonEpisodes(i);
+        // Make sure we have the episodes data. OBS: episodesData state kan vara stale
+        // direkt efter setEpisodesData i fetchSeasonEpisodes, så använd returvärdet.
+        let episodes = episodesData[i];
+        if (!episodes) {
+          const seasonData = await fetchSeasonEpisodes(i);
+          episodes = seasonData?.episodes || [];
         }
-
-        const episodes = episodesData[i] || [];
 
         if (watched) {
           // Mark all as watched

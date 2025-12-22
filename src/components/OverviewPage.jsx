@@ -133,10 +133,11 @@ const OverviewPage = () => {
   };
 
   const toggleWatched = async (item) => {
+    const sameId = (a, b) => String(a) === String(b);
     const allWatched = await loadWatchedAll();
-    const alreadyExists = allWatched.some((w) => w.id === item.id);
+    const alreadyExists = allWatched.some((w) => sameId(w.id, item.id));
     if (alreadyExists) {
-      const updatedAll = allWatched.filter((w) => w.id !== item.id);
+      const updatedAll = allWatched.filter((w) => !sameId(w.id, item.id));
       await saveWatchedAll(updatedAll);
       setWatched(updatedAll);
       notify(`"${item.title || item.name}" removed from watched.`);

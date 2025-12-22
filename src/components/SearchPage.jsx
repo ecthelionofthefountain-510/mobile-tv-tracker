@@ -247,10 +247,12 @@ const SearchPage = () => {
   const toggleWatched = async (item, e) => {
     e?.stopPropagation?.();
 
+    const sameId = (a, b) => String(a) === String(b);
+
     const allWatched = await loadWatchedAll();
-    const alreadyExists = allWatched.some((w) => w.id === item.id);
+    const alreadyExists = allWatched.some((w) => sameId(w.id, item.id));
     if (alreadyExists) {
-      const updatedAll = allWatched.filter((w) => w.id !== item.id);
+      const updatedAll = allWatched.filter((w) => !sameId(w.id, item.id));
       await saveWatchedAll(updatedAll);
       setWatched(updatedAll);
       notify(`"${item.title || item.name}" removed from watched.`);
@@ -513,7 +515,7 @@ const SearchPage = () => {
           <button
             type="button"
             onClick={() => setShowToast(false)}
-            className="px-4 py-2 text-sm text-gray-100 border border-gray-700 rounded-lg shadow-lg bg-gray-900"
+            className="px-4 py-2 text-sm text-gray-100 bg-gray-900 border border-gray-700 rounded-lg shadow-lg"
           >
             {toastMessage}
           </button>

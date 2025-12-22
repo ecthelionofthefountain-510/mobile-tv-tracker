@@ -150,7 +150,19 @@ const ShowsList = () => {
         `${TMDB_BASE_URL}/tv/${show.id}?api_key=${API_KEY}`,
         { ttlMs: 6 * 60 * 60 * 1000 }
       );
-      setSelectedShow({ ...show, ...details });
+      // TMDB details innehåller `seasons` som en array (metadata) och kan annars skriva över
+      // vår progress-`seasons` (object med watchedEpisodes). Bevara progress-strukturen.
+      const progressSeasons =
+        show.seasons && !Array.isArray(show.seasons) ? show.seasons : undefined;
+
+      setSelectedShow({
+        ...show,
+        ...details,
+        seasons: progressSeasons,
+        number_of_seasons: show.number_of_seasons ?? details?.number_of_seasons,
+        number_of_episodes:
+          show.number_of_episodes ?? details?.number_of_episodes,
+      });
     } catch (err) {
       console.error("Kunde inte hämta show-detaljer", err);
     }
