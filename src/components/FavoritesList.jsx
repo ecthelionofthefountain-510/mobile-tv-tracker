@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { IMAGE_BASE_URL, API_KEY, TMDB_BASE_URL } from "../config";
+import { useState, useEffect } from "react";
+import { API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 import NotificationModal from "./NotificationModal";
-import FavoriteCard from "./FavoriteCard";
-import ShowCard from "./ShowCard";
 import SwipeableFavoriteCard from "./SwipeableFavoriteCard";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
@@ -25,11 +23,8 @@ const FavoritesList = () => {
     show: false,
     message: "",
   });
-  const [showSwipeInfo, setShowSwipeInfo] = useState(true);
-  const [swipeFeedback, setSwipeFeedback] = useState({
-    show: false,
-    message: "",
-  });
+
+  const sameId = (a, b) => String(a) === String(b);
 
   useEffect(() => {
     // Load favorites from localStorage
@@ -37,7 +32,6 @@ const FavoritesList = () => {
       try {
         const storedFavorites =
           JSON.parse(localStorage.getItem("favorites")) || [];
-        console.log("Loaded favorites:", storedFavorites);
 
         // Sort favorites alphabetically by title
         const sortedFavorites = sortFavorites(storedFavorites, sortBy);
@@ -109,15 +103,18 @@ const FavoritesList = () => {
 
     try {
       const [details, credits, videos] = await Promise.all([
-        fetch(
-          `${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`
-        ).then((res) => res.json()),
-        fetch(
-          `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`
-        ).then((res) => res.json()),
-        fetch(
-          `${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`
-        ).then((res) => res.json()),
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`,
+          { ttlMs: 6 * 60 * 60 * 1000 }
+        ),
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`,
+          { ttlMs: 24 * 60 * 60 * 1000 }
+        ),
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`,
+          { ttlMs: 24 * 60 * 60 * 1000 }
+        ),
       ]);
       setItemDetails({ ...details, credits, videos });
     } catch (error) {
@@ -136,7 +133,6 @@ const FavoritesList = () => {
 
   // Remove an item from favorites
   const removeFromFavorites = (id) => {
-    console.log("Removing item with ID:", id);
     const updatedList = favorites.filter((item) => item.id !== id);
     setFavorites(updatedList);
     setFilteredFavorites(
@@ -155,8 +151,6 @@ const FavoritesList = () => {
   // Add an item to watched list and remove from favorites
   const addToWatched = async (item, e) => {
     e?.stopPropagation?.();
-
-    const sameId = (a, b) => String(a) === String(b);
     const mediaType = item.mediaType || (item.first_air_date ? "tv" : "movie");
 
     // Check if already in watched list
@@ -170,8 +164,6 @@ const FavoritesList = () => {
     }
 
     try {
-      console.log("Adding to watched:", item);
-
       // Create item to add with proper structure
       let itemToAdd = {
         ...item,
@@ -236,7 +228,7 @@ const FavoritesList = () => {
 
   // Check if an item is in the watched list
   const isInWatchedList = (id) => {
-    return watched.some((item) => item.id === id);
+    return watched.some((item) => sameId(item.id, id));
   };
 
   const sortFavorites = (items, sortBy) => {
@@ -252,18 +244,6 @@ const FavoritesList = () => {
       );
     }
     return items;
-  };
-
-  useEffect(() => {
-    if (!localStorage.getItem("swipeInfoSeen")) {
-      setShowSwipeInfo(true);
-      localStorage.setItem("swipeInfoSeen", "1");
-    }
-  }, []);
-
-  const showSwipeFeedback = (message) => {
-    setSwipeFeedback({ show: true, message });
-    setTimeout(() => setSwipeFeedback({ show: false, message: "" }), 1800);
   };
 
   return (
@@ -400,25 +380,6 @@ const FavoritesList = () => {
           autoCloseTime={3000}
         />
       )}
-
-      {/* Swipe Info Toast */}
-      {/* {showSwipeInfo && (
-        <SwipeInfoToast
-          onClose={() => setShowSwipeInfo(false)}
-          leftAction={{
-            icon: "👈",
-            color: "text-green-400",
-            label: "VÄNSTER",
-            text: 'för att lägga till i "watched"'
-          }}
-          rightAction={{
-            icon: "👉",
-            color: "text-red-400",
-            label: "HÖGER",
-            text: "för att ta bort från favoriter"
-          }}
-        />
-      )} */}
     </div>
   );
 };

@@ -24,7 +24,7 @@ export function useWatchedList(mediaType, options = {}) {
     // Best effort: får inte blocka UI/laddning
     try {
       void ensurePersistentStorage();
-    } catch (_) {
+    } catch {
       // ignore
     }
 

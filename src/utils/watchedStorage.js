@@ -176,7 +176,7 @@ export async function saveWatchedAll(items) {
     // Viktigt: rensa så vi inte råkar läsa gammalt/stale från localStorage och skriva över IDB senare
     try {
       localStorage.removeItem(WATCHED_KEY);
-    } catch (_) {
+    } catch {
       // ignore
     }
   }

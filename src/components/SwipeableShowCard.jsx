@@ -102,9 +102,10 @@ const SwipeableShowCard = ({
     icon = iconStar;
   }
 
-  const handleSafeSelect = () => {
+  const handleSafeSelect = (selected) => {
     if (justSwiped.current || animating) return;
-    onSelect(show);
+    if (!onSelect) return;
+    onSelect(selected || show);
   };
 
   return (
@@ -135,7 +136,7 @@ const SwipeableShowCard = ({
       >
         <ShowCard
           item={show}
-          onSelect={() => onSelect(show)}
+          onSelect={handleSafeSelect}
           onShowInfo={onShowInfo}
           onRemove={onRemove}
           showRemoveButton={false}
