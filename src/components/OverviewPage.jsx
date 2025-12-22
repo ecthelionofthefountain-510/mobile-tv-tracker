@@ -521,7 +521,7 @@ const OverviewPage = () => {
         key={key}
         type="button"
         onClick={() => openDetails(item)}
-        className="flex w-full overflow-hidden text-left transition border border-gray-800 rounded-lg bg-gray-900/80 hover:border-yellow-500/80 hover:bg-gray-900"
+        className="flex w-full overflow-hidden text-left transition border border-gray-800 rounded-lg bg-gray-900/80 hover:border-yellow-500/80 hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
       >
         <div className="flex-shrink-0 w-16 sm:w-20">
           {item.poster_path ? (
@@ -579,7 +579,7 @@ const OverviewPage = () => {
           <button
             type="button"
             onClick={() => setShowToast(false)}
-            className="px-4 py-2 text-sm text-gray-100 bg-gray-900 border border-gray-700 rounded-lg shadow-lg"
+            className="px-4 py-2 text-sm text-gray-100 bg-gray-900 border border-gray-700 rounded-lg shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
             {toastMessage}
           </button>
@@ -643,20 +643,14 @@ const OverviewPage = () => {
                 <span aria-hidden>✦</span>
                 AI pick
               </h2>
-              <span className="px-2 py-1 text-[10px] font-semibold tracking-wide text-yellow-300 uppercase border rounded-full border-yellow-500/40 bg-gray-900/80">
-                Client AI
-              </span>
             </div>
-            {/* <p className="mt-1 text-sm text-gray-300">
-              Förslag från dina favoriter och serier du påbörjat.
-            </p> */}
           </div>
 
           <button
             type="button"
             onClick={pickClientSide}
             disabled={aiLoading}
-            className="ai-pick-cta relative isolate overflow-hidden px-4 py-2.5 text-sm font-bold tracking-wide text-gray-900 uppercase transition bg-yellow-500 rounded-lg shadow-lg hover:bg-green-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:opacity-60"
+            className="ai-pick-cta relative isolate overflow-hidden px-4 py-1.5 text-sm font-bold tracking-wide text-gray-900 uppercase transition bg-yellow-500 rounded-lg shadow-lg hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:opacity-60"
           >
             {aiLoading ? "Thinking..." : "Pick something"}
           </button>
@@ -680,7 +674,7 @@ const OverviewPage = () => {
                     name: p.title,
                   })
                 }
-                className="w-full p-3 text-left transition border rounded-lg border-yellow-500/20 bg-gray-900/70 hover:border-yellow-500/70 hover:bg-gray-900"
+                className="w-full p-3 text-left transition border rounded-lg border-yellow-500/20 bg-gray-900/70 hover:border-yellow-500/70 hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <div className="text-sm font-bold text-yellow-400">
@@ -721,97 +715,6 @@ const OverviewPage = () => {
         </div>
       )}
 
-      {/* Recently added */}
-      {/* <section className="mt-8">
-        <h2 className="mb-3 text-xl font-bold tracking-wide text-yellow-400 uppercase">
-          Recently added to watched
-        </h2>
-
-        {recentWatched.length === 0 ? (
-          <div className="px-4 py-6 text-sm text-center text-gray-400 border border-gray-800 rounded-lg bg-gray-900/70">
-            Nothing here yet. Start adding some movies or shows!
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {recentWatched.map((item) => {
-              const year = getYear(item);
-              const seasonsCount = getSeasonsCount(item);
-              const rating =
-                typeof item.vote_average === "number"
-                  ? item.vote_average.toFixed(1)
-                  : null;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => openDetails(item)}
-                  className="flex w-full overflow-hidden text-left transition border border-gray-800 rounded-lg bg-gray-900/80 hover:border-yellow-500/80 hover:bg-gray-900"
-                >
-                  <div className="flex-shrink-0 w-16 sm:w-20">
-                    {item.poster_path ? (
-                      <img
-                        src={`${IMAGE_BASE_URL}${item.poster_path}`}
-                        alt={item.title || item.name}
-                        className="object-cover w-full h-full"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-800">
-                        No image
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 px-3 py-2">
-                    <div className="text-sm font-bold text-yellow-400 sm:text-base">
-                      {(item.title || item.name || "").toUpperCase()}
-                    </div>
-                    <div className="mt-0.5 text-xs text-gray-300">
-                      <div>
-                        {item.mediaType === "tv" ? "TV SHOW" : "MOVIE"}
-                        {year && <> • {year}</>}
-                      </div>
-                      <div>
-                        {seasonsCount && (
-                          <>
-                            {seasonsCount} SEASON
-                            {seasonsCount > 1 ? "S" : ""}{" "}
-                          </>
-                        )}
-                        {rating && <> ⭐ {rating}</>}
-                      </div>
-                      {item.genres && item.genres.length > 0 && (
-                        <div className="mt-0.5 text-[10px] text-gray-400">
-                          {item.genres.map((g) => g.name).join(" • ")}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section> */}
-
-      {/* Highlights */}
-      {/* {(topRatedMovie || topRatedShow || longestShow) && (
-        <section className="mt-8">
-          <h2 className="mb-3 text-xl font-bold tracking-wide text-yellow-400 uppercase">
-            Highlights from your collection
-          </h2>
-          <div className="space-y-3">
-            {renderSmallCard("Top rated movie", topRatedMovie, "top-movie")}
-            {renderSmallCard("Top rated show", topRatedShow, "top-show")}
-            {renderSmallCard(
-              "Longest running show",
-              longestShow,
-              "longest-show"
-            )}
-          </div>
-        </section>
-      )} */}
-
       {/* Because you watched ... */}
       {(isRecLoading || recommendations.length > 0) && (
         <section className="mt-8">
@@ -838,79 +741,6 @@ const OverviewPage = () => {
           )}
         </section>
       )}
-
-      {/* Recent favorites */}
-      {/* <section className="mt-8">
-        <h2 className="mb-3 text-xl font-bold tracking-wide text-yellow-400 uppercase">
-          Recent favorites
-        </h2>
-
-        {recentFavorites.length === 0 ? (
-          <p className="text-sm text-gray-400">
-            Mark something as favorite to see it here.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {recentFavorites.map((item) => {
-              const year = getYear(item);
-              const seasonsCount = getSeasonsCount(item);
-              const rating =
-                typeof item.vote_average === "number"
-                  ? item.vote_average.toFixed(1)
-                  : null;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => openDetails(item)}
-                  className="flex w-full overflow-hidden text-left transition border border-gray-800 rounded-lg bg-gray-900/80 hover:border-yellow-500/80 hover:bg-gray-900"
-                >
-                  <div className="flex-shrink-0 w-16 sm:w-20">
-                    {item.poster_path ? (
-                      <img
-                        src={`${IMAGE_BASE_URL}${item.poster_path}`}
-                        alt={item.title || item.name}
-                        className="object-cover w-full h-full"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-800">
-                        No image
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 px-3 py-2">
-                    <div className="text-sm font-bold text-yellow-300 sm:text-base">
-                      {(item.title || item.name || "").toUpperCase()}
-                    </div>
-                    <div className="mt-0.5 text-xs text-gray-300">
-                      <div>
-                        {item.mediaType === "tv" ? "TV SHOW" : "MOVIE"}
-                        {year && <> • {year}</>}
-                      </div>
-                      <div>
-                        {seasonsCount && (
-                          <>
-                            {seasonsCount} SEASON
-                            {seasonsCount > 1 ? "S" : ""}{" "}
-                          </>
-                        )}
-                        {rating && <> ⭐ {rating}</>}
-                      </div>
-                      {item.genres && item.genres.length > 0 && (
-                        <div className="mt-0.5 text-[10px] text-gray-400">
-                          {item.genres.map((g) => g.name).join(" • ")}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section> */}
 
       {/* Detalj-modal */}
       {selectedItem &&

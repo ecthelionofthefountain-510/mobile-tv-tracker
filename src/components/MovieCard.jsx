@@ -63,10 +63,28 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
 
   const displayItem = { ...mockItem, ...item };
 
+  const isSelectable = typeof onSelect === "function";
+
+  const handleCardKeyDown = (e) => {
+    if (!isSelectable) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelect(displayItem);
+    }
+  };
+
   return (
     <div
-      className="relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg cursor-pointer bg-gray-800 border-yellow-900/30 hover:bg-gray-700"
-      onClick={onSelect ? () => onSelect(displayItem) : undefined}
+      className={`relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg bg-gray-800 border-yellow-900/30 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
+        isSelectable ? "cursor-pointer" : ""
+      }`}
+      onClick={isSelectable ? () => onSelect(displayItem) : undefined}
+      role={isSelectable ? "button" : undefined}
+      tabIndex={isSelectable ? 0 : undefined}
+      onKeyDown={handleCardKeyDown}
+      aria-label={
+        isSelectable ? `Open details for ${displayItem.title}` : undefined
+      }
     >
       <div className="flex">
         <div className="flex-shrink-0 w-24 self-stretch min-h-[8rem] sm:w-28 sm:min-h-[10rem]">
@@ -122,11 +140,12 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
           {showRemoveButton && (
             <div className="flex justify-end mt-2">
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove(displayItem.id);
                 }}
-                className="px-3 py-1 text-sm font-medium text-white transition-colors duration-150 rounded-md bg-red-600/80 hover:bg-red-700"
+                className="px-3 py-1 text-sm font-medium text-white transition-colors duration-150 rounded-md bg-red-600/80 hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               >
                 Remove
               </button>

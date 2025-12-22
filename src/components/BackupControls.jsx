@@ -16,7 +16,9 @@ export default function BackupControls({ onRestore }) {
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = `watched-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `watched-backup-${new Date()
+        .toISOString()
+        .slice(0, 10)}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -68,22 +70,22 @@ export default function BackupControls({ onRestore }) {
 
   return (
     <div className="p-3 mt-8 space-y-2 text-sm text-gray-300 border border-gray-800 rounded-lg bg-gray-900/80">
-      <div className="font-semibold text-yellow-400">
-        Backup & restore
-      </div>
+      <div className="font-semibold text-yellow-400">Backup & restore</div>
       <p className="text-xs text-gray-400">
         Exporterar / importerar hela din "watched"-lista som en JSON-fil.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={handleExport}
-          className="px-3 py-1 text-xs font-semibold text-gray-900 transition bg-yellow-500 rounded hover:bg-yellow-400"
+          className="px-3 py-1 text-xs font-semibold text-gray-900 transition bg-yellow-500 rounded hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
         >
           Export backup
         </button>
         <button
+          type="button"
           onClick={handleImportClick}
-          className="px-3 py-1 text-xs text-gray-100 transition bg-gray-700 rounded hover:bg-gray-600"
+          className="px-3 py-1 text-xs text-gray-100 transition bg-gray-700 rounded hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
         >
           Import backup
         </button>
@@ -95,11 +97,7 @@ export default function BackupControls({ onRestore }) {
           onChange={handleImportFile}
         />
       </div>
-      {status && (
-        <div className="text-xs text-gray-400">
-          {status}
-        </div>
-      )}
+      {status && <div className="text-xs text-gray-400">{status}</div>}
     </div>
   );
 }

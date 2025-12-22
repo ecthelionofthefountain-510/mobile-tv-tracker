@@ -26,6 +26,7 @@ const GENRE_MAP = {
 
 const FavoriteCard = ({
   item,
+  onSelect,
   onClick,
   onRemove,
   onAddToWatched,
@@ -34,6 +35,9 @@ const FavoriteCard = ({
 }) => {
   const touchStartX = useRef(null);
   const touchMoved = useRef(false);
+  const ignoreNextClick = useRef(false);
+
+  const handleSelect = onSelect ?? onClick;
 
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
@@ -49,9 +53,28 @@ const FavoriteCard = ({
 
   const handleTouchEnd = (e) => {
     // Om det inte var en swipe, kör click
-    if (!touchMoved.current && onClick) onClick(e);
+    if (!touchMoved.current && handleSelect) {
+      ignoreNextClick.current = true;
+      handleSelect(e);
+      setTimeout(() => {
+        ignoreNextClick.current = false;
+      }, 0);
+    }
     touchStartX.current = null;
     touchMoved.current = false;
+  };
+
+  const handleMouseClick = (e) => {
+    if (ignoreNextClick.current) return;
+    if (handleSelect) handleSelect(e);
+  };
+
+  const handleKeyDown = (e) => {
+    if (!handleSelect) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleSelect(e);
+    }
   };
 
   // Genre-hantering
@@ -75,10 +98,17 @@ const FavoriteCard = ({
 
   return (
     <div
-      className="relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg cursor-pointer bg-gray-800 border-yellow-900/30 hover:bg-gray-700"
+      className={`relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg bg-gray-800 border-yellow-900/30 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
+        handleSelect ? "cursor-pointer" : ""
+      }`}
+      onClick={handleSelect ? handleMouseClick : undefined}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      role={handleSelect ? "button" : undefined}
+      tabIndex={handleSelect ? 0 : undefined}
+      onKeyDown={handleKeyDown}
+      aria-label={handleSelect ? `Open details for ${item.title}` : undefined}
     >
       <div className="flex">
         <div className="flex-shrink-0 w-24 self-stretch min-h-[8rem] sm:w-28 sm:min-h-[10rem]">
@@ -117,16 +147,18 @@ const FavoriteCard = ({
           {showButtons && (
             <div className="flex flex-wrap gap-2 mt-2">
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove(item.id, e);
                 }}
-                className="px-3 py-1 text-sm text-white transition-colors duration-200 rounded-md bg-red-600/80 hover:bg-red-700"
+                className="px-3 py-1 text-sm text-white transition-colors duration-200 rounded-md bg-red-600/80 hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               >
                 Remove
               </button>
 
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onAddToWatched(item, e);
@@ -136,7 +168,7 @@ const FavoriteCard = ({
                   alreadyWatched
                     ? "bg-green-700 cursor-not-allowed"
                     : "bg-green-600 hover:bg-green-700"
-                }`}
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900`}
               >
                 {alreadyWatched ? "Already Watched" : "Add to Watched"}
               </button>

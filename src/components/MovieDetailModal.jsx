@@ -88,8 +88,9 @@ const MovieDetailModal = ({
             />
             <div className="absolute inset-0 z-0 bg-black bg-opacity-70"></div>
             <button
+              type="button"
               onClick={onClose}
-              className="absolute p-1 transition rounded top-2 right-2 hover:bg-gray-800"
+              className="absolute p-1 transition rounded top-2 right-2 hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               aria-label="Close"
             >
               <svg
@@ -134,6 +135,7 @@ const MovieDetailModal = ({
                       ? "bg-green-600 text-white cursor-default"
                       : "bg-yellow-500 text-gray-900 hover:bg-yellow-600"
                   }
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900
                 `}
               >
                 {isWatched ? "Remove Watched" : "Add to Watched"}
@@ -149,6 +151,7 @@ const MovieDetailModal = ({
                       ? "bg-yellow-400 text-gray-900 cursor-default"
                       : "bg-gray-700 text-yellow-400 hover:bg-yellow-600 hover:text-gray-900"
                   }
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900
                 `}
               >
                 {isFavorited ? "Unfavorite" : "Favorite"}

@@ -398,6 +398,13 @@ const SearchPage = () => {
     setItemDetails(null);
   };
 
+  const handleResultKeyDown = (e, item) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      viewDetails(item);
+    }
+  };
+
   const renderContentItem = (item) => {
     const isWatched = watched.some((w) => w.id === item.id);
     const isFavorited = favorites.some((f) => f.id === item.id);
@@ -405,8 +412,12 @@ const SearchPage = () => {
     return (
       <div
         key={`${item.mediaType}-${item.id}`}
-        className="relative mb-4 overflow-hidden transition-colors duration-200 bg-gray-800 border rounded-lg cursor-pointer border-yellow-900/30 hover:bg-gray-700 group"
+        className="relative mb-4 overflow-hidden transition-colors duration-200 bg-gray-800 border rounded-lg cursor-pointer border-yellow-900/30 hover:bg-gray-700 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
         onClick={() => viewDetails(item)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => handleResultKeyDown(e, item)}
+        aria-label={`Open details for ${item.title || item.name}`}
       >
         <div className="flex p-3">
           <div className="flex-shrink-0 w-24 h-36">
@@ -476,11 +487,16 @@ const SearchPage = () => {
                       ? "bg-green-600 text-white"
                       : "bg-yellow-500 text-gray-900 hover:bg-yellow-600"
                   }
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900
                 `}
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleWatched(item, e);
                 }}
+                aria-pressed={isWatched}
+                aria-label={
+                  isWatched ? "Remove from watched" : "Add to watched"
+                }
               >
                 {isWatched ? "Remove Watched" : "Add to Watched"}
               </button>
@@ -493,11 +509,16 @@ const SearchPage = () => {
                       ? "bg-yellow-400 text-gray-900"
                       : "bg-gray-700 text-yellow-400 hover:bg-yellow-600 hover:text-gray-900"
                   }
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900
                 `}
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleFavorite(item, e);
                 }}
+                aria-pressed={isFavorited}
+                aria-label={
+                  isFavorited ? "Remove from favorites" : "Add to favorites"
+                }
               >
                 {isFavorited ? "Unfavorite" : "Favorite"}
               </button>
@@ -515,7 +536,7 @@ const SearchPage = () => {
           <button
             type="button"
             onClick={() => setShowToast(false)}
-            className="px-4 py-2 text-sm text-gray-100 bg-gray-900 border border-gray-700 rounded-lg shadow-lg"
+            className="px-4 py-2 text-sm text-gray-100 bg-gray-900 border border-gray-700 rounded-lg shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
             {toastMessage}
           </button>
@@ -543,7 +564,8 @@ const SearchPage = () => {
                     setQuery("");
                     setResults([]);
                   }}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-lg text-gray-300 hover:text-white"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-lg text-gray-300 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                  aria-label="Clear search"
                 >
                   ✖
                 </button>
@@ -553,54 +575,11 @@ const SearchPage = () => {
             <button
               type="button"
               onClick={searchContent}
-              className="p-2 font-bold text-gray-900 transition-all bg-yellow-500 rounded-lg hover:bg-yellow-600"
+              className="p-2 font-bold text-gray-900 transition-all bg-yellow-500 rounded-lg hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
               GO!
             </button>
           </div>
-
-          {/* <div className="pt-2 border-t border-gray-800">
-            <div className="flex justify-center">
-              <div className="inline-flex overflow-hidden bg-gray-800 border border-gray-700 rounded-full">
-                <button
-                  type="button"
-                  onClick={() => setSearchType("all")}
-                  className={`px-4 py-1.5 text-xs sm:text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/60 focus-visible:ring-inset ${
-                    searchType === "all"
-                      ? "bg-yellow-500 text-gray-900"
-                      : "text-gray-300 hover:bg-gray-700"
-                  }`}
-                  aria-pressed={searchType === "all"}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSearchType("movies")}
-                  className={`px-4 py-1.5 text-xs sm:text-sm font-semibold transition border-l border-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/60 focus-visible:ring-inset ${
-                    searchType === "movies"
-                      ? "bg-yellow-500 text-gray-900"
-                      : "text-gray-300 hover:bg-gray-700"
-                  }`}
-                  aria-pressed={searchType === "movies"}
-                >
-                  Movies
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSearchType("tv")}
-                  className={`px-4 py-1.5 text-xs sm:text-sm font-semibold transition border-l border-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/60 focus-visible:ring-inset ${
-                    searchType === "tv"
-                      ? "bg-yellow-500 text-gray-900"
-                      : "text-gray-300 hover:bg-gray-700"
-                  }`}
-                  aria-pressed={searchType === "tv"}
-                >
-                  Shows
-                </button>
-              </div>
-            </div>
-          </div> */}
         </div>
       </div>
 

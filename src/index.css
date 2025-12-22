@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :where(a, button, input, select, textarea, [role="button"]):focus-visible {
+    @apply outline-none ring-2 ring-yellow-400/70 ring-offset-2 ring-offset-gray-900;
+  }
+}
+
 :root {
   color-scheme: light dark;
 }
@@ -115,19 +121,6 @@ nav {
   @apply opacity-100;
   transform: scale(1.2);
 }
-
-/* Animated indicator for active tab
-.nav-link-active::after {
-  content: '';
-  @apply absolute top-0 w-6 h-1 transform -translate-x-1/2 bg-yellow-400 rounded-full left-1/2;
-  box-shadow: 0 0 8px rgba(250, 204, 21, 0.8);
-  animation: pulseWidth 2s infinite ease-in-out;
-} */
-
-/* @keyframes pulseWidth {
-  0%, 100% { width: 24px; opacity: 0.8; }
-  50% { width: 28px; opacity: 1; }
-} */
 
 /* Hover effects */
 .nav-link:hover .nav-icon {

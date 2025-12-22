@@ -9,10 +9,21 @@ const MediaCard = ({
   alreadyWatched,
   showAddToWatched = true,
 }) => {
+  const handleCardKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelect(item);
+    }
+  };
+
   return (
     <div
-      className="mb-4 relative overflow-hidden rounded-lg border border-yellow-900/30 group"
+      className="mb-4 relative overflow-hidden rounded-lg border border-yellow-900/30 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
       onClick={() => onSelect(item)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={handleCardKeyDown}
+      aria-label={`Open details for ${item.title}`}
     >
       {/* Bakgrundsbild med mörkare overlay */}
       <div className="absolute inset-0 bg-gray-900"></div>
@@ -67,24 +78,28 @@ const MediaCard = ({
           <div className="flex mt-2 space-x-2">
             {showAddToWatched && !alreadyWatched && (
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onAddToWatched(item, e);
                 }}
-                className="w-8 h-8 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center"
+                className="w-8 h-8 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                 title="Add to watched"
+                aria-label="Add to watched"
               >
                 ✓
               </button>
             )}
 
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onRemove(item.id, e);
               }}
-              className="w-8 h-8 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center"
+              className="w-8 h-8 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               title="Remove"
+              aria-label="Remove"
             >
               ✕
             </button>

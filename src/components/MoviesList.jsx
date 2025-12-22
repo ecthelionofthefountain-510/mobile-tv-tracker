@@ -155,16 +155,19 @@ const MoviesList = () => {
               </div>
               {searchTerm && (
                 <button
+                  type="button"
                   onClick={() => setSearchTerm("")}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                  aria-label="Clear search"
                 >
                   ✖️
                 </button>
               )}
             </div>
             <button
+              type="button"
               onClick={() => handleSearch({ target: { value: searchTerm } })}
-              className="p-2 font-bold text-gray-900 transition duration-300 bg-yellow-500 rounded-md hover:bg-yellow-600"
+              className="p-2 font-bold text-gray-900 transition duration-300 bg-yellow-500 rounded-md hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
               GO!
             </button>
@@ -224,27 +227,6 @@ const MoviesList = () => {
           )}
         </div>
       )}
-
-      {/* {showSwipeInfo && (
-        <SwipeInfoToast
-          onClose={() => {
-            setShowSwipeInfo(false);
-            localStorage.setItem("swipeInfoMoviesSeen", "1");
-          }}
-          leftAction={{
-            icon: "👈",
-            color: "text-red-400",
-            label: "LEFT",
-            text: "to remove from list"
-          }}
-          rightAction={{
-            icon: "👉",
-            color: "text-yellow-400",
-            label: "RIGHT",
-            text: "to add to favorites"
-          }}
-        />
-      )} */}
     </div>
   );
 };

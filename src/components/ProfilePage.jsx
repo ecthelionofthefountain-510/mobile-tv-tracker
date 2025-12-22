@@ -2,10 +2,16 @@ import React, { useState, useEffect } from "react";
 import { FaUser, FaCamera } from "react-icons/fa";
 
 const ProfilePage = () => {
-  const [users, setUsers] = useState(() => JSON.parse(localStorage.getItem("users")) || []);
-  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem("currentUser")));
+  const [users, setUsers] = useState(
+    () => JSON.parse(localStorage.getItem("users")) || []
+  );
+  const [currentUser, setCurrentUser] = useState(() =>
+    JSON.parse(localStorage.getItem("currentUser"))
+  );
   const [newUser, setNewUser] = useState("");
-  const [profileImages, setProfileImages] = useState(() => JSON.parse(localStorage.getItem("profileImages")) || {});
+  const [profileImages, setProfileImages] = useState(
+    () => JSON.parse(localStorage.getItem("profileImages")) || {}
+  );
 
   // Lägg till ny användare
   const addUser = () => {
@@ -46,7 +52,8 @@ const ProfilePage = () => {
     if (file) reader.readAsDataURL(file);
   };
 
-  const favorites = JSON.parse(localStorage.getItem(`favorites_${currentUser}`)) || [];
+  const favorites =
+    JSON.parse(localStorage.getItem(`favorites_${currentUser}`)) || [];
 
   return (
     <div className="p-4">
@@ -60,7 +67,13 @@ const ProfilePage = () => {
           onChange={(e) => setNewUser(e.target.value)}
           className="w-full p-2 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
         />
-        <button onClick={addUser} className="p-2 mt-2 text-white bg-green-600 rounded">Add User</button>
+        <button
+          type="button"
+          onClick={addUser}
+          className="p-2 mt-2 text-white bg-green-600 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+        >
+          Add User
+        </button>
       </div>
 
       <h3 className="mt-4 text-yellow-300">Switch User</h3>
@@ -74,12 +87,22 @@ const ProfilePage = () => {
           >
             <div className="flex items-center gap-4">
               <img
-                src={profileImages[user] || "https://ui-avatars.com/api/?name=" + encodeURIComponent(user)}
+                src={
+                  profileImages[user] ||
+                  "https://ui-avatars.com/api/?name=" + encodeURIComponent(user)
+                }
                 alt="Profile"
                 className="object-cover w-12 h-12 bg-gray-800 border-2 border-yellow-300 rounded-full"
               />
-              <span className={`text-lg font-bold tracking-wide ${currentUser === user ? "text-yellow-300" : "text-white"}`}>
-                {user} {currentUser === user && <span className="text-base font-normal">(active)</span>}
+              <span
+                className={`text-lg font-bold tracking-wide ${
+                  currentUser === user ? "text-yellow-300" : "text-white"
+                }`}
+              >
+                {user}{" "}
+                {currentUser === user && (
+                  <span className="text-base font-normal">(active)</span>
+                )}
               </span>
             </div>
             <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
@@ -90,20 +113,22 @@ const ProfilePage = () => {
                   type="file"
                   accept="image/*"
                   style={{ display: "none" }}
-                  onChange={e => handleImageChange(user, e.target.files[0])}
+                  onChange={(e) => handleImageChange(user, e.target.files[0])}
                 />
               </label>
               {currentUser !== user && (
                 <button
+                  type="button"
                   onClick={() => switchUser(user)}
-                  className="px-4 py-1 text-xs font-medium text-white bg-blue-500 rounded hover:bg-blue-600"
+                  className="px-4 py-1 text-xs font-medium text-white bg-blue-500 rounded hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                 >
                   Switch user
                 </button>
               )}
               <button
+                type="button"
                 onClick={() => removeUser(user)}
-                className="px-4 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700"
+                className="px-4 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               >
                 Remove
               </button>

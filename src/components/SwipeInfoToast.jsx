@@ -3,9 +3,14 @@ import { useEffect } from "react";
 const SwipeInfoToast = ({
   onClose,
   autoCloseTime = 5000,
-  leftAction = { icon: "👈", color: "text-green-400", label: "VÄNSTER", text: "" },
+  leftAction = {
+    icon: "👈",
+    color: "text-green-400",
+    label: "VÄNSTER",
+    text: "",
+  },
   rightAction = { icon: "👉", color: "text-red-400", label: "HÖGER", text: "" },
-  title = "Swipe Info"
+  title = "Swipe Info",
 }) => {
   useEffect(() => {
     const timer = setTimeout(onClose, autoCloseTime);
@@ -19,19 +24,26 @@ const SwipeInfoToast = ({
         <div>
           <span className="mr-2 text-2xl">{leftAction.icon}</span>
           <span>
-            <span className={`font-semibold ${leftAction.color}`}>{leftAction.label}</span> {leftAction.text}
+            <span className={`font-semibold ${leftAction.color}`}>
+              {leftAction.label}
+            </span>{" "}
+            {leftAction.text}
           </span>
         </div>
         <div className="mt-2">
           <span className="mr-2 text-2xl">{rightAction.icon}</span>
           <span>
-            <span className={`font-semibold ${rightAction.color}`}>{rightAction.label}</span> {rightAction.text}
+            <span className={`font-semibold ${rightAction.color}`}>
+              {rightAction.label}
+            </span>{" "}
+            {rightAction.text}
           </span>
         </div>
       </div>
       <button
+        type="button"
         onClick={onClose}
-        className="px-4 py-1 mt-4 font-bold text-gray-900 transition bg-yellow-500 rounded shadow hover:bg-yellow-400"
+        className="px-4 py-1 mt-4 font-bold text-gray-900 transition bg-yellow-500 rounded shadow hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
       >
         OK
       </button>
@@ -40,19 +52,3 @@ const SwipeInfoToast = ({
 };
 
 export default SwipeInfoToast;
-
-<SwipeInfoToast
-  onClose={() => setShowSwipeInfo(false)}
-  leftAction={{
-    icon: "👈",
-    color: "text-red-400",
-    label: "VÄNSTER",
-    text: "för att ta bort från listan"
-  }}
-  rightAction={{
-    icon: "👉",
-    color: "text-yellow-400",
-    label: "HÖGER",
-    text: "för att lägga tillbaka i favoriter"
-  }}
-/>

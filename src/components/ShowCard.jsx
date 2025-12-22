@@ -108,19 +108,38 @@ const ShowCard = ({
     return "ring-red-600/60";
   })();
 
+  const isSelectable = typeof onSelect === "function";
+
+  const handleCardKeyDown = (e) => {
+    if (!isSelectable) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelect(displayItem);
+    }
+  };
+
   return (
     <div
-      className={`relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg cursor-pointer bg-gray-800 border-yellow-900/30 hover:bg-gray-700 ring-1 ring-inset ${ringClass}`}
-      onClick={onSelect ? () => onSelect(displayItem) : undefined}
+      className={`relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg bg-gray-800 border-yellow-900/30 hover:bg-gray-700 ring-1 ring-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${ringClass} ${
+        isSelectable ? "cursor-pointer" : ""
+      }`}
+      onClick={isSelectable ? () => onSelect(displayItem) : undefined}
+      role={isSelectable ? "button" : undefined}
+      tabIndex={isSelectable ? 0 : undefined}
+      onKeyDown={handleCardKeyDown}
+      aria-label={
+        isSelectable ? `Open details for ${displayItem.name}` : undefined
+      }
     >
       <div className="flex">
-        <div
-          className="flex-shrink-0 w-24 self-stretch min-h-[8rem] sm:w-28 sm:min-h-[10rem]"
+        <button
+          type="button"
+          className="flex-shrink-0 w-24 self-stretch min-h-[8rem] sm:w-28 sm:min-h-[10rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           onClick={(e) => {
-            e.stopPropagation(); // Hindra att kortets onClick triggas
+            e.stopPropagation();
             if (onShowInfo) onShowInfo(displayItem);
           }}
-          style={{ cursor: "pointer" }}
+          aria-label={`Show info for ${displayItem.name}`}
         >
           <img
             src={
@@ -131,7 +150,7 @@ const ShowCard = ({
             alt={displayItem.name}
             className="object-cover w-full h-full border-r border-yellow-900/30"
           />
-        </div>
+        </button>
         <div className="flex flex-col justify-between flex-1 min-w-0 p-3">
           <div>
             <h3 className="text-lg font-semibold text-yellow-400 truncate sm:text-xl">
@@ -177,11 +196,12 @@ const ShowCard = ({
           {showRemoveButton && (
             <div className="flex justify-end mt-2">
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove(displayItem);
                 }}
-                className="px-3 py-1 text-sm font-medium text-red-600 transition-colors duration-200 bg-red-100 rounded-full hover:bg-red-200"
+                className="px-3 py-1 text-sm font-medium text-red-600 transition-colors duration-200 bg-red-100 rounded-full hover:bg-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               >
                 Remove
               </button>
