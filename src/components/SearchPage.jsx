@@ -551,6 +551,7 @@ const SearchPage = () => {
             </div>
 
             <button
+              type="button"
               onClick={searchContent}
               className="p-2 font-bold text-gray-900 transition-all bg-yellow-500 rounded-lg hover:bg-yellow-600"
             >
@@ -603,15 +604,17 @@ const SearchPage = () => {
         </div>
       </div>
 
-      {/* {isSearching ? (
-        <div className="py-12 text-center text-yellow-400">Searching...</div>
-      ) : results.length > 0 ? (
-        <div className="space-y-4">{results.map(renderContentItem)}</div>
-      ) : (
-        <div className="py-10 text-center text-gray-400">
-          Start typing to search for content.
-        </div>
-      )} */}
+      {query && (
+        <>
+          {isSearching ? (
+            <div className="py-12 text-center text-yellow-400">
+              Searching...
+            </div>
+          ) : results.length > 0 ? (
+            <div className="space-y-4">{results.map(renderContentItem)}</div>
+          ) : null}
+        </>
+      )}
 
       {!query && (
         <div className="space-y-8">

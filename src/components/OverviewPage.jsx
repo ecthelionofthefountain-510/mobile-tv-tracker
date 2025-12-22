@@ -44,6 +44,11 @@ const OverviewPage = () => {
   const [itemDetails, setItemDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // AI pick
+  const [aiPicks, setAiPicks] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
 
@@ -62,6 +67,138 @@ const OverviewPage = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [recContext, setRecContext] = useState(null);
   const [isRecLoading, setIsRecLoading] = useState(false);
+
+  const computeWatchedEpisodeCount = (show) => {
+    const seasons = show?.seasons;
+    if (!seasons || typeof seasons !== "object" || Array.isArray(seasons))
+      return 0;
+    return Object.values(seasons).reduce(
+      (sum, season) => sum + (season?.watchedEpisodes?.length || 0),
+      0
+    );
+  };
+
+  const computeTotalEpisodes = (show) => {
+    const n = show?.number_of_episodes;
+    return typeof n === "number" && n > 0 ? n : null;
+  };
+
+  const pickClientSide = () => {
+    setAiError("");
+    setAiLoading(true);
+
+    // tiny delay so the button feels responsive
+    setTimeout(() => {
+      try {
+        const favs = Array.isArray(favorites) ? favorites : [];
+        const wat = Array.isArray(watched) ? watched : [];
+
+        const inProgressShows = wat
+          .filter(
+            (i) =>
+              (i?.mediaType || (i?.first_air_date ? "tv" : "movie")) === "tv"
+          )
+          .map((s) => {
+            const watchedEpisodes = computeWatchedEpisodeCount(s);
+            const totalEpisodes = computeTotalEpisodes(s);
+            const completed =
+              typeof totalEpisodes === "number"
+                ? watchedEpisodes >= totalEpisodes
+                : !!s?.completed;
+            return {
+              raw: s,
+              watchedEpisodes,
+              totalEpisodes,
+              completed,
+              ratio:
+                typeof totalEpisodes === "number" && totalEpisodes > 0
+                  ? watchedEpisodes / totalEpisodes
+                  : null,
+            };
+          })
+          .filter((x) => !x.completed && x.watchedEpisodes > 0)
+          .sort((a, b) => {
+            // Prefer close-to-finish when we have totals; otherwise prefer most watched episodes
+            if (a.ratio != null && b.ratio != null) return b.ratio - a.ratio;
+            if (a.ratio != null) return -1;
+            if (b.ratio != null) return 1;
+            return (b.watchedEpisodes || 0) - (a.watchedEpisodes || 0);
+          });
+
+        const picks = [];
+        const used = new Set();
+
+        const pushPick = (item, reason) => {
+          if (!item || item.id == null) return;
+          const mediaType =
+            item.mediaType || (item.first_air_date ? "tv" : "movie");
+          const key = `${mediaType}:${String(item.id)}`;
+          if (used.has(key)) return;
+          used.add(key);
+          picks.push({
+            id: item.id,
+            mediaType,
+            title: item.title || item.name || "",
+            reason,
+          });
+        };
+
+        // 1) Always try: one in-progress show
+        if (inProgressShows.length > 0) {
+          const best = inProgressShows[0];
+          const r =
+            best.totalEpisodes != null
+              ? `Fortsätt där du slutade (${best.watchedEpisodes}/${best.totalEpisodes} avsnitt).`
+              : `Fortsätt där du slutade (${best.watchedEpisodes} avsnitt markerade).`;
+          pushPick(best.raw, r);
+        }
+
+        // 2) Add one favorite (random)
+        if (favs.length > 0) {
+          const shuffled = [...favs].sort(() => Math.random() - 0.5);
+          const candidate = shuffled.find((x) => x && x.id != null);
+          if (candidate) {
+            pushPick(candidate, "En favorit som brukar leverera.");
+          }
+        }
+
+        // 3) Optional second in-progress or second favorite
+        if (picks.length < 3) {
+          const secondShow = inProgressShows.find((x) => {
+            const mediaType =
+              x.raw.mediaType || (x.raw.first_air_date ? "tv" : "movie");
+            return !used.has(`${mediaType}:${String(x.raw.id)}`);
+          });
+          if (secondShow) {
+            pushPick(secondShow.raw, "Bra att beta av lite till.");
+          }
+        }
+
+        if (picks.length < 3 && favs.length > 1) {
+          const shuffled = [...favs].sort(() => Math.random() - 0.5);
+          for (const f of shuffled) {
+            const mediaType =
+              f.mediaType || (f.first_air_date ? "tv" : "movie");
+            if (used.has(`${mediaType}:${String(f.id)}`)) continue;
+            pushPick(f, "Om du vill ha något lätt och tryggt.");
+            break;
+          }
+        }
+
+        setAiPicks(picks);
+        if (picks.length === 0) {
+          setAiError(
+            "Inga förslag just nu (lägg till en favorit eller börja titta på en serie)."
+          );
+        }
+      } catch (e) {
+        console.error(e);
+        setAiError("Kunde inte ta fram ett förslag just nu.");
+      } finally {
+        setAiLoading(false);
+      }
+    }, 200);
+  };
 
   // Ladda watched + favorites
   useEffect(() => {
@@ -438,11 +575,11 @@ const OverviewPage = () => {
   return (
     <div className="min-h-screen p-4 pb-20">
       {showToast && (
-        <div className="fixed left-1/2 bottom-24 z-50 -translate-x-1/2">
+        <div className="fixed z-50 -translate-x-1/2 left-1/2 bottom-24">
           <button
             type="button"
             onClick={() => setShowToast(false)}
-            className="px-4 py-2 text-sm text-gray-100 border border-gray-700 rounded-lg shadow-lg bg-gray-900"
+            className="px-4 py-2 text-sm text-gray-100 bg-gray-900 border border-gray-700 rounded-lg shadow-lg"
           >
             {toastMessage}
           </button>
@@ -497,6 +634,71 @@ const OverviewPage = () => {
         </p>
       </div>
 
+      {/* AI pick */}
+      <div className="relative p-4 mb-6 overflow-hidden border rounded-lg border-yellow-500/30 bg-gradient-to-br from-gray-900/80 via-gray-900/90 to-gray-800/60 ring-1 ring-yellow-500/15">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-yellow-400">
+                <span aria-hidden>✦</span>
+                AI pick
+              </h2>
+              <span className="px-2 py-1 text-[10px] font-semibold tracking-wide text-yellow-300 uppercase border rounded-full border-yellow-500/40 bg-gray-900/80">
+                Client AI
+              </span>
+            </div>
+            {/* <p className="mt-1 text-sm text-gray-300">
+              Förslag från dina favoriter och serier du påbörjat.
+            </p> */}
+          </div>
+
+          <button
+            type="button"
+            onClick={pickClientSide}
+            disabled={aiLoading}
+            className="ai-pick-cta relative isolate overflow-hidden px-4 py-2.5 text-sm font-bold tracking-wide text-gray-900 uppercase transition bg-yellow-500 rounded-lg shadow-lg hover:bg-green-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:opacity-60"
+          >
+            {aiLoading ? "Thinking..." : "Pick something"}
+          </button>
+        </div>
+
+        <div className="mt-3 border-t border-yellow-500/10" />
+
+        {aiError && <div className="mt-3 text-sm text-red-300">{aiError}</div>}
+
+        {aiPicks.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {aiPicks.map((p, idx) => (
+              <button
+                key={`${p.mediaType}:${p.id}`}
+                type="button"
+                onClick={() =>
+                  openDetails({
+                    id: p.id,
+                    mediaType: p.mediaType,
+                    title: p.title,
+                    name: p.title,
+                  })
+                }
+                className="w-full p-3 text-left transition border rounded-lg border-yellow-500/20 bg-gray-900/70 hover:border-yellow-500/70 hover:bg-gray-900"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <div className="text-sm font-bold text-yellow-400">
+                    {(p.title || "").toUpperCase()}
+                  </div>
+                  <div className="text-[10px] font-semibold tracking-wide text-gray-400">
+                    #{idx + 1}
+                  </div>
+                </div>
+                {p.reason && (
+                  <div className="mt-1 text-xs text-gray-300">{p.reason}</div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Genre breakdown */}
       {topGenres.length > 0 && (
         <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
@@ -520,7 +722,7 @@ const OverviewPage = () => {
       )}
 
       {/* Recently added */}
-      <section className="mt-8">
+      {/* <section className="mt-8">
         <h2 className="mb-3 text-xl font-bold tracking-wide text-yellow-400 uppercase">
           Recently added to watched
         </h2>
@@ -590,10 +792,10 @@ const OverviewPage = () => {
             })}
           </div>
         )}
-      </section>
+      </section> */}
 
       {/* Highlights */}
-      {(topRatedMovie || topRatedShow || longestShow) && (
+      {/* {(topRatedMovie || topRatedShow || longestShow) && (
         <section className="mt-8">
           <h2 className="mb-3 text-xl font-bold tracking-wide text-yellow-400 uppercase">
             Highlights from your collection
@@ -608,7 +810,7 @@ const OverviewPage = () => {
             )}
           </div>
         </section>
-      )}
+      )} */}
 
       {/* Because you watched ... */}
       {(isRecLoading || recommendations.length > 0) && (
@@ -638,7 +840,7 @@ const OverviewPage = () => {
       )}
 
       {/* Recent favorites */}
-      <section className="mt-8">
+      {/* <section className="mt-8">
         <h2 className="mb-3 text-xl font-bold tracking-wide text-yellow-400 uppercase">
           Recent favorites
         </h2>
@@ -708,7 +910,7 @@ const OverviewPage = () => {
             })}
           </div>
         )}
-      </section>
+      </section> */}
 
       {/* Detalj-modal */}
       {selectedItem &&
