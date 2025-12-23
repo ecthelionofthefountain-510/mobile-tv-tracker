@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { HashRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
+import {
+  HashRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import SearchPage from "./components/SearchPage";
 import ShowsList from "./components/ShowsList";
 import MoviesList from "./components/MoviesList";
 import Navbar from "./components/Navbar";
-import FavoritesList from "./components/FavoritesList";
 import ProfilePage from "./components/ProfilePage";
 import OverviewPage from "./components/OverviewPage";
+import SettingsPage from "./components/SettingsPage";
 import "./index.css";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
     // Scrolla .main-content till toppen
-    const main = document.querySelector('.main-content');
+    const main = document.querySelector(".main-content");
     if (main) {
       main.scrollTo({ top: 0, behavior: "auto" });
     } else {
@@ -27,23 +33,40 @@ const App = () => {
   return (
     <Router>
       <ScrollToTop />
-      <div className="flex flex-col h-screen">
-        <div className="flex-grow pb-16 overflow-auto main-content">
-          <Routes>
-            <Route path="/" element={<Navigate to="/search" replace />} />
-            <Route path="/shows" element={<ShowsList />} />
-            <Route path="/movies" element={<MoviesList />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/favorites" element={<FavoritesList />} />
-            <Route path="/overview" element={<OverviewPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            {/* Fallback route */}
-          </Routes>
-        </div>
-        <Navbar />
-      </div>
+      <AppShell />
     </Router>
   );
 };
+
+function AppShell() {
+  const { pathname } = useLocation();
+  const hideNavbar = pathname === "/settings";
+
+  return (
+    <div className="flex flex-col h-screen">
+      <div
+        className={
+          "flex-grow overflow-auto main-content" + (hideNavbar ? "" : " pb-16")
+        }
+      >
+        <Routes>
+          <Route path="/" element={<Navigate to="/search" replace />} />
+          <Route path="/shows" element={<ShowsList />} />
+          <Route path="/movies" element={<MoviesList />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route
+            path="/favorites"
+            element={<Navigate to="/profile" replace />}
+          />
+          <Route path="/overview" element={<OverviewPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          {/* Fallback route */}
+        </Routes>
+      </div>
+      {!hideNavbar && <Navbar />}
+    </div>
+  );
+}
 
 export default App;

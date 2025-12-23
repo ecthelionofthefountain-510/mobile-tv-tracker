@@ -1,13 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  FaSearch,
-  FaTv,
-  FaFilm,
-  FaHeart,
-  FaUser,
-  FaChartPie,
-} from "react-icons/fa";
+import { FaSearch, FaTv, FaFilm, FaUser, FaChartPie } from "react-icons/fa";
 import "./Navbar.css";
 
 export default function Navbar() {
@@ -33,12 +26,13 @@ export default function Navbar() {
     { to: "/shows", icon: <FaTv />, label: "Shows" },
     { to: "/movies", icon: <FaFilm />, label: "Movies" },
     { to: "/search", icon: <FaSearch />, label: "Explore" },
-    { to: "/favorites", icon: <FaHeart />, label: "Favorites" },
     { to: "/overview", icon: <FaChartPie />, label: "Overview" },
+    { to: "/profile", icon: <FaUser />, label: "Profile" },
   ];
-  const activeIndex = navItems.findIndex(
+  const foundIndex = navItems.findIndex(
     (item) => item.to === location.pathname
   );
+  const activeIndex = foundIndex >= 0 ? foundIndex : 0;
 
   return (
     <nav className="custom-navbar">

@@ -13,7 +13,7 @@ import {
 } from "../utils/favoritesStorage";
 // import SwipeInfoToast from "./SwipeInfoToast";
 
-const FavoritesList = () => {
+const FavoritesList = ({ embedded = false } = {}) => {
   const [favorites, setFavorites] = useState([]);
   const [filteredFavorites, setFilteredFavorites] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -282,12 +282,18 @@ const FavoritesList = () => {
   };
 
   return (
-    <div className="min-h-screen p-4 pb-20 bg-gray-900">
+    <div className={embedded ? "" : "min-h-screen p-4 pb-20 bg-gray-900"}>
       {errorMessage && (
         <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
       )}
       {/* Header with search section - enhanced background */}
-      <div className="sticky top-0 z-20 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900">
+      <div
+        className={
+          embedded
+            ? "mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900"
+            : "sticky top-0 z-20 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900"
+        }
+      >
         <div className="p-1">
           {/* Search input */}
           <div className="flex items-center space-x-2">
@@ -342,17 +348,33 @@ const FavoritesList = () => {
       {/* Favorites List with updated styling to match Movies/Shows */}
       <div className="grid grid-cols-1 gap-4">
         {/* Header for favorites section */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="font-semibold text-yellow-400">Your Favorites</div>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
-          >
-            <option value="title">A-Ö</option>
-            <option value="dateAdded">Most recent</option>
-          </select>
-        </div>
+        {!embedded && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="font-semibold text-yellow-400">Your Favorites</div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
+            >
+              <option value="title">A-\u00d6</option>
+              <option value="dateAdded">Most recent</option>
+            </select>
+          </div>
+        )}
+
+        {embedded && (
+          <div className="flex items-center justify-end mb-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
+              aria-label="Sort favorites"
+            >
+              <option value="title">A-\u00d6</option>
+              <option value="dateAdded">Most recent</option>
+            </select>
+          </div>
+        )}
         <div className="space-y-4">
           {filteredFavorites.map((item) => (
             <SwipeableFavoriteCard
