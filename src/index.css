@@ -6,6 +6,20 @@
   :where(a, button, input, select, textarea, [role="button"]):focus-visible {
     @apply outline-none ring-2 ring-yellow-400/70 ring-offset-2 ring-offset-gray-900;
   }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    @apply transition-transform duration-75;
+  }
+
+  button:active {
+    @apply scale-95;
+  }
+
+  button:disabled {
+    @apply cursor-not-allowed;
+  }
 }
 
 :root {

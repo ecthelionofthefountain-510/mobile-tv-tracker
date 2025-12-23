@@ -635,7 +635,7 @@ const OverviewPage = () => {
       </div>
 
       {/* AI pick */}
-      <div className="relative p-4 mb-6 overflow-hidden border rounded-lg border-yellow-500/30 bg-gradient-to-br from-gray-900/80 via-gray-900/90 to-gray-800/60 ring-1 ring-yellow-500/15">
+      <div className="relative p-4 mb-6 overflow-hidden border rounded-lg border-orange-300/90 bg-gradient-to-br from-gray-900/80 via-gray-900/90 to-gray-800/60 ring-1 ring-yellow-500/15">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -650,7 +650,7 @@ const OverviewPage = () => {
             type="button"
             onClick={pickClientSide}
             disabled={aiLoading}
-            className="ai-pick-cta relative isolate overflow-hidden px-4 py-1.5 text-sm font-bold tracking-wide text-gray-900 uppercase transition bg-yellow-500 rounded-lg shadow-lg hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:opacity-60"
+            className="ai-pick-cta relative isolate overflow-hidden px-4 py-2.5 text-sm font-bold tracking-wide text-gray-900 uppercase transition bg-yellow-500 rounded-lg shadow-lg hover:bg-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:opacity-60"
           >
             {aiLoading ? "Thinking..." : "Pick something"}
           </button>
