@@ -6,6 +6,11 @@ import NotificationModal from "./NotificationModal";
 import SwipeableFavoriteCard from "./SwipeableFavoriteCard";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import {
+  loadFavorites as loadFavoritesFromStorage,
+  saveFavorites,
+  favoriteIdentity,
+} from "../utils/favoritesStorage";
 // import SwipeInfoToast from "./SwipeInfoToast";
 
 const FavoritesList = () => {
@@ -18,20 +23,25 @@ const FavoritesList = () => {
   const [watched, setWatched] = useState([]);
   const [sortBy, setSortBy] = useState("title"); // "title" eller "dateAdded"
 
+  const [errorMessage, setErrorMessage] = useState("");
+
   // State for notifications
   const [notification, setNotification] = useState({
     show: false,
     message: "",
   });
 
-  const sameId = (a, b) => String(a) === String(b);
+  const sameEntry = (a, b) =>
+    String(a?.id) === String(b?.id) &&
+    (a?.mediaType || (a?.first_air_date ? "tv" : "movie")) ===
+      (b?.mediaType || (b?.first_air_date ? "tv" : "movie"));
 
   useEffect(() => {
     // Load favorites from localStorage
     const loadFavorites = () => {
       try {
-        const storedFavorites =
-          JSON.parse(localStorage.getItem("favorites")) || [];
+        setErrorMessage("");
+        const storedFavorites = loadFavoritesFromStorage();
 
         // Sort favorites alphabetically by title
         const sortedFavorites = sortFavorites(storedFavorites, sortBy);
@@ -42,6 +52,7 @@ const FavoritesList = () => {
         console.error("Error loading favorites:", error);
         setFavorites([]);
         setFilteredFavorites([]);
+        setErrorMessage("Could not load your favorites.");
       }
     };
 
@@ -49,11 +60,13 @@ const FavoritesList = () => {
     const loadWatched = () => {
       (async () => {
         try {
+          setErrorMessage("");
           const storedWatched = await loadWatchedAll();
           setWatched(storedWatched);
         } catch (error) {
           console.error("Error loading watched items:", error);
           setWatched([]);
+          setErrorMessage("Could not load your watched list.");
         }
       })();
     };
@@ -87,7 +100,9 @@ const FavoritesList = () => {
       setFilteredFavorites(favorites);
     } else {
       const filtered = favorites.filter((item) =>
-        item.title.toLowerCase().includes(value.toLowerCase())
+        (item.title || item.name || "")
+          .toLowerCase()
+          .includes(value.toLowerCase())
       );
       setFilteredFavorites(filtered);
     }
@@ -132,18 +147,31 @@ const FavoritesList = () => {
   };
 
   // Remove an item from favorites
-  const removeFromFavorites = (id) => {
-    const updatedList = favorites.filter((item) => item.id !== id);
+  const removeFromFavorites = (itemOrId) => {
+    const refItem =
+      itemOrId && typeof itemOrId === "object"
+        ? itemOrId
+        : favorites.find((f) => String(f.id) === String(itemOrId));
+
+    const updatedList = refItem
+      ? favorites.filter((item) => !sameEntry(item, refItem))
+      : favorites.filter((item) => String(item.id) !== String(itemOrId));
     setFavorites(updatedList);
     setFilteredFavorites(
       updatedList.filter((item) =>
-        item.title.toLowerCase().includes(searchTerm.toLowerCase())
+        (item.title || item.name || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())
       )
     );
-    localStorage.setItem("favorites", JSON.stringify(updatedList));
+    saveFavorites(updatedList);
 
     // Close modal if the removed item is currently selected
-    if (selectedItem && selectedItem.id === id) {
+    if (
+      selectedItem &&
+      refItem &&
+      sameEntry(selectedItem, { ...refItem, mediaType: refItem.mediaType })
+    ) {
       closeModal();
     }
   };
@@ -155,7 +183,7 @@ const FavoritesList = () => {
 
     // Check if already in watched list
     const isAlreadyWatched = watched.some((watchedItem) =>
-      sameId(watchedItem.id, item.id)
+      sameEntry(watchedItem, { ...item, mediaType })
     );
 
     if (isAlreadyWatched) {
@@ -204,14 +232,19 @@ const FavoritesList = () => {
       await saveWatchedAll(updatedWatched);
 
       // Remove from favorites
-      const updatedFavorites = favorites.filter((fav) => fav.id !== item.id);
+      const updatedFavorites = favorites.filter(
+        (fav) =>
+          favoriteIdentity(fav) !== favoriteIdentity({ ...item, mediaType })
+      );
       setFavorites(updatedFavorites);
       setFilteredFavorites(
         updatedFavorites.filter((item) =>
-          item.title.toLowerCase().includes(searchTerm.toLowerCase())
+          (item.title || item.name || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
         )
       );
-      localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+      saveFavorites(updatedFavorites);
 
       // Show notification instead of alert
       showNotification(`"${item.title}" has been added to your watched list`);
@@ -227,8 +260,10 @@ const FavoritesList = () => {
   };
 
   // Check if an item is in the watched list
-  const isInWatchedList = (id) => {
-    return watched.some((item) => sameId(item.id, id));
+  const isInWatchedList = (item) => {
+    const mediaType =
+      item?.mediaType || (item?.first_air_date ? "tv" : "movie");
+    return watched.some((w) => sameEntry(w, { ...item, mediaType }));
   };
 
   const sortFavorites = (items, sortBy) => {
@@ -248,6 +283,9 @@ const FavoritesList = () => {
 
   return (
     <div className="min-h-screen p-4 pb-20 bg-gray-900">
+      {errorMessage && (
+        <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
+      )}
       {/* Header with search section - enhanced background */}
       <div className="sticky top-0 z-20 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900">
         <div className="p-1">
@@ -318,13 +356,13 @@ const FavoritesList = () => {
         <div className="space-y-4">
           {filteredFavorites.map((item) => (
             <SwipeableFavoriteCard
-              key={item.id}
+              key={favoriteIdentity(item) || item.id}
               item={item}
               swipeStartThreshold={30}
               onSelect={viewDetails}
               onRemove={removeFromFavorites}
               onAddToWatched={addToWatched}
-              alreadyWatched={isInWatchedList(item.id)}
+              alreadyWatched={isInWatchedList(item)}
             />
           ))}
         </div>

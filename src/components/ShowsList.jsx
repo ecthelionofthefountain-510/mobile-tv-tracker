@@ -1,5 +1,5 @@
 // ShowsList.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
 import SwipeableShowCard from "./SwipeableShowCard";
@@ -7,6 +7,11 @@ import ShowDetailModal from "./ShowDetailModal";
 import BackupControls from "./BackupControls";
 import { useWatchedList } from "../hooks/useWatchedList";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import {
+  loadFavorites,
+  saveFavorites,
+  favoriteIdentity,
+} from "../utils/favoritesStorage";
 
 // ev. SwipeInfoToast om du har den
 // import SwipeInfoToast from "./SwipeInfoToast";
@@ -17,12 +22,13 @@ const ShowsList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showForModal, setShowForModal] = useState(null);
   const [showDetails, setShowDetails] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [sortBy, setSortBy] = useState("title");
   const [showSwipeInfo, setShowSwipeInfo] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "inProgress", "done"
 
-  // Normalisering flyttad hit och används av hooken
-  const normalizeShows = (items) => {
+  // Normalisering används av hooken (memoized för att undvika refresh-loop)
+  const normalizeShows = useCallback((items) => {
     let changed = false;
 
     const normalized = items.map((item) => {
@@ -57,11 +63,12 @@ const ShowsList = () => {
     });
 
     return { normalized, changed };
-  };
+  }, []);
 
   const {
     items: watchedShowsRaw,
     loading,
+    error: watchedError,
     refresh,
     remove,
   } = useWatchedList("tv", { normalize: normalizeShows });
@@ -136,16 +143,19 @@ const ShowsList = () => {
       setShowDetails({ ...details, credits, videos });
     } catch (err) {
       console.error(err);
+      setErrorMessage("Could not load show details.");
     }
   };
 
   const handleShowModalSelect = (show) => {
+    setErrorMessage("");
     setShowForModal(show);
     fetchShowDetails(show.id);
   };
 
   const handleShowSelect = async (show) => {
     try {
+      setErrorMessage("");
       const details = await cachedFetchJson(
         `${TMDB_BASE_URL}/tv/${show.id}?api_key=${API_KEY}`,
         { ttlMs: 6 * 60 * 60 * 1000 }
@@ -165,12 +175,14 @@ const ShowsList = () => {
       });
     } catch (err) {
       console.error("Kunde inte hämta show-detaljer", err);
+      setErrorMessage("Could not load show details.");
     }
   };
 
   const closeShowModal = () => {
     setShowForModal(null);
     setShowDetails(null);
+    setErrorMessage("");
   };
 
   const removeShow = async (id) => {
@@ -185,14 +197,24 @@ const ShowsList = () => {
   };
 
   const addToFavorites = async (show) => {
-    const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
-    if (favorites.some((fav) => fav.id === show.id)) return;
+    const favorites = loadFavorites();
+    const normalizedShow = {
+      ...show,
+      mediaType: "tv",
+    };
+    if (
+      favorites.some(
+        (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedShow)
+      )
+    ) {
+      return;
+    }
 
     const updatedFavorites = [
       ...favorites,
-      { ...show, dateAdded: new Date().toISOString() },
+      { ...normalizedShow, dateAdded: new Date().toISOString() },
     ];
-    localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+    saveFavorites(updatedFavorites);
 
     await removeShow(show.id);
   };
@@ -299,22 +321,34 @@ const ShowsList = () => {
         </div>
       </div>
 
-      {/* Listan */}
-      <div className="space-y-4">
-        {filteredShows.map((show) => (
-          <SwipeableShowCard
-            key={show.id}
-            show={show}
-            swipeStartThreshold={30}
-            onSelect={handleShowSelect}
-            onShowInfo={handleShowModalSelect}
-            onRemove={removeShow}
-            onAddToFavorites={addToFavorites}
-          />
-        ))}
-      </div>
+      {(watchedError || errorMessage) && (
+        <div className="mb-3 text-sm text-red-300">
+          {watchedError || errorMessage}
+        </div>
+      )}
 
-      {filteredShows.length === 0 && (
+      {loading && (
+        <div className="py-8 text-center text-gray-400">Loading…</div>
+      )}
+
+      {/* Listan */}
+      {!loading && (
+        <div className="space-y-4">
+          {filteredShows.map((show) => (
+            <SwipeableShowCard
+              key={show.id}
+              show={show}
+              swipeStartThreshold={30}
+              onSelect={handleShowSelect}
+              onShowInfo={handleShowModalSelect}
+              onRemove={removeShow}
+              onAddToFavorites={addToFavorites}
+            />
+          ))}
+        </div>
+      )}
+
+      {!loading && filteredShows.length === 0 && (
         <div className="py-10 text-center">
           {watchedShowsRaw.length === 0 ? (
             <>

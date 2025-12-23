@@ -79,10 +79,15 @@ const SwipeableShowCard = ({
         setDeltaX(0);
       }
     },
-    onSwiped: () => {
+    onSwiped: (e) => {
+      if (Math.abs(e.deltaX) > 10) {
+        justSwiped.current = true;
+      }
+
       setTimeout(() => {
         justSwiped.current = false;
       }, 400);
+
       if (!animating) setDeltaX(0);
     },
     axis: "x", // Endast horisontell swipe
@@ -122,6 +127,11 @@ const SwipeableShowCard = ({
       <div
         {...handlers}
         className="relative z-10"
+        onClickCapture={(e) => {
+          if (!justSwiped.current) return;
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         style={{
           touchAction: "pan-y",
           userSelect: "none",

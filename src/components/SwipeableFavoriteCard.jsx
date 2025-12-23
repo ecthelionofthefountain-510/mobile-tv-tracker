@@ -39,13 +39,17 @@ const SwipeableFavoriteCard = ({
         setTimeout(() => {
           setDeltaX(0);
           setAnimating(false);
-          onRemove(item.id);
+          onRemove(item);
         }, 200);
       } else {
         setDeltaX(0);
       }
     },
-    onSwiped: () => {
+    onSwiped: (e) => {
+      if (Math.abs(e.deltaX) > 10) {
+        justSwiped.current = true;
+      }
+
       setTimeout(() => {
         justSwiped.current = false;
       }, 400);
@@ -99,6 +103,11 @@ const SwipeableFavoriteCard = ({
       <div
         {...handlers}
         className="relative z-10"
+        onClickCapture={(e) => {
+          if (!justSwiped.current) return;
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         style={{
           touchAction: "pan-y",
           userSelect: "none",

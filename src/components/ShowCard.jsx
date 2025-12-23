@@ -1,4 +1,5 @@
 import React from "react";
+import { IMAGE_BASE_URL } from "../config";
 
 const GENRE_MAP = {
   28: "Action",
@@ -29,7 +30,8 @@ const ShowCard = ({
   onShowInfo,
   showRemoveButton = true,
 }) => {
-  const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
+  const displayItem = item || {};
+  const nameText = displayItem.name || displayItem.title || "Untitled";
 
   const getGenres = () => {
     if (item.genres && Array.isArray(item.genres) && item.genres.length > 0) {
@@ -48,19 +50,6 @@ const ShowCard = ({
   };
 
   const genres = getGenres();
-
-  // Mock data för demonstration (valfritt, ta bort om du inte behöver)
-  const mockItem = {
-    id: 1,
-    name: "Sample Show",
-    poster_path: null,
-    mediaType: "tv",
-    first_air_date: "2022-01-01",
-    genre_ids: [18, 9648],
-    ...item,
-  };
-
-  const displayItem = { ...mockItem, ...item };
 
   const getWatchedEpisodeCount = () => {
     const seasons = displayItem?.seasons;
@@ -127,9 +116,7 @@ const ShowCard = ({
       role={isSelectable ? "button" : undefined}
       tabIndex={isSelectable ? 0 : undefined}
       onKeyDown={handleCardKeyDown}
-      aria-label={
-        isSelectable ? `Open details for ${displayItem.name}` : undefined
-      }
+      aria-label={isSelectable ? `Open details for ${nameText}` : undefined}
     >
       <div className="flex">
         <button
@@ -147,14 +134,14 @@ const ShowCard = ({
                 ? `${IMAGE_BASE_URL}${displayItem.poster_path}`
                 : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='168' viewBox='0 0 112 168'%3E%3Crect width='112' height='168' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='0.3em' fill='%236B7280' font-family='Arial' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E"
             }
-            alt={displayItem.name}
+            alt={nameText}
             className="object-cover w-full h-full border-r border-yellow-900/30"
           />
         </button>
         <div className="flex flex-col justify-between flex-1 min-w-0 p-3">
           <div>
             <h3 className="text-lg font-semibold text-yellow-400 truncate sm:text-xl">
-              {displayItem.name}
+              {nameText}
             </h3>
             <div className="mt-1 text-sm text-gray-400 truncate">
               TV Show

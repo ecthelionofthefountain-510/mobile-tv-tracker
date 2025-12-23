@@ -1,7 +1,34 @@
 // src/utils/watchedStorage.js
 import { get, set } from "idb-keyval";
 
-const WATCHED_KEY = "watched";
+const WATCHED_KEY_BASE = "watched";
+
+function safeJsonParse(value, fallback) {
+  if (value == null) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function getCurrentUser() {
+  const raw = localStorage.getItem("currentUser");
+  if (!raw) return null;
+
+  // currentUser is typically stored as JSON string (e.g. "Alice")
+  const parsed = safeJsonParse(raw, null);
+  if (typeof parsed === "string" && parsed.trim()) return parsed;
+
+  // fallback: if someone stored it as plain text
+  if (typeof raw === "string" && raw.trim() && raw !== "null") return raw;
+
+  return null;
+}
+
+function watchedKeyForUser(user = getCurrentUser()) {
+  return user ? `${WATCHED_KEY_BASE}_${user}` : WATCHED_KEY_BASE;
+}
 
 const ALLOWED_BASE_KEYS = [
   "id",
@@ -129,12 +156,29 @@ export async function ensurePersistentStorage() {
 }
 
 // Läs ALL watched-lista (filmer + serier)
-export async function loadWatchedAll() {
+export async function loadWatchedAll(user = getCurrentUser()) {
+  const scopedKey = watchedKeyForUser(user);
+  const legacyKey = WATCHED_KEY_BASE;
+
   // 1) Primär källa: IndexedDB (större kapacitet + mer pålitlig vid stora listor)
   try {
-    const fromIdb = await get(WATCHED_KEY);
+    const fromIdb = await get(scopedKey);
     if (Array.isArray(fromIdb)) {
       return normalizeWatchedItems(fromIdb);
+    }
+
+    // Migration: legacy global watched -> per user
+    if (user) {
+      const legacyFromIdb = await get(legacyKey);
+      if (Array.isArray(legacyFromIdb) && legacyFromIdb.length > 0) {
+        const normalized = normalizeWatchedItems(legacyFromIdb);
+        try {
+          await set(scopedKey, normalized);
+        } catch {
+          // ignore
+        }
+        return normalized;
+      }
     }
   } catch (e) {
     console.warn("Error reading from IndexedDB", e);
@@ -142,11 +186,21 @@ export async function loadWatchedAll() {
 
   // 2) Fallback: localStorage (snabbt, men kan vara begränsat i storlek)
   try {
-    const lsValue = localStorage.getItem(WATCHED_KEY);
-    if (lsValue) {
-      const parsed = JSON.parse(lsValue);
-      if (Array.isArray(parsed)) {
-        return normalizeWatchedItems(parsed);
+    const scopedRaw = localStorage.getItem(scopedKey);
+    const scopedParsed = safeJsonParse(scopedRaw, null);
+    if (Array.isArray(scopedParsed)) return normalizeWatchedItems(scopedParsed);
+
+    if (user) {
+      const legacyRaw = localStorage.getItem(legacyKey);
+      const legacyParsed = safeJsonParse(legacyRaw, null);
+      if (Array.isArray(legacyParsed) && legacyParsed.length > 0) {
+        const normalized = normalizeWatchedItems(legacyParsed);
+        try {
+          localStorage.setItem(scopedKey, JSON.stringify(normalized));
+        } catch {
+          // ignore
+        }
+        return normalized;
       }
     }
   } catch (e) {
@@ -158,24 +212,25 @@ export async function loadWatchedAll() {
 }
 
 // Spara hela watched-listan
-export async function saveWatchedAll(items) {
+export async function saveWatchedAll(items, user = getCurrentUser()) {
+  const scopedKey = watchedKeyForUser(user);
   const normalized = normalizeWatchedItems(items);
 
   try {
     // Primärt: IndexedDB
-    await set(WATCHED_KEY, normalized);
+    await set(scopedKey, normalized);
   } catch (e) {
     console.warn("Could not save to IndexedDB", e);
   }
 
   try {
     // Sekundärt: localStorage (kan faila vid stora listor)
-    localStorage.setItem(WATCHED_KEY, JSON.stringify(normalized));
+    localStorage.setItem(scopedKey, JSON.stringify(normalized));
   } catch (e) {
     console.warn("Could not save to localStorage", e);
     // Viktigt: rensa så vi inte råkar läsa gammalt/stale från localStorage och skriva över IDB senare
     try {
-      localStorage.removeItem(WATCHED_KEY);
+      localStorage.removeItem(scopedKey);
     } catch {
       // ignore
     }

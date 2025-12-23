@@ -1,9 +1,14 @@
 // OverviewPage.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { createWatchedMovie, createWatchedShow } from "../utils/watchedMapper";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import {
+  loadFavorites,
+  saveFavorites,
+  favoriteIdentity,
+} from "../utils/favoritesStorage";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 
@@ -44,6 +49,8 @@ const OverviewPage = () => {
   const [itemDetails, setItemDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [errorMessage, setErrorMessage] = useState("");
+
   // AI pick
   const [aiPicks, setAiPicks] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
@@ -67,6 +74,12 @@ const OverviewPage = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [recContext, setRecContext] = useState(null);
   const [isRecLoading, setIsRecLoading] = useState(false);
+  const [recError, setRecError] = useState("");
+
+  // Upcoming episodes / premieres
+  const [upcoming, setUpcoming] = useState([]);
+  const [upcomingLoading, setUpcomingLoading] = useState(false);
+  const [upcomingError, setUpcomingError] = useState("");
 
   const computeWatchedEpisodeCount = (show) => {
     const seasons = show?.seasons;
@@ -203,10 +216,17 @@ const OverviewPage = () => {
   // Ladda watched + favorites
   useEffect(() => {
     (async () => {
-      const allWatched = await loadWatchedAll();
-      setWatched(allWatched || []);
-      const favs = JSON.parse(localStorage.getItem("favorites")) || [];
-      setFavorites(favs);
+      try {
+        setErrorMessage("");
+        const allWatched = await loadWatchedAll();
+        setWatched(allWatched || []);
+        setFavorites(loadFavorites());
+      } catch (err) {
+        console.error("Failed to load overview data", err);
+        setWatched([]);
+        setFavorites([]);
+        setErrorMessage("Could not load your data.");
+      }
     })();
   }, []);
 
@@ -218,6 +238,126 @@ const OverviewPage = () => {
 
   const watchedShows = watched.filter(isShow);
   const watchedMovies = watched.filter(isMovie);
+
+  const premiereCandidateIds = useMemo(() => {
+    const ids = new Set();
+
+    for (const w of watchedShows) {
+      const mediaType = w?.mediaType || (w?.first_air_date ? "tv" : "movie");
+      if (mediaType !== "tv") continue;
+      if (w?.id == null) continue;
+      // Prefer in-progress if we know completion
+      if (w?.completed === true) continue;
+      ids.add(String(w.id));
+    }
+
+    for (const f of favorites) {
+      const mediaType = f?.mediaType || (f?.first_air_date ? "tv" : "movie");
+      if (mediaType !== "tv") continue;
+      if (f?.id == null) continue;
+      ids.add(String(f.id));
+    }
+
+    return Array.from(ids);
+  }, [watchedShows, favorites]);
+
+  const fmtDate = (iso) => {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return iso;
+    }
+  };
+
+  const relativeLabel = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+
+    const startOfDay = (x) =>
+      new Date(x.getFullYear(), x.getMonth(), x.getDate());
+    const today = startOfDay(new Date());
+    const target = startOfDay(d);
+    const diffDays = Math.round((target - today) / (24 * 60 * 60 * 1000));
+
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays > 1) return `In ${diffDays} days`;
+    if (diffDays === -1) return "Yesterday";
+    return `${Math.abs(diffDays)} days ago`;
+  };
+
+  useEffect(() => {
+    const key = premiereCandidateIds.join("|");
+    if (!key) {
+      setUpcoming([]);
+      setUpcomingError("");
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      setUpcomingLoading(true);
+      setUpcomingError("");
+      try {
+        const ids = premiereCandidateIds.slice(0, 10);
+        const details = await Promise.all(
+          ids.map((id) =>
+            cachedFetchJson(`${TMDB_BASE_URL}/tv/${id}?api_key=${API_KEY}`, {
+              ttlMs: 6 * 60 * 60 * 1000,
+              cacheKey: `tv:${id}:details`,
+            })
+          )
+        );
+        if (cancelled) return;
+
+        const items = (details || [])
+          .map((d) => {
+            const next = d?.next_episode_to_air;
+            const airDate = next?.air_date;
+            if (!airDate) return null;
+            const t = new Date(airDate).getTime();
+            if (Number.isNaN(t)) return null;
+            return {
+              id: d.id,
+              mediaType: "tv",
+              name: d.name,
+              title: d.name,
+              poster_path: d.poster_path,
+              air_date: airDate,
+              season_number: next?.season_number,
+              episode_number: next?.episode_number,
+            };
+          })
+          .filter(Boolean)
+          .sort((a, b) => new Date(a.air_date) - new Date(b.air_date));
+
+        // Keep it short and relevant
+        setUpcoming(items.slice(0, 8));
+      } catch (err) {
+        console.error("Failed to load upcoming episodes", err);
+        if (!cancelled) {
+          setUpcoming([]);
+          setUpcomingError("Could not load upcoming episodes.");
+        }
+      } finally {
+        if (!cancelled) setUpcomingLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [premiereCandidateIds.join("|")]);
 
   const totalEpisodesWatched = watchedShows.reduce((sum, show) => {
     const seasons = show.seasons || {};
@@ -255,13 +395,22 @@ const OverviewPage = () => {
   const recentFavorites = [...favorites].slice(-5).reverse();
 
   const toggleFavorite = (item) => {
-    const exists = favorites.some((f) => f.id === item.id);
+    const normalizedItem = {
+      ...item,
+      mediaType: item.mediaType || (item.first_air_date ? "tv" : "movie"),
+    };
+
+    const exists = favorites.some(
+      (f) => favoriteIdentity(f) === favoriteIdentity(normalizedItem)
+    );
     const updated = exists
-      ? favorites.filter((f) => f.id !== item.id)
-      : [...favorites, item];
+      ? favorites.filter(
+          (f) => favoriteIdentity(f) !== favoriteIdentity(normalizedItem)
+        )
+      : [...favorites, normalizedItem];
 
     setFavorites(updated);
-    localStorage.setItem("favorites", JSON.stringify(updated));
+    saveFavorites(updated);
     notify(
       exists
         ? `"${item.title || item.name}" removed from favorites.`
@@ -270,11 +419,14 @@ const OverviewPage = () => {
   };
 
   const toggleWatched = async (item) => {
-    const sameId = (a, b) => String(a) === String(b);
+    const sameEntry = (a, b) =>
+      String(a?.id) === String(b?.id) &&
+      (a?.mediaType || (a?.first_air_date ? "tv" : "movie")) ===
+        (b?.mediaType || (b?.first_air_date ? "tv" : "movie"));
     const allWatched = await loadWatchedAll();
-    const alreadyExists = allWatched.some((w) => sameId(w.id, item.id));
+    const alreadyExists = allWatched.some((w) => sameEntry(w, item));
     if (alreadyExists) {
-      const updatedAll = allWatched.filter((w) => !sameId(w.id, item.id));
+      const updatedAll = allWatched.filter((w) => !sameEntry(w, item));
       await saveWatchedAll(updatedAll);
       setWatched(updatedAll);
       notify(`"${item.title || item.name}" removed from watched.`);
@@ -376,6 +528,7 @@ const OverviewPage = () => {
 
     setSelectedItem({ ...item, mediaType });
     setIsLoading(true);
+    setErrorMessage("");
 
     const endpoint = mediaType === "tv" ? "tv" : "movie";
 
@@ -398,6 +551,8 @@ const OverviewPage = () => {
       setItemDetails({ ...details, credits, videos });
     } catch (err) {
       console.error("Failed to load details from TMDB", err);
+      setErrorMessage("Could not load details.");
+      notify("Could not load details.");
     } finally {
       setIsLoading(false);
     }
@@ -406,6 +561,7 @@ const OverviewPage = () => {
   const closeModal = () => {
     setSelectedItem(null);
     setItemDetails(null);
+    setErrorMessage("");
   };
 
   const getYear = (item) => {
@@ -466,6 +622,7 @@ const OverviewPage = () => {
     const endpoint = mediaType === "tv" ? "tv" : "movie";
 
     setIsRecLoading(true);
+    setRecError("");
     setRecContext({
       title: seed.title || seed.name || "",
       mediaType,
@@ -493,6 +650,7 @@ const OverviewPage = () => {
     } catch (err) {
       console.error("Failed to fetch recommendations", err);
       setRecommendations([]);
+      setRecError("Could not load recommendations.");
     } finally {
       setIsRecLoading(false);
     }
@@ -587,6 +745,10 @@ const OverviewPage = () => {
       )}
 
       <h1 className="mb-4 text-2xl font-bold text-yellow-400">Overview</h1>
+
+      {errorMessage && (
+        <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
+      )}
 
       {/* Snabba siffror */}
       <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
@@ -693,6 +855,80 @@ const OverviewPage = () => {
         )}
       </div>
 
+      {/* Upcoming */}
+      {(upcomingLoading || upcomingError || upcoming.length > 0) && (
+        <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
+          <h2 className="mb-2 text-lg font-semibold text-yellow-400">
+            Upcoming
+          </h2>
+
+          {upcomingLoading && (
+            <div className="py-1 text-sm text-gray-400">Loading…</div>
+          )}
+
+          {!upcomingLoading && upcomingError && (
+            <div className="py-1 text-sm text-red-300">{upcomingError}</div>
+          )}
+
+          {!upcomingLoading && !upcomingError && upcoming.length > 0 && (
+            <div className="space-y-2">
+              {upcoming.map((u) => {
+                const rel = relativeLabel(u.air_date);
+                const isSeasonPremiere = u.episode_number === 1;
+                return (
+                  <button
+                    key={`upcoming:${u.id}`}
+                    type="button"
+                    onClick={() => openDetails(u)}
+                    className="flex w-full overflow-hidden text-left transition border border-gray-800 rounded-lg bg-gray-900/80 hover:border-yellow-500/80 hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                  >
+                    <div className="flex-shrink-0 w-16 sm:w-20">
+                      {u.poster_path ? (
+                        <img
+                          src={`${IMAGE_BASE_URL}${u.poster_path}`}
+                          alt={u.name}
+                          className="object-cover w-full h-full"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-800">
+                          No image
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 px-3 py-2">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div className="text-sm font-bold text-yellow-400 sm:text-base">
+                          {(u.name || "").toUpperCase()}
+                        </div>
+                        {rel && (
+                          <div className="text-[10px] font-semibold tracking-wide text-gray-400">
+                            {rel.toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-0.5 text-xs text-gray-300">
+                        {isSeasonPremiere ? "SEASON PREMIERE" : "NEXT EPISODE"}
+                        {typeof u.season_number === "number" &&
+                          typeof u.episode_number === "number" && (
+                            <>
+                              {" "}
+                              • S{u.season_number}E{u.episode_number}
+                            </>
+                          )}
+                        {u.air_date && <> • {fmtDate(u.air_date)}</>}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Genre breakdown */}
       {topGenres.length > 0 && (
         <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
@@ -730,6 +966,10 @@ const OverviewPage = () => {
               Finding similar{" "}
               {recContext?.mediaType === "tv" ? "shows" : "movies"}...
             </div>
+          )}
+
+          {!isRecLoading && recError && (
+            <div className="py-2 text-sm text-red-300">{recError}</div>
           )}
 
           {!isRecLoading && recommendations.length > 0 && (

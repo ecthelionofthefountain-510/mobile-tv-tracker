@@ -31,7 +31,10 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [showCongrats, setShowCongrats] = useState(false);
   const { width, height } = useWindowSize(); // valfritt
 
-  const sameId = (a, b) => String(a) === String(b);
+  const sameEntry = (a, b) =>
+    String(a?.id) === String(b?.id) &&
+    (a?.mediaType || (a?.first_air_date ? "tv" : "movie")) ===
+      (b?.mediaType || (b?.first_air_date ? "tv" : "movie"));
 
   // Calculate progress stats on load and when seasons change
   useEffect(() => {
@@ -49,7 +52,9 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   useEffect(() => {
     (async () => {
       const allWatched = await loadWatchedAll();
-      const found = allWatched.find((item) => sameId(item.id, show.id));
+      const found = allWatched.find((item) =>
+        sameEntry(item, { id: show.id, mediaType: "tv" })
+      );
       if (found && found.seasons && !Array.isArray(found.seasons)) {
         setSeasons(found.seasons);
       }
@@ -84,12 +89,14 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     const allWatched = await loadWatchedAll();
     const isCompleted = computeCompletion(seasons);
 
-    const idx = allWatched.findIndex((item) => sameId(item.id, show.id));
+    const idx = allWatched.findIndex((item) =>
+      sameEntry(item, { id: show.id, mediaType: "tv" })
+    );
     let updatedAll;
 
     if (idx >= 0) {
       updatedAll = allWatched.map((item) =>
-        sameId(item.id, show.id)
+        sameEntry(item, { id: show.id, mediaType: "tv" })
           ? {
               ...item,
               mediaType: "tv",
@@ -119,7 +126,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     setHasChanges(false);
   }, [
     computeCompletion,
-    sameId,
+    sameEntry,
     seasons,
     show.id,
     show.name,

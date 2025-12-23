@@ -1,4 +1,5 @@
 import React from "react";
+import { IMAGE_BASE_URL } from "../config";
 
 const GENRE_MAP = {
   28: "Action",
@@ -23,8 +24,8 @@ const GENRE_MAP = {
 };
 
 const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
-  // Mock IMAGE_BASE_URL för demonstration
-  const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
+  const displayItem = item || {};
+  const titleText = displayItem.title || displayItem.name || "Untitled";
 
   // Förbättrad genre-hantering
   const getGenres = () => {
@@ -50,19 +51,6 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
 
   const genres = getGenres();
 
-  // Mock data för demonstration
-  const mockItem = {
-    id: 1,
-    title: "Sample Movie",
-    poster_path: null,
-    mediaType: "movie",
-    release_date: "2023-05-15",
-    genre_ids: [28, 12, 878], // Action, Adventure, Science Fiction
-    ...item,
-  };
-
-  const displayItem = { ...mockItem, ...item };
-
   const isSelectable = typeof onSelect === "function";
 
   const handleCardKeyDown = (e) => {
@@ -82,9 +70,7 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
       role={isSelectable ? "button" : undefined}
       tabIndex={isSelectable ? 0 : undefined}
       onKeyDown={handleCardKeyDown}
-      aria-label={
-        isSelectable ? `Open details for ${displayItem.title}` : undefined
-      }
+      aria-label={isSelectable ? `Open details for ${titleText}` : undefined}
     >
       <div className="flex">
         <div className="flex-shrink-0 w-24 self-stretch min-h-[8rem] sm:w-28 sm:min-h-[10rem]">
@@ -94,7 +80,7 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
                 ? `${IMAGE_BASE_URL}${displayItem.poster_path}`
                 : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='168' viewBox='0 0 112 168'%3E%3Crect width='112' height='168' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='0.3em' fill='%236B7280' font-family='Arial' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E"
             }
-            alt={displayItem.title}
+            alt={titleText}
             className="object-cover w-full h-full border-r border-yellow-900/30"
           />
         </div>
@@ -102,7 +88,7 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
         <div className="flex flex-col justify-between flex-1 min-w-0 p-3">
           <div>
             <h3 className="text-lg font-semibold text-yellow-400 sm:text-xl line-clamp-1">
-              {displayItem.title}
+              {titleText}
             </h3>
 
             <div className="mt-1 text-sm text-gray-400">

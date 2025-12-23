@@ -7,6 +7,11 @@ import "react-swipeable-list/dist/styles.css";
 import SwipeableMovieCard from "./SwipeableMovieCard";
 import { useWatchedList } from "../hooks/useWatchedList";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import {
+  loadFavorites,
+  saveFavorites,
+  favoriteIdentity,
+} from "../utils/favoritesStorage";
 // import SwipeInfoToast from "./SwipeInfoToast";
 
 const MoviesList = () => {
@@ -14,6 +19,7 @@ const MoviesList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [sortBy, setSortBy] = useState("title"); // "title" | "dateAdded"
   const [showSwipeInfo, setShowSwipeInfo] = useState(false);
 
@@ -21,6 +27,7 @@ const MoviesList = () => {
   const {
     items: watchedMoviesRaw,
     loading,
+    error: watchedError,
     refresh,
     remove,
   } = useWatchedList("movie");
@@ -93,10 +100,12 @@ const MoviesList = () => {
       setMovieDetails({ ...details, credits, videos });
     } catch (err) {
       console.error(err);
+      setErrorMessage("Could not load movie details.");
     }
   };
 
   const handleMovieSelect = (movie) => {
+    setErrorMessage("");
     setSelectedMovie(movie);
     fetchMovieDetails(movie.id);
   };
@@ -104,6 +113,7 @@ const MoviesList = () => {
   const closeMovieModal = () => {
     setSelectedMovie(null);
     setMovieDetails(null);
+    setErrorMessage("");
   };
 
   const removeMovie = async (id) => {
@@ -115,16 +125,24 @@ const MoviesList = () => {
   };
 
   const addToFavorites = async (movie) => {
-    const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
-    if (favorites.some((fav) => fav.id === movie.id)) {
+    const favorites = loadFavorites();
+    const normalizedMovie = {
+      ...movie,
+      mediaType: "movie",
+    };
+    if (
+      favorites.some(
+        (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedMovie)
+      )
+    ) {
       return;
     }
 
     const updatedFavorites = [
       ...favorites,
-      { ...movie, dateAdded: new Date().toISOString() },
+      { ...normalizedMovie, dateAdded: new Date().toISOString() },
     ];
-    localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+    saveFavorites(updatedFavorites);
 
     await removeMovie(movie.id);
   };
@@ -197,25 +215,37 @@ const MoviesList = () => {
         </select>
       </div>
 
+      {(watchedError || errorMessage) && (
+        <div className="mb-3 text-sm text-red-300">
+          {watchedError || errorMessage}
+        </div>
+      )}
+
+      {loading && (
+        <div className="py-8 text-center text-gray-400">Loading…</div>
+      )}
+
       {/* List with swipe-cards */}
-      <SwipeableList swipeStartThreshold={30}>
-        {filteredMovies.map((movie) => (
-          <SwipeableMovieCard
-            key={movie.id}
-            movie={movie}
-            onSelect={handleMovieSelect}
-            onRemove={removeMovie}
-            onAddToFavorites={addToFavorites}
-          />
-        ))}
-      </SwipeableList>
+      {!loading && (
+        <SwipeableList swipeStartThreshold={30}>
+          {filteredMovies.map((movie) => (
+            <SwipeableMovieCard
+              key={movie.id}
+              movie={movie}
+              onSelect={handleMovieSelect}
+              onRemove={removeMovie}
+              onAddToFavorites={addToFavorites}
+            />
+          ))}
+        </SwipeableList>
+      )}
 
       {/* Movie Detail Modal */}
       {selectedMovie && movieDetails && (
         <MovieDetailModal movie={movieDetails} onClose={closeMovieModal} />
       )}
 
-      {filteredMovies.length === 0 && (
+      {!loading && filteredMovies.length === 0 && (
         <div className="py-10 text-center">
           {watchedMoviesRaw.length === 0 ? (
             <>

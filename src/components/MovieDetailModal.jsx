@@ -1,4 +1,6 @@
-import React, { useRef } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
+import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
+import { cachedFetchJson } from "../utils/tmdbCache";
 
 const MovieDetailModal = ({
   movie,
@@ -9,11 +11,13 @@ const MovieDetailModal = ({
   onAddToWatched,
   onAddToFavorites,
 }) => {
-  // Mock IMAGE_BASE_URL for demonstration
-  const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
-
   // Swipe to close
   const touchStartY = useRef(null);
+
+  const dialogRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const previouslyFocusedElementRef = useRef(null);
+  const titleId = useId();
 
   const handleTouchStart = (e) => {
     touchStartY.current = e.touches[0].clientY;
@@ -33,39 +37,155 @@ const MovieDetailModal = ({
     if (e.target === e.currentTarget) onClose();
   };
 
-  if (!movie) return null;
-
-  // Mock data for demonstration if movie is empty
-  const mockMovie = {
-    title: "Sample Movie",
-    tagline: "This is a sample movie tagline",
-    vote_average: 7.8,
-    vote_count: 2150,
-    genres: [{ name: "Action" }, { name: "Drama" }],
-    release_date: "2023-05-15",
-    runtime: 128,
-    overview:
-      "This is a sample overview of the movie. It describes the plot, characters, and what makes this movie interesting to watch.",
-    credits: {
-      cast: [
-        { id: 1, name: "Actor One", profile_path: null },
-        { id: 2, name: "Actor Two", profile_path: null },
-        { id: 3, name: "Actor Three", profile_path: null },
-        { id: 4, name: "Actor Four", profile_path: null },
-        { id: 5, name: "Actor Five", profile_path: null },
-        { id: 6, name: "Actor Six", profile_path: null },
-        { id: 7, name: "Actor Seven", profile_path: null },
-        { id: 8, name: "Actor Eight", profile_path: null },
-        { id: 9, name: "Actor Nine", profile_path: null },
-        { id: 10, name: "Actor Ten", profile_path: null },
-      ],
-    },
-    videos: {
-      results: [{ key: "dQw4w9WgXcQ" }],
-    },
+  const getFocusableElements = () => {
+    const dialogEl = dialogRef.current;
+    if (!dialogEl) return [];
+    const elements = dialogEl.querySelectorAll(
+      [
+        "a[href]",
+        "button:not([disabled])",
+        "input:not([disabled])",
+        "select:not([disabled])",
+        "textarea:not([disabled])",
+        "[tabindex]:not([tabindex='-1'])",
+      ].join(",")
+    );
+    return Array.from(elements).filter(
+      (el) =>
+        !el.hasAttribute("disabled") &&
+        el.getAttribute("aria-hidden") !== "true"
+    );
   };
 
-  const displayMovie = movie ?? mockMovie;
+  const handleDialogKeyDown = (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onClose();
+      return;
+    }
+
+    if (e.key !== "Tab") return;
+
+    const focusables = getFocusableElements();
+    if (focusables.length === 0) {
+      e.preventDefault();
+      return;
+    }
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+
+    if (e.shiftKey) {
+      if (active === first || !dialogRef.current?.contains(active)) {
+        e.preventDefault();
+        last.focus();
+      }
+      return;
+    }
+
+    if (active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  if (!movie) return null;
+
+  useEffect(() => {
+    previouslyFocusedElementRef.current = document.activeElement;
+
+    const focusInitial = () => {
+      if (closeButtonRef.current) {
+        closeButtonRef.current.focus({ preventScroll: true });
+        return;
+      }
+
+      const focusables = getFocusableElements();
+      if (focusables[0]?.focus) {
+        focusables[0].focus({ preventScroll: true });
+        return;
+      }
+
+      dialogRef.current?.focus?.({ preventScroll: true });
+    };
+
+    const raf = requestAnimationFrame(focusInitial);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      const prev = previouslyFocusedElementRef.current;
+      try {
+        prev?.focus?.({ preventScroll: true });
+      } catch {
+        // ignore
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const displayMovie = movie;
+
+  const [providers, setProviders] = useState(null);
+  const [providersLoading, setProvidersLoading] = useState(false);
+  const [providersError, setProvidersError] = useState("");
+
+  const pickProviders = (results) => {
+    if (!results || typeof results !== "object") return null;
+    return (
+      results.SE ||
+      results.US ||
+      results.GB ||
+      results.DE ||
+      Object.values(results).find((v) => v && typeof v === "object") ||
+      null
+    );
+  };
+
+  const uniqProviders = (list) => {
+    const arr = Array.isArray(list) ? list : [];
+    const seen = new Set();
+    const out = [];
+    for (const p of arr) {
+      const id = p?.provider_id;
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push(p);
+    }
+    return out;
+  };
+
+  useEffect(() => {
+    if (!displayMovie?.id) return;
+    let cancelled = false;
+
+    (async () => {
+      setProvidersLoading(true);
+      setProvidersError("");
+      try {
+        const data = await cachedFetchJson(
+          `${TMDB_BASE_URL}/movie/${displayMovie.id}/watch/providers?api_key=${API_KEY}`,
+          { ttlMs: 24 * 60 * 60 * 1000 }
+        );
+        if (cancelled) return;
+        const picked = pickProviders(data?.results);
+        setProviders(picked);
+      } catch (err) {
+        console.error("Failed to load watch providers", err);
+        if (!cancelled) {
+          setProviders(null);
+          setProvidersError("Could not load streaming providers.");
+        }
+      } finally {
+        if (!cancelled) setProvidersLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayMovie?.id]);
 
   return (
     <div
@@ -75,9 +195,38 @@ const MovieDetailModal = ({
       onTouchEnd={handleTouchEnd}
     >
       <div
+        ref={dialogRef}
         className="relative bg-gray-800 rounded-none sm:rounded-lg shadow-xl w-full max-w-full sm:max-w-2xl max-h-[100vh] sm:max-h-[90vh] overflow-y-auto hide-scrollbar"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onKeyDown={handleDialogKeyDown}
+        tabIndex={-1}
       >
+        <button
+          ref={closeButtonRef}
+          type="button"
+          onClick={onClose}
+          className="absolute z-20 p-1 transition rounded top-2 right-2 hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+          aria-label="Close"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-6 h-6 text-gray-300 hover:text-yellow-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+
         {/* Backdrop image */}
         {displayMovie.backdrop_path && (
           <div className="relative w-full h-40 overflow-hidden md:h-56">
@@ -87,27 +236,6 @@ const MovieDetailModal = ({
               className="object-cover w-full h-full"
             />
             <div className="absolute inset-0 z-0 bg-black bg-opacity-70"></div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="absolute p-1 transition rounded top-2 right-2 hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-              aria-label="Close"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-6 h-6 text-gray-300 hover:text-yellow-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
           </div>
         )}
 
@@ -162,7 +290,7 @@ const MovieDetailModal = ({
 
         {/* All info/text under postern */}
         <div className="px-6 mt-2 text-left">
-          <h2 className="mb-1 text-3xl font-bold text-yellow-400">
+          <h2 id={titleId} className="mb-1 text-3xl font-bold text-yellow-400">
             {displayMovie.title}
           </h2>
           {displayMovie.tagline && (
@@ -203,6 +331,122 @@ const MovieDetailModal = ({
                 Overview
               </h3>
               <p className="text-gray-300">{displayMovie.overview}</p>
+            </div>
+          )}
+
+          {/* Where to watch */}
+          {(providersLoading || providersError || providers) && (
+            <div className="mb-4">
+              <h3 className="mb-2 text-lg font-semibold text-yellow-400">
+                Where to watch
+              </h3>
+
+              {providersLoading && (
+                <div className="text-sm text-gray-400">Loading…</div>
+              )}
+
+              {!providersLoading && providersError && (
+                <div className="text-sm text-red-300">{providersError}</div>
+              )}
+
+              {!providersLoading && !providersError && providers && (
+                <div className="space-y-3">
+                  {uniqProviders(providers.flatrate).length > 0 && (
+                    <div>
+                      <div className="mb-1 text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                        Stream
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {uniqProviders(providers.flatrate).map((p) => (
+                          <div
+                            key={p.provider_id}
+                            className="flex items-center gap-2 px-2 py-1 border border-gray-700 rounded bg-gray-900/60"
+                          >
+                            {p.logo_path && (
+                              <img
+                                src={`https://image.tmdb.org/t/p/w45${p.logo_path}`}
+                                alt={p.provider_name}
+                                className="w-5 h-5 rounded"
+                                loading="lazy"
+                              />
+                            )}
+                            <span className="text-xs text-gray-200">
+                              {p.provider_name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+{/* 
+                  {uniqProviders(providers.rent).length > 0 && (
+                    <div>
+                      <div className="mb-1 text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                        Rent
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {uniqProviders(providers.rent).map((p) => (
+                          <div
+                            key={p.provider_id}
+                            className="flex items-center gap-2 px-2 py-1 border border-gray-700 rounded bg-gray-900/60"
+                          >
+                            {p.logo_path && (
+                              <img
+                                src={`https://image.tmdb.org/t/p/w45${p.logo_path}`}
+                                alt={p.provider_name}
+                                className="w-5 h-5 rounded"
+                                loading="lazy"
+                              />
+                            )}
+                            <span className="text-xs text-gray-200">
+                              {p.provider_name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {uniqProviders(providers.buy).length > 0 && (
+                    <div>
+                      <div className="mb-1 text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                        Buy
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {uniqProviders(providers.buy).map((p) => (
+                          <div
+                            key={p.provider_id}
+                            className="flex items-center gap-2 px-2 py-1 border border-gray-700 rounded bg-gray-900/60"
+                          >
+                            {p.logo_path && (
+                              <img
+                                src={`https://image.tmdb.org/t/p/w45${p.logo_path}`}
+                                alt={p.provider_name}
+                                className="w-5 h-5 rounded"
+                                loading="lazy"
+                              />
+                            )}
+                            <span className="text-xs text-gray-200">
+                              {p.provider_name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )} */}
+
+                  {providers?.link && (
+                    <a
+                      href={providers.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block text-sm font-semibold text-yellow-400 underline underline-offset-4"
+                    >
+                      View on TMDB
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -253,8 +497,9 @@ const MovieDetailModal = ({
                     ▶️ Watch trailer
                   </a>
                   <button
+                    type="button"
                     onClick={onClose}
-                    className="px-6 py-2 text-base font-bold text-gray-900 transition bg-yellow-400 rounded-full shadow-lg hover:bg-yellow-500"
+                    className="px-6 py-2 text-base font-bold text-gray-900 transition bg-yellow-400 rounded-full shadow-lg hover:bg-yellow-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                     style={{ minWidth: 80 }}
                   >
                     Close

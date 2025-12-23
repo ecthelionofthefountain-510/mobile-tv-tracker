@@ -7,6 +7,11 @@ import ShowDetailModal from "./ShowDetailModal";
 import { createWatchedShow, createWatchedMovie } from "../utils/watchedMapper";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import {
+  loadFavorites,
+  saveFavorites,
+  favoriteIdentity,
+} from "../utils/favoritesStorage";
 
 const genreMap = {
   28: "Action",
@@ -38,10 +43,10 @@ const SearchPage = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
 
+  const [errorMessage, setErrorMessage] = useState("");
+
   const [watched, setWatched] = useState([]);
-  const [favorites, setFavorites] = useState(
-    () => JSON.parse(localStorage.getItem("favorites")) || []
-  );
+  const [favorites, setFavorites] = useState(() => loadFavorites());
 
   const [searchType, setSearchType] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
@@ -79,6 +84,11 @@ const SearchPage = () => {
     })();
   }, []);
 
+  // Ladda favorites (user-scoped) när sidan mountar
+  useEffect(() => {
+    setFavorites(loadFavorites());
+  }, []);
+
   // Debounce-sök
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -97,6 +107,7 @@ const SearchPage = () => {
   const fetchPopularMovies = async () => {
     setIsPopularMoviesLoading(true);
     try {
+      setErrorMessage("");
       const pages = [1, 2, 3]; // top ~60, men filtrerar sen
       const responses = await Promise.all(
         pages.map((page) =>
@@ -126,6 +137,7 @@ const SearchPage = () => {
     } catch (err) {
       console.error("Error fetching popular movies", err);
       setPopularMovies([]);
+      setErrorMessage("Could not load popular movies.");
     } finally {
       setIsPopularMoviesLoading(false);
     }
@@ -135,6 +147,7 @@ const SearchPage = () => {
   const fetchPopularTV = async () => {
     setIsPopularTVLoading(true);
     try {
+      setErrorMessage("");
       const pages = [1, 2, 3];
       const responses = await Promise.all(
         pages.map((page) =>
@@ -162,6 +175,7 @@ const SearchPage = () => {
     } catch (err) {
       console.error("Error fetching popular tv", err);
       setPopularTV([]);
+      setErrorMessage("Could not load popular shows.");
     } finally {
       setIsPopularTVLoading(false);
     }
@@ -197,6 +211,7 @@ const SearchPage = () => {
 
     setIsSearching(true);
     setResults([]);
+    setErrorMessage("");
     let combinedResults = [];
 
     try {
@@ -239,6 +254,7 @@ const SearchPage = () => {
     } catch (error) {
       console.error("Error searching content:", error);
       notify(`Search error: ${error.message}`);
+      setErrorMessage("Could not search right now.");
     } finally {
       setIsSearching(false);
     }
@@ -247,12 +263,15 @@ const SearchPage = () => {
   const toggleWatched = async (item, e) => {
     e?.stopPropagation?.();
 
-    const sameId = (a, b) => String(a) === String(b);
+    const sameEntry = (a, b) =>
+      String(a?.id) === String(b?.id) &&
+      (a?.mediaType || (a?.first_air_date ? "tv" : "movie")) ===
+        (b?.mediaType || (b?.first_air_date ? "tv" : "movie"));
 
     const allWatched = await loadWatchedAll();
-    const alreadyExists = allWatched.some((w) => sameId(w.id, item.id));
+    const alreadyExists = allWatched.some((w) => sameEntry(w, item));
     if (alreadyExists) {
-      const updatedAll = allWatched.filter((w) => !sameId(w.id, item.id));
+      const updatedAll = allWatched.filter((w) => !sameEntry(w, item));
       await saveWatchedAll(updatedAll);
       setWatched(updatedAll);
       notify(`"${item.title || item.name}" removed from watched.`);
@@ -336,13 +355,23 @@ const SearchPage = () => {
 
   const toggleFavorite = (item, e) => {
     e?.stopPropagation?.();
-    const isFavorited = favorites.some((fav) => fav.id === item.id);
+
+    const normalizedItem = {
+      ...item,
+      mediaType: item.mediaType || (item.first_air_date ? "tv" : "movie"),
+    };
+
+    const isFavorited = favorites.some(
+      (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedItem)
+    );
     const updatedFavorites = isFavorited
-      ? favorites.filter((fav) => fav.id !== item.id)
-      : [...favorites, item];
+      ? favorites.filter(
+          (fav) => favoriteIdentity(fav) !== favoriteIdentity(normalizedItem)
+        )
+      : [...favorites, normalizedItem];
 
     setFavorites(updatedFavorites);
-    localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+    saveFavorites(updatedFavorites);
     notify(
       isFavorited
         ? `"${item.title || item.name}" removed from favorites.`
@@ -368,6 +397,7 @@ const SearchPage = () => {
   const viewDetails = async (item) => {
     setSelectedItem(item);
     setIsLoading(true);
+    setErrorMessage("");
     const endpoint = item.mediaType === "tv" ? "tv" : "movie";
 
     try {
@@ -388,6 +418,8 @@ const SearchPage = () => {
       setItemDetails({ ...details, credits, videos });
     } catch (err) {
       console.error(err);
+      setErrorMessage("Could not load details.");
+      notify("Could not load details.");
     } finally {
       setIsLoading(false);
     }
@@ -396,6 +428,7 @@ const SearchPage = () => {
   const closeModal = () => {
     setSelectedItem(null);
     setItemDetails(null);
+    setErrorMessage("");
   };
 
   const handleResultKeyDown = (e, item) => {
@@ -582,6 +615,10 @@ const SearchPage = () => {
           </div>
         </div>
       </div>
+
+      {errorMessage && (
+        <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
+      )}
 
       {query && (
         <>
