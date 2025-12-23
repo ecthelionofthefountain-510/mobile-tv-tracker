@@ -695,7 +695,7 @@ const ProfilePage = () => {
             className="flex items-center justify-between text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
             aria-label="Open shows"
           >
-            <span>Shows</span>
+            <span>Favorite Shows</span>
             <FaChevronRight className="text-gray-300" />
           </Link>
 
@@ -726,7 +726,7 @@ const ProfilePage = () => {
             className="flex items-center justify-between text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
             aria-label="Open movies"
           >
-            <span>Movies</span>
+            <span>Favorite Movies</span>
             <FaChevronRight className="text-gray-300" />
           </Link>
 
