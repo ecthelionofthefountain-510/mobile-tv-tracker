@@ -750,112 +750,7 @@ const OverviewPage = () => {
         <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
       )}
 
-      {/* Snabba siffror */}
-      <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
-        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
-          <div className="text-xs text-gray-400">Total watched</div>
-          <div className="text-2xl font-bold text-yellow-400">
-            {watched.length}
-          </div>
-        </div>
-        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
-          <div className="text-xs text-gray-400">Movies</div>
-          <div className="text-2xl font-bold text-yellow-400">
-            {watchedMovies.length}
-          </div>
-        </div>
-        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
-          <div className="text-xs text-gray-400">Shows</div>
-          <div className="text-2xl font-bold text-yellow-400">
-            {watchedShows.length}
-          </div>
-        </div>
-        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
-          <div className="text-xs text-gray-400">Favorites</div>
-          <div className="text-2xl font-bold text-yellow-400">
-            {favorites.length}
-          </div>
-        </div>
-      </div>
-
-      {/* Avsnitts-statistik */}
-      <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
-        <h2 className="mb-2 text-lg font-semibold text-yellow-400">
-          Episode progress
-        </h2>
-        <p className="text-sm text-gray-300">
-          You have tracked{" "}
-          <span className="font-semibold text-yellow-400">
-            {totalEpisodesWatched}
-          </span>{" "}
-          watched episodes across{" "}
-          <span className="font-semibold text-yellow-400">
-            {watchedShows.length}
-          </span>{" "}
-          shows.
-        </p>
-      </div>
-
-      {/* AI pick */}
-      <div className="relative p-4 mb-6 overflow-hidden border rounded-lg border-orange-300/90 bg-gradient-to-br from-gray-900/80 via-gray-900/90 to-gray-800/60 ring-1 ring-yellow-500/15">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-yellow-400">
-                <span aria-hidden>✦</span>
-                AI pick
-              </h2>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={pickClientSide}
-            disabled={aiLoading}
-            className="ai-pick-cta relative isolate overflow-hidden px-4 py-2.5 text-sm font-bold tracking-wide text-gray-900 uppercase transition bg-yellow-500 rounded-lg shadow-lg hover:bg-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:opacity-60"
-          >
-            {aiLoading ? "Thinking..." : "Pick something"}
-          </button>
-        </div>
-
-        <div className="mt-3 border-t border-yellow-500/10" />
-
-        {aiError && <div className="mt-3 text-sm text-red-300">{aiError}</div>}
-
-        {aiPicks.length > 0 && (
-          <div className="mt-3 space-y-2">
-            {aiPicks.map((p, idx) => (
-              <button
-                key={`${p.mediaType}:${p.id}`}
-                type="button"
-                onClick={() =>
-                  openDetails({
-                    id: p.id,
-                    mediaType: p.mediaType,
-                    title: p.title,
-                    name: p.title,
-                  })
-                }
-                className="w-full p-3 text-left transition border rounded-lg border-yellow-500/20 bg-gray-900/70 hover:border-yellow-500/70 hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <div className="text-sm font-bold text-yellow-400">
-                    {(p.title || "").toUpperCase()}
-                  </div>
-                  <div className="text-[10px] font-semibold tracking-wide text-gray-400">
-                    #{idx + 1}
-                  </div>
-                </div>
-                {p.reason && (
-                  <div className="mt-1 text-xs text-gray-300">{p.reason}</div>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Upcoming */}
+            {/* Upcoming */}
       {(upcomingLoading || upcomingError || upcoming.length > 0) && (
         <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
           <h2 className="mb-2 text-lg font-semibold text-yellow-400">
@@ -929,6 +824,112 @@ const OverviewPage = () => {
         </div>
       )}
 
+      {/* Snabba siffror */}
+      {/* <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
+        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
+          <div className="text-xs text-gray-400">Total watched</div>
+          <div className="text-2xl font-bold text-yellow-400">
+            {watched.length}
+          </div>
+        </div>
+        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
+          <div className="text-xs text-gray-400">Movies</div>
+          <div className="text-2xl font-bold text-yellow-400">
+            {watchedMovies.length}
+          </div>
+        </div>
+        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
+          <div className="text-xs text-gray-400">Shows</div>
+          <div className="text-2xl font-bold text-yellow-400">
+            {watchedShows.length}
+          </div>
+        </div>
+        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
+          <div className="text-xs text-gray-400">Favorites</div>
+          <div className="text-2xl font-bold text-yellow-400">
+            {favorites.length}
+          </div>
+        </div>
+      </div> */}
+
+      {/* Avsnitts-statistik */}
+      {/* <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
+        <h2 className="mb-2 text-lg font-semibold text-yellow-400">
+          Episode progress
+        </h2>
+        <p className="text-sm text-gray-300">
+          You have tracked{" "}
+          <span className="font-semibold text-yellow-400">
+            {totalEpisodesWatched}
+          </span>{" "}
+          watched episodes across{" "}
+          <span className="font-semibold text-yellow-400">
+            {watchedShows.length}
+          </span>{" "}
+          shows.
+        </p>
+      </div> */}
+
+      {/* AI pick */}
+      <div className="relative p-4 mb-6 overflow-hidden border rounded-lg border-orange-300/90 bg-gradient-to-br from-gray-900/80 via-gray-900/90 to-gray-800/60 ring-1 ring-yellow-500/15">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-yellow-400">
+                <span aria-hidden>✦</span>
+                AI pick
+              </h2>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={pickClientSide}
+            disabled={aiLoading}
+            className="ai-pick-cta relative isolate overflow-hidden px-4 py-2.5 text-sm font-bold tracking-wide text-gray-900 uppercase transition bg-yellow-500 rounded-lg shadow-lg hover:bg-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:opacity-60"
+          >
+            {aiLoading ? "Thinking..." : "Pick something"}
+          </button>
+        </div>
+
+        <div className="mt-3 border-t border-yellow-500/10" />
+
+        {aiError && <div className="mt-3 text-sm text-red-300">{aiError}</div>}
+
+        {aiPicks.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {aiPicks.map((p, idx) => (
+              <button
+                key={`${p.mediaType}:${p.id}`}
+                type="button"
+                onClick={() =>
+                  openDetails({
+                    id: p.id,
+                    mediaType: p.mediaType,
+                    title: p.title,
+                    name: p.title,
+                  })
+                }
+                className="w-full p-3 text-left transition border rounded-lg border-yellow-500/20 bg-gray-900/70 hover:border-yellow-500/70 hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <div className="text-sm font-bold text-yellow-400">
+                    {(p.title || "").toUpperCase()}
+                  </div>
+                  <div className="text-[10px] font-semibold tracking-wide text-gray-400">
+                    #{idx + 1}
+                  </div>
+                </div>
+                {p.reason && (
+                  <div className="mt-1 text-xs text-gray-300">{p.reason}</div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+
       {/* Genre breakdown */}
       {topGenres.length > 0 && (
         <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
@@ -952,7 +953,7 @@ const OverviewPage = () => {
       )}
 
       {/* Because you watched ... */}
-      {(isRecLoading || recommendations.length > 0) && (
+      {/* {(isRecLoading || recommendations.length > 0) && (
         <section className="mt-8">
           <h2 className="mb-2 text-xl font-bold tracking-wide text-yellow-400 uppercase">
             Because you watched{" "}
@@ -980,7 +981,7 @@ const OverviewPage = () => {
             </div>
           )}
         </section>
-      )}
+      )} */}
 
       {/* Detalj-modal */}
       {selectedItem &&

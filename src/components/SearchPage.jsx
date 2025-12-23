@@ -39,6 +39,15 @@ const ALLOWED_LANGS = ["en", "sv", "de", "da"];
 
 const POPULAR_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minuter
 
+const mediaTypeOf = (item) =>
+  item?.mediaType || (item?.first_air_date ? "tv" : "movie");
+
+const identityOf = (item) => {
+  const mt = mediaTypeOf(item);
+  if (!mt || item?.id == null) return null;
+  return `${mt}:${String(item.id)}`;
+};
+
 const SearchPage = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -56,6 +65,14 @@ const SearchPage = () => {
   const [popularTV, setPopularTV] = useState([]);
   const [isPopularMoviesLoading, setIsPopularMoviesLoading] = useState(false);
   const [isPopularTVLoading, setIsPopularTVLoading] = useState(false);
+
+  const [recommendedMovies, setRecommendedMovies] = useState([]);
+  const [recommendedTV, setRecommendedTV] = useState([]);
+  const [isRecommendedMoviesLoading, setIsRecommendedMoviesLoading] =
+    useState(false);
+  const [isRecommendedTVLoading, setIsRecommendedTVLoading] = useState(false);
+  const [movieRecSeedTitle, setMovieRecSeedTitle] = useState("");
+  const [tvRecSeedTitle, setTvRecSeedTitle] = useState("");
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
@@ -75,6 +92,8 @@ const SearchPage = () => {
   };
 
   const lastPopularFetchRef = useRef(0);
+  const lastMovieRecSeedRef = useRef(null);
+  const lastTVRecSeedRef = useRef(null);
 
   // Ladda watched från gemensam storage när sidan laddas
   useEffect(() => {
@@ -205,6 +224,85 @@ const SearchPage = () => {
       document.removeEventListener("visibilitychange", handleVisibility);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const pickLatestWatched = (type) => {
+    const list = (Array.isArray(watched) ? watched : []).filter(
+      (w) => mediaTypeOf(w) === type
+    );
+    list.sort(
+      (a, b) =>
+        new Date(b?.dateAdded || 0).getTime() -
+        new Date(a?.dateAdded || 0).getTime()
+    );
+    return list[0] || null;
+  };
+
+  const fetchRecommendations = async (type, seedId) => {
+    const endpoint = type === "tv" ? "tv" : "movie";
+    const url =
+      `${TMDB_BASE_URL}/${endpoint}/${seedId}/recommendations?` +
+      `api_key=${API_KEY}&language=en-US`;
+
+    const data = await cachedFetchJson(url, { ttlMs: 6 * 60 * 60 * 1000 });
+    const items = Array.isArray(data?.results) ? data.results : [];
+    const filtered = items.filter((it) =>
+      ALLOWED_LANGS.includes(it?.original_language)
+    );
+    return filtered.slice(0, 8);
+  };
+
+  // Personliga rekommendationer: "Because you watched ..."
+  useEffect(() => {
+    if (query) return;
+
+    const movieSeed = pickLatestWatched("movie");
+    const tvSeed = pickLatestWatched("tv");
+
+    const movieSeedId = movieSeed?.id != null ? String(movieSeed.id) : null;
+    const tvSeedId = tvSeed?.id != null ? String(tvSeed.id) : null;
+
+    setMovieRecSeedTitle(movieSeed?.title || movieSeed?.name || "");
+    setTvRecSeedTitle(tvSeed?.title || tvSeed?.name || "");
+
+    if (!movieSeedId) {
+      lastMovieRecSeedRef.current = null;
+      setRecommendedMovies([]);
+    }
+
+    if (!tvSeedId) {
+      lastTVRecSeedRef.current = null;
+      setRecommendedTV([]);
+    }
+
+    if (movieSeedId && movieSeedId !== lastMovieRecSeedRef.current) {
+      lastMovieRecSeedRef.current = movieSeedId;
+      setIsRecommendedMoviesLoading(true);
+      fetchRecommendations("movie", movieSeedId)
+        .then((items) => {
+          setRecommendedMovies(items);
+        })
+        .catch((err) => {
+          console.error("Error fetching movie recommendations", err);
+          setRecommendedMovies([]);
+        })
+        .finally(() => setIsRecommendedMoviesLoading(false));
+    }
+
+    if (tvSeedId && tvSeedId !== lastTVRecSeedRef.current) {
+      lastTVRecSeedRef.current = tvSeedId;
+      setIsRecommendedTVLoading(true);
+      fetchRecommendations("tv", tvSeedId)
+        .then((items) => {
+          setRecommendedTV(items);
+        })
+        .catch((err) => {
+          console.error("Error fetching tv recommendations", err);
+          setRecommendedTV([]);
+        })
+        .finally(() => setIsRecommendedTVLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watched, query]);
 
   const searchContent = async () => {
     if (!query.trim()) return;
@@ -439,25 +537,31 @@ const SearchPage = () => {
   };
 
   const renderContentItem = (item) => {
-    const isWatched = watched.some((w) => w.id === item.id);
-    const isFavorited = favorites.some((f) => f.id === item.id);
+    const normalizedItem = { ...item, mediaType: mediaTypeOf(item) };
+    const id = identityOf(normalizedItem);
+    const isWatched = watched.some((w) => identityOf(w) === id);
+    const isFavorited = favorites.some(
+      (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedItem)
+    );
 
     return (
       <div
-        key={`${item.mediaType}-${item.id}`}
+        key={`${normalizedItem.mediaType}-${normalizedItem.id}`}
         className="relative mb-4 overflow-hidden transition-colors duration-200 bg-gray-800 border rounded-lg cursor-pointer border-yellow-900/30 hover:bg-gray-700 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-        onClick={() => viewDetails(item)}
+        onClick={() => viewDetails(normalizedItem)}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => handleResultKeyDown(e, item)}
-        aria-label={`Open details for ${item.title || item.name}`}
+        onKeyDown={(e) => handleResultKeyDown(e, normalizedItem)}
+        aria-label={`Open details for ${
+          normalizedItem.title || normalizedItem.name
+        }`}
       >
         <div className="flex p-3">
           <div className="flex-shrink-0 w-24 h-36">
-            {item.poster_path ? (
+            {normalizedItem.poster_path ? (
               <img
-                src={`${IMAGE_BASE_URL}${item.poster_path}`}
-                alt={item.title || item.name}
+                src={`${IMAGE_BASE_URL}${normalizedItem.poster_path}`}
+                alt={normalizedItem.title || normalizedItem.name}
                 className="object-cover w-full h-full border-2 rounded-md shadow-lg border-yellow-600/30"
               />
             ) : (
@@ -467,45 +571,49 @@ const SearchPage = () => {
 
           <div className="flex-1 min-w-0 ml-4">
             <h3 className="mb-1 text-xl font-bold text-yellow-400 truncate">
-              {item.title || item.name}
+              {normalizedItem.title || normalizedItem.name}
             </h3>
 
             <div className="mb-1 text-sm text-yellow-300/70">
-              {item.mediaType === "tv" ? "TV SERIES" : "MOVIE"}
+              {normalizedItem.mediaType === "tv" ? "TV SERIES" : "MOVIE"}
             </div>
 
             <div className="text-gray-300 text-xs mt-0.5 space-x-1">
-              {typeof item.vote_average === "number" &&
-                item.vote_average > 0 && (
-                  <span>⭐ {Number(item.vote_average).toFixed(1)}</span>
+              {typeof normalizedItem.vote_average === "number" &&
+                normalizedItem.vote_average > 0 && (
+                  <span>
+                    ⭐ {Number(normalizedItem.vote_average).toFixed(1)}
+                  </span>
                 )}
-
-              {Array.isArray(item.genre_ids) && item.genre_ids.length > 0 && (
-                <span>
-                  •{" "}
-                  {item.genre_ids
-                    .slice(0, 2)
-                    .map((id) => genreMap[id])
-                    .filter(Boolean)
-                    .join(", ")}
-                </span>
-              )}
-
-              {item.mediaType === "tv" && item.number_of_seasons && (
-                <span>• {item.number_of_seasons} seasons</span>
-              )}
+              {Array.isArray(normalizedItem.genre_ids) &&
+                normalizedItem.genre_ids.length > 0 && (
+                  <span>
+                    •{" "}
+                    {normalizedItem.genre_ids
+                      .slice(0, 2)
+                      .map((id) => genreMap[id])
+                      .filter(Boolean)
+                      .join(", ")}
+                  </span>
+                )}
+              {normalizedItem.mediaType === "tv" &&
+                normalizedItem.number_of_seasons && (
+                  <span>• {normalizedItem.number_of_seasons} seasons</span>
+                )}
             </div>
 
-            {(item.release_date || item.first_air_date) && (
+            {(normalizedItem.release_date || normalizedItem.first_air_date) && (
               <div className="text-gray-400 text-xs mt-0.5">
-                {item.release_date && (
+                {normalizedItem.release_date && (
                   <div>
-                    RELEASED: {new Date(item.release_date).getFullYear()}
+                    RELEASED:{" "}
+                    {new Date(normalizedItem.release_date).getFullYear()}
                   </div>
                 )}
-                {item.first_air_date && (
+                {normalizedItem.first_air_date && (
                   <div>
-                    FIRST AIRED: {new Date(item.first_air_date).getFullYear()}
+                    FIRST AIRED:{" "}
+                    {new Date(normalizedItem.first_air_date).getFullYear()}
                   </div>
                 )}
               </div>
@@ -524,7 +632,7 @@ const SearchPage = () => {
                 `}
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleWatched(item, e);
+                  toggleWatched(normalizedItem, e);
                 }}
                 aria-pressed={isWatched}
                 aria-label={
@@ -546,7 +654,7 @@ const SearchPage = () => {
                 `}
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleFavorite(item, e);
+                  toggleFavorite(normalizedItem, e);
                 }}
                 aria-pressed={isFavorited}
                 aria-label={
@@ -636,9 +744,37 @@ const SearchPage = () => {
         <div className="space-y-8">
           <div>
             <h2 className="mb-2 text-lg font-bold text-yellow-400">
-              Popular movies
+              {movieRecSeedTitle
+                ? `Because you watched ${movieRecSeedTitle}`
+                : "Popular movies"}
             </h2>
-            {isPopularMoviesLoading ? (
+            {movieRecSeedTitle ? (
+              isRecommendedMoviesLoading ? (
+                <div className="py-4 text-yellow-400">Laddar...</div>
+              ) : recommendedMovies.length > 0 ? (
+                <div className="space-y-4">
+                  {recommendedMovies.map((item) =>
+                    renderContentItem({
+                      ...item,
+                      mediaType: "movie",
+                      title: item.title || item.name,
+                    })
+                  )}
+                </div>
+              ) : isPopularMoviesLoading ? (
+                <div className="py-4 text-yellow-400">Laddar...</div>
+              ) : (
+                <div className="space-y-4">
+                  {popularMovies.map((item) =>
+                    renderContentItem({
+                      ...item,
+                      mediaType: "movie",
+                      title: item.title || item.name,
+                    })
+                  )}
+                </div>
+              )
+            ) : isPopularMoviesLoading ? (
               <div className="py-4 text-yellow-400">Laddar...</div>
             ) : (
               <div className="space-y-4">
@@ -654,9 +790,37 @@ const SearchPage = () => {
           </div>
           <div>
             <h2 className="mb-2 text-lg font-bold text-yellow-400">
-              Popular shows
+              {tvRecSeedTitle
+                ? `Because you watched ${tvRecSeedTitle}`
+                : "Popular shows"}
             </h2>
-            {isPopularTVLoading ? (
+            {tvRecSeedTitle ? (
+              isRecommendedTVLoading ? (
+                <div className="py-4 text-yellow-400">Laddar...</div>
+              ) : recommendedTV.length > 0 ? (
+                <div className="space-y-4">
+                  {recommendedTV.map((item) =>
+                    renderContentItem({
+                      ...item,
+                      mediaType: "tv",
+                      title: item.title || item.name,
+                    })
+                  )}
+                </div>
+              ) : isPopularTVLoading ? (
+                <div className="py-4 text-yellow-400">Laddar...</div>
+              ) : (
+                <div className="space-y-4">
+                  {popularTV.map((item) =>
+                    renderContentItem({
+                      ...item,
+                      mediaType: "tv",
+                      title: item.title || item.name,
+                    })
+                  )}
+                </div>
+              )
+            ) : isPopularTVLoading ? (
               <div className="py-4 text-yellow-400">Laddar...</div>
             ) : (
               <div className="space-y-4">
@@ -681,8 +845,17 @@ const SearchPage = () => {
             show={itemDetails}
             onClose={closeModal}
             showActions
-            isWatched={watched.some((w) => w.id === selectedItem.id)}
-            isFavorited={favorites.some((f) => f.id === selectedItem.id)}
+            isWatched={watched.some(
+              (w) => identityOf(w) === identityOf(selectedItem)
+            )}
+            isFavorited={favorites.some(
+              (f) =>
+                favoriteIdentity(f) ===
+                favoriteIdentity({
+                  ...selectedItem,
+                  mediaType: mediaTypeOf(selectedItem),
+                })
+            )}
             onAddToWatched={(show) => {
               const actionItem = getActionItem();
               if (actionItem) toggleWatched({ ...actionItem, ...show });
@@ -697,8 +870,17 @@ const SearchPage = () => {
             movie={itemDetails}
             onClose={closeModal}
             showActions
-            isWatched={watched.some((w) => w.id === selectedItem.id)}
-            isFavorited={favorites.some((f) => f.id === selectedItem.id)}
+            isWatched={watched.some(
+              (w) => identityOf(w) === identityOf(selectedItem)
+            )}
+            isFavorited={favorites.some(
+              (f) =>
+                favoriteIdentity(f) ===
+                favoriteIdentity({
+                  ...selectedItem,
+                  mediaType: mediaTypeOf(selectedItem),
+                })
+            )}
             onAddToWatched={(movie) => {
               const actionItem = getActionItem();
               if (actionItem) toggleWatched({ ...actionItem, ...movie });
