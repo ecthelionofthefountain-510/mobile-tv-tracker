@@ -15,6 +15,7 @@ import {
   loadFavorites,
   saveFavorites,
 } from "../utils/favoritesStorage";
+import { emitProfileMediaUpdated } from "../utils/profileMediaEvents";
 import { createWatchedMovie, createWatchedShow } from "../utils/watchedMapper";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
@@ -268,6 +269,7 @@ const ProfilePage = () => {
         } catch {
           // ignore
         }
+        emitProfileMediaUpdated({ kind: "cover", user });
       } catch (e) {
         console.error(e);
       }
@@ -366,6 +368,7 @@ const ProfilePage = () => {
       } catch {
         // ignore
       }
+      emitProfileMediaUpdated({ kind: "avatar", user: activeUser });
     }
 
     if (editDraft.coverDataUrl) {
@@ -384,6 +387,7 @@ const ProfilePage = () => {
       } catch {
         // ignore
       }
+      emitProfileMediaUpdated({ kind: "cover", user: activeUser });
     }
 
     closeEditProfile();

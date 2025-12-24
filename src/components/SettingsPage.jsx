@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { del as idbDel, get as idbGet, set as idbSet } from "idb-keyval";
 import { FaCamera, FaChevronLeft } from "react-icons/fa";
 import { getCurrentUser } from "../utils/favoritesStorage";
+import { emitProfileMediaUpdated } from "../utils/profileMediaEvents";
 
 const profileAvatarKeyForUser = (user) =>
   user ? `profileAvatar_${user}` : "profileAvatar";
@@ -277,6 +278,8 @@ const SettingsPage = () => {
     setStatus("");
     setCurrentUser(user);
     localStorage.setItem("currentUser", JSON.stringify(user));
+
+    emitProfileMediaUpdated({ kind: "user", user });
   };
 
   const removeUser = (user) => {
@@ -288,6 +291,8 @@ const SettingsPage = () => {
     if (currentUser === user) {
       setCurrentUser(null);
       localStorage.removeItem("currentUser");
+
+      emitProfileMediaUpdated({ kind: "user", user: null });
     }
   };
 
@@ -316,6 +321,8 @@ const SettingsPage = () => {
         } catch {
           // ignore
         }
+
+        emitProfileMediaUpdated({ kind: "avatar", user });
       } catch {
         // ignore
       }
@@ -353,6 +360,7 @@ const SettingsPage = () => {
       // ignore
     }
     setCurrentUser(null);
+    emitProfileMediaUpdated({ kind: "user", user: null });
     setStatus("Logged out.");
   };
 
@@ -407,7 +415,8 @@ const SettingsPage = () => {
       const images = safeJsonParse(localStorage.getItem("profileImages"), {});
       const covers = safeJsonParse(localStorage.getItem("profileCovers"), {});
 
-      if (displayNames && typeof displayNames === "object") delete displayNames[user];
+      if (displayNames && typeof displayNames === "object")
+        delete displayNames[user];
       if (info && typeof info === "object") delete info[user];
       if (images && typeof images === "object") delete images[user];
       if (covers && typeof covers === "object") delete covers[user];
@@ -438,6 +447,8 @@ const SettingsPage = () => {
     }
 
     setStatus("Account deleted.");
+
+    emitProfileMediaUpdated({ kind: "user", user: null });
   };
 
   return (
@@ -509,14 +520,18 @@ const SettingsPage = () => {
 
             <div className="mt-5 space-y-6">
               <div>
-                <div className="text-lg font-semibold text-gray-100">Username</div>
+                <div className="text-lg font-semibold text-gray-100">
+                  Username
+                </div>
                 <div className="mt-1 text-xl font-semibold text-blue-500">
                   {activeUser || "—"}
                 </div>
               </div>
 
               <div>
-                <div className="text-lg font-semibold text-gray-100">User ID</div>
+                <div className="text-lg font-semibold text-gray-100">
+                  User ID
+                </div>
                 <div className="mt-1 text-xl font-semibold text-gray-400">
                   {activeUser || "—"}
                 </div>
@@ -542,7 +557,8 @@ const SettingsPage = () => {
                       Set profile to private
                     </div>
                     <div className="mt-1 text-sm text-gray-400">
-                      If your profile is private, only followers can see your activity.
+                      If your profile is private, only followers can see your
+                      activity.
                     </div>
                   </div>
 
@@ -564,6 +580,106 @@ const SettingsPage = () => {
                       aria-hidden="true"
                     />
                   </button>
+                </div>
+              </div>
+
+              <div className="pt-10 mt-10 border-t border-white/10">
+                <div className="text-2xl font-bold text-gray-100">Accounts</div>
+                <div className="mt-4 border border-white/10 rounded-2xl bg-white/5">
+                  <div className="p-4">
+                    <div className="flex items-stretch gap-2">
+                      <input
+                        type="text"
+                        placeholder="Enter new user name"
+                        value={newUser}
+                        onChange={(e) => setNewUser(e.target.value)}
+                        className="flex-1 min-w-0 p-2 text-white placeholder-gray-400 bg-gray-800 border rounded-md border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                      />
+                      <button
+                        type="button"
+                        onClick={addUser}
+                        className="px-4 py-2 text-sm font-semibold text-gray-900 bg-yellow-500 rounded-md hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      {users.length === 0 && (
+                        <div className="text-sm text-gray-400">
+                          No users yet.
+                        </div>
+                      )}
+
+                      {users.map((user) => {
+                        const isActive = activeUser === user;
+                        return (
+                          <div
+                            key={user}
+                            className={
+                              "flex flex-col gap-3 p-4 border rounded-2xl sm:flex-row sm:items-center sm:justify-between " +
+                              (isActive
+                                ? "border-yellow-500/60 bg-black/35"
+                                : "border-white/10 bg-black/25")
+                            }
+                          >
+                            <div className="flex items-center flex-1 min-w-0 gap-4">
+                              <img
+                                src={avatarUrlFor(user)}
+                                alt={`${user} profile`}
+                                className="flex-shrink-0 object-cover w-12 h-12 bg-gray-800 border rounded-full border-white/10"
+                              />
+                              <div className="min-w-0">
+                                <div className="text-sm font-semibold text-gray-100 truncate">
+                                  {user}
+                                </div>
+                                {isActive && (
+                                  <div className="text-[11px] text-yellow-300">
+                                    Active
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center w-full gap-3 sm:w-auto sm:justify-end">
+                              <label className="flex items-center justify-center w-12 h-12 border cursor-pointer rounded-xl border-white/10 bg-black/25 hover:bg-black/35 focus-within:ring-2 focus-within:ring-yellow-400/70 focus-within:ring-offset-2 focus-within:ring-offset-gray-900">
+                                <FaCamera className="text-yellow-300" />
+                                <span className="sr-only">Choose picture</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleImageChange(user, file);
+                                    if (e.target) e.target.value = "";
+                                  }}
+                                />
+                              </label>
+
+                              {!isActive && (
+                                <button
+                                  type="button"
+                                  onClick={() => switchUser(user)}
+                                  className="px-4 py-3 text-xs font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                                >
+                                  Switch
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => removeUser(user)}
+                                className="px-6 py-3 text-xs font-semibold text-white rounded-xl bg-red-700/80 hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -741,7 +857,9 @@ const SettingsPage = () => {
                 <span
                   className={
                     "inline-block h-6 w-6 transform rounded-full bg-gray-950 transition " +
-                    (prefHideWatchedEpisodes ? "translate-x-7" : "translate-x-1")
+                    (prefHideWatchedEpisodes
+                      ? "translate-x-7"
+                      : "translate-x-1")
                   }
                   aria-hidden="true"
                 />
@@ -749,104 +867,6 @@ const SettingsPage = () => {
             </div>
           </>
         )}
-
-        <div className="pt-10 mt-10 border-t border-white/10">
-          <div className="text-2xl font-bold text-gray-100">Accounts</div>
-          <div className="mt-4 border border-white/10 rounded-2xl bg-white/5">
-            <div className="p-4">
-              <div className="flex items-stretch gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter new user name"
-                  value={newUser}
-                  onChange={(e) => setNewUser(e.target.value)}
-                  className="flex-1 min-w-0 p-2 text-white placeholder-gray-400 bg-gray-800 border rounded-md border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-                />
-                <button
-                  type="button"
-                  onClick={addUser}
-                  className="px-4 py-2 text-sm font-semibold text-gray-900 bg-yellow-500 rounded-md hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-                >
-                  Add
-                </button>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                {users.length === 0 && (
-                  <div className="text-sm text-gray-400">No users yet.</div>
-                )}
-
-                {users.map((user) => {
-                  const isActive = activeUser === user;
-                  return (
-                    <div
-                      key={user}
-                      className={
-                        "flex flex-col gap-3 p-4 border rounded-2xl sm:flex-row sm:items-center sm:justify-between " +
-                        (isActive
-                          ? "border-yellow-500/60 bg-black/35"
-                          : "border-white/10 bg-black/25")
-                      }
-                    >
-                      <div className="flex items-center flex-1 min-w-0 gap-4">
-                        <img
-                          src={avatarUrlFor(user)}
-                          alt={`${user} profile`}
-                          className="flex-shrink-0 object-cover w-12 h-12 bg-gray-800 border rounded-full border-white/10"
-                        />
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold text-gray-100 truncate">
-                            {user}
-                          </div>
-                          {isActive && (
-                            <div className="text-[11px] text-yellow-300">
-                              Active
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center w-full gap-3 sm:w-auto sm:justify-end">
-                        <label className="flex items-center justify-center w-12 h-12 border cursor-pointer rounded-xl border-white/10 bg-black/25 hover:bg-black/35 focus-within:ring-2 focus-within:ring-yellow-400/70 focus-within:ring-offset-2 focus-within:ring-offset-gray-900">
-                          <FaCamera className="text-yellow-300" />
-                          <span className="sr-only">Choose picture</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleImageChange(user, file);
-                              if (e.target) e.target.value = "";
-                            }}
-                          />
-                        </label>
-
-                        {!isActive && (
-                          <button
-                            type="button"
-                            onClick={() => switchUser(user)}
-                            className="px-4 py-3 text-xs font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-                          >
-                            Switch
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => removeUser(user)}
-                          className="px-6 py-3 text-xs font-semibold text-white rounded-xl bg-red-700/80 hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
