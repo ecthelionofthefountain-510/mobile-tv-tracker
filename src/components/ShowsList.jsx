@@ -303,7 +303,7 @@ const ShowsList = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
+            className="px-4 py-2 text-sm font-semibold text-white bg-gray-800 border border-yellow-500 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
             <option value="all">All</option>
             <option value="inProgress">In progress</option>
@@ -313,7 +313,7 @@ const ShowsList = () => {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="w-24 px-2 py-1 text-sm text-yellow-400 bg-gray-800 border border-gray-700 rounded-lg"
+            className="px-4 py-2 text-sm font-semibold text-yellow-300 bg-gray-800 border border-yellow-500 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
             <option value="title">A-Ö</option>
             <option value="dateAdded">Most recent</option>

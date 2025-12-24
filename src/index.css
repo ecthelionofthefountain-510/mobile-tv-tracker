@@ -37,6 +37,48 @@ body {
   overflow-x: hidden; /* Förhindra horisontell scroll */
 }
 
+/* Theme overrides (applied by JS via body.theme-light) */
+body.theme-light {
+  @apply text-gray-900 bg-gray-100;
+  background-image: none;
+}
+
+body.theme-light .bg-gray-950 {
+  @apply bg-white;
+}
+
+body.theme-light .bg-gray-900 {
+  @apply bg-gray-50;
+}
+
+body.theme-light .bg-black\/80 {
+  @apply bg-white/80;
+}
+
+body.theme-light .bg-white\/5 {
+  @apply bg-black/5;
+}
+
+body.theme-light .text-gray-100 {
+  @apply text-gray-900;
+}
+
+body.theme-light .text-gray-300 {
+  @apply text-gray-700;
+}
+
+body.theme-light .text-gray-400 {
+  @apply text-gray-600;
+}
+
+body.theme-light .border-white\/10 {
+  @apply border-black/10;
+}
+
+body.theme-light .border-white\/15 {
+  @apply border-black/15;
+}
+
 /* 📱 Säkra textstorlek för mobil */
 h1 {
   @apply text-2xl font-bold text-yellow-400 md:text-4xl;

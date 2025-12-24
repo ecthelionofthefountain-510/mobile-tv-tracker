@@ -81,7 +81,7 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
                 : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='168' viewBox='0 0 112 168'%3E%3Crect width='112' height='168' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='0.3em' fill='%236B7280' font-family='Arial' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E"
             }
             alt={titleText}
-            className="object-cover w-full h-full border-r border-yellow-900/30"
+            className="object-cover w-full h-full border-r border-yellow-500/20"
           />
         </div>
 
@@ -91,7 +91,7 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
               {titleText}
             </h3>
 
-            <div className="mt-1 text-sm text-gray-400">
+            <div className="mt-1 text-sm text-gray-300">
               {displayItem.mediaType === "tv" ? "TV Show" : "Movie"}
               {displayItem.release_date && (
                 <span className="ml-2">
@@ -102,10 +102,10 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
 
             {/* Genre-visning */}
             {genres.length > 0 && (
-              <div className="mt-1 text-sm text-gray-300">
+              <div className="mt-1 text-sm text-gray-200">
                 {genres.slice(0, 3).join(", ")}
                 {genres.length > 3 && (
-                  <span className="text-gray-400">
+                  <span className="text-gray-300">
                     {" "}
                     +{genres.length - 3} more
                   </span>
@@ -116,7 +116,7 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
             {/* Extra info för TV-serier */}
             {displayItem.mediaType === "tv" &&
               displayItem.number_of_seasons && (
-                <div className="mt-1 text-sm text-gray-400">
+                <div className="mt-1 text-sm text-gray-300">
                   {displayItem.number_of_seasons}{" "}
                   {displayItem.number_of_seasons === 1 ? "Season" : "Seasons"}
                 </div>

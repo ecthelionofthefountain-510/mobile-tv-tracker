@@ -4,6 +4,7 @@ import { del as idbDel, get as idbGet, set as idbSet } from "idb-keyval";
 import { FaCamera, FaChevronLeft } from "react-icons/fa";
 import { getCurrentUser } from "../utils/favoritesStorage";
 import { emitProfileMediaUpdated } from "../utils/profileMediaEvents";
+import { applyThemePreference } from "../utils/theme";
 
 const profileAvatarKeyForUser = (user) =>
   user ? `profileAvatar_${user}` : "profileAvatar";
@@ -129,7 +130,7 @@ const SettingsPage = () => {
   const [prefTheme, setPrefTheme] = useState(() =>
     safeJsonParse(
       localStorage.getItem(makeSettingKey(activeUser, "theme")),
-      "system"
+      "dark"
     )
   );
 
@@ -162,7 +163,7 @@ const SettingsPage = () => {
     setPrefTheme(
       safeJsonParse(
         localStorage.getItem(makeSettingKey(activeUser, "theme")),
-        "system"
+        "dark"
       )
     );
   }, [activeUser]);
@@ -215,12 +216,18 @@ const SettingsPage = () => {
     try {
       localStorage.setItem(
         makeSettingKey(activeUser, "theme"),
-        JSON.stringify(prefTheme)
+        JSON.stringify("dark")
       );
     } catch {
       // ignore
     }
   }, [activeUser, prefTheme]);
+
+  useEffect(() => {
+    // Dark-only for now.
+    if (prefTheme !== "dark") setPrefTheme("dark");
+    applyThemePreference("dark");
+  }, [prefTheme]);
 
   // Load avatars for users list from IndexedDB.
   useEffect(() => {
@@ -738,42 +745,8 @@ const SettingsPage = () => {
 
             <div className="pt-8 mt-8 border-t border-white/10">
               <div className="text-2xl font-bold text-gray-100">Theme</div>
-              <div className="mt-5 space-y-4">
-                <label className="flex items-center gap-3 text-lg font-semibold text-gray-100">
-                  <input
-                    type="radio"
-                    name="theme"
-                    value="system"
-                    checked={prefTheme === "system"}
-                    onChange={() => setPrefTheme("system")}
-                    className="w-5 h-5"
-                  />
-                  Automatically sync app with device setting
-                </label>
-
-                <label className="flex items-center gap-3 text-lg font-semibold text-gray-100">
-                  <input
-                    type="radio"
-                    name="theme"
-                    value="light"
-                    checked={prefTheme === "light"}
-                    onChange={() => setPrefTheme("light")}
-                    className="w-5 h-5"
-                  />
-                  Light Mode
-                </label>
-
-                <label className="flex items-center gap-3 text-lg font-semibold text-gray-100">
-                  <input
-                    type="radio"
-                    name="theme"
-                    value="dark"
-                    checked={prefTheme === "dark"}
-                    onChange={() => setPrefTheme("dark")}
-                    className="w-5 h-5"
-                  />
-                  Dark Mode
-                </label>
+              <div className="mt-3 text-sm text-gray-400">
+                Dark mode is enabled.
               </div>
             </div>
 

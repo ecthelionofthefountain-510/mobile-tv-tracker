@@ -14,6 +14,7 @@ import ProfilePage from "./components/ProfilePage";
 import OverviewPage from "./components/OverviewPage";
 import SettingsPage from "./components/SettingsPage";
 import "./index.css";
+import { applyThemePreference, getStoredThemePreference } from "./utils/theme";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -41,6 +42,23 @@ const App = () => {
 function AppShell() {
   const { pathname } = useLocation();
   const hideNavbar = pathname === "/settings";
+
+  useEffect(() => {
+    const applyFromStorage = () => {
+      let user = null;
+      try {
+        user = JSON.parse(localStorage.getItem("currentUser"));
+      } catch {
+        user = null;
+      }
+
+      applyThemePreference(getStoredThemePreference(user));
+    };
+
+    applyFromStorage();
+    window.addEventListener("storage", applyFromStorage);
+    return () => window.removeEventListener("storage", applyFromStorage);
+  }, []);
 
   return (
     <div className="flex flex-col h-screen">
