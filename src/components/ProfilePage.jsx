@@ -172,6 +172,28 @@ const ProfilePage = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isMenuOpen]);
 
+  // Load active user's avatar from IndexedDB.
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      if (!activeUser) return;
+      try {
+        const avatar = await idbGet(profileAvatarKeyForUser(activeUser));
+        if (cancelled) return;
+        if (typeof avatar === "string" && avatar) {
+          setProfileImages((prev) => ({ ...prev, [activeUser]: avatar }));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeUser]);
+
   // Load active user's cover from IndexedDB.
   useEffect(() => {
     let cancelled = false;
