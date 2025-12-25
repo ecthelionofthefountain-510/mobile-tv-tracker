@@ -1,5 +1,6 @@
 // OverviewPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { createWatchedMovie, createWatchedShow } from "../utils/watchedMapper";
@@ -43,6 +44,7 @@ const GENRE_MAP = {
 };
 
 const OverviewPage = () => {
+  const navigate = useNavigate();
   const [watched, setWatched] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -750,12 +752,19 @@ const OverviewPage = () => {
         <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
       )}
 
-            {/* Upcoming */}
+      {/* Upcoming */}
       {(upcomingLoading || upcomingError || upcoming.length > 0) && (
         <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
-          <h2 className="mb-2 text-lg font-semibold text-yellow-400">
-            Upcoming
-          </h2>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <h2 className="text-lg font-semibold text-yellow-400">Upcoming</h2>
+            <button
+              type="button"
+              onClick={() => navigate("/upcoming")}
+              className="px-3 py-2 text-xs font-semibold text-yellow-300 bg-gray-800 border border-yellow-500 rounded-xl hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            >
+              See all
+            </button>
+          </div>
 
           {upcomingLoading && (
             <div className="py-1 text-sm text-gray-400">Loading…</div>
@@ -928,7 +937,6 @@ const OverviewPage = () => {
           </div>
         )}
       </div>
-
 
       {/* Genre breakdown */}
       {topGenres.length > 0 && (

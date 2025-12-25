@@ -13,6 +13,7 @@ import Navbar from "./components/Navbar";
 import ProfilePage from "./components/ProfilePage";
 import OverviewPage from "./components/OverviewPage";
 import SettingsPage from "./components/SettingsPage";
+import UpcomingPage from "./components/UpcomingPage";
 import "./index.css";
 import { applyThemePreference, getStoredThemePreference } from "./utils/theme";
 
@@ -77,6 +78,7 @@ function AppShell() {
             element={<Navigate to="/profile" replace />}
           />
           <Route path="/overview" element={<OverviewPage />} />
+          <Route path="/upcoming" element={<UpcomingPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           {/* Fallback route */}

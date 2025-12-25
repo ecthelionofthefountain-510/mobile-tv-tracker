@@ -796,6 +796,14 @@ const SettingsPage = () => {
 
         {activeTab === "upcoming" && (
           <>
+            <button
+              type="button"
+              onClick={() => navigate("/upcoming")}
+              className="w-full px-4 py-4 text-base font-semibold text-gray-900 bg-yellow-500 rounded-full hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            >
+              Open Upcoming
+            </button>
+
             <div className="text-2xl font-bold text-gray-100">
               Episodes to display
             </div>

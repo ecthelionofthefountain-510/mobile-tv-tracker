@@ -72,8 +72,8 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
       onKeyDown={handleCardKeyDown}
       aria-label={isSelectable ? `Open details for ${titleText}` : undefined}
     >
-      <div className="flex">
-        <div className="flex-shrink-0 w-24 self-stretch min-h-[8rem] sm:w-28 sm:min-h-[10rem]">
+      <div className="flex p-3">
+        <div className="flex-shrink-0 w-24 h-36 sm:w-28 sm:h-40">
           <img
             src={
               displayItem.poster_path
@@ -81,13 +81,13 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
                 : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='168' viewBox='0 0 112 168'%3E%3Crect width='112' height='168' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='0.3em' fill='%236B7280' font-family='Arial' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E"
             }
             alt={titleText}
-            className="object-cover w-full h-full border-r border-yellow-500/20"
+            className="object-cover w-full h-full rounded-md shadow-lg border-2 border-yellow-600/30"
           />
         </div>
 
-        <div className="flex flex-col justify-between flex-1 min-w-0 p-3">
+        <div className="flex flex-col justify-between flex-1 min-w-0 ml-4">
           <div>
-            <h3 className="text-lg font-semibold text-yellow-400 sm:text-xl line-clamp-1">
+            <h3 className="text-xl font-bold text-yellow-400 line-clamp-1">
               {titleText}
             </h3>
 

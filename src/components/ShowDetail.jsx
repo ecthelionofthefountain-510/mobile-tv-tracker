@@ -444,15 +444,17 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       <div className="sticky top-0 z-20 pt-2 pb-4 bg-gray-900">
         <div className="flex items-center justify-between mb-3">
           <button
+            type="button"
             onClick={handleBack}
             className="flex items-center text-yellow-400 hover:text-yellow-300"
           >
             <span className="mr-1">←</span> Back
           </button>
           <h2 className="text-xl font-semibold text-yellow-400 truncate max-w-[50%]">
-            {show.title}
+            {show.title || show.name}
           </h2>
           <button
+            type="button"
             onClick={() => onRemove(show.id)}
             className="px-3 py-1 text-sm text-white rounded-md bg-red-600/80 hover:bg-red-700"
           >
@@ -488,16 +490,20 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
             <button
+              type="button"
               onClick={() => markAllSeasonsAs(true)}
-              className="px-2 py-1 overflow-hidden text-xs text-white bg-green-600 rounded-md hover:bg-green-700 whitespace-nowrap"
+              className="px-4 py-2 overflow-hidden text-xs font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
-              MARK ALL WATCHED
+              <span className="sm:hidden">WATCH ALL</span>
+              <span className="hidden sm:inline">MARK ALL WATCHED</span>
             </button>
             <button
+              type="button"
               onClick={() => markAllSeasonsAs(false)}
-              className="px-2 py-1 overflow-hidden text-xs text-white bg-gray-600 rounded-md hover:bg-gray-700 whitespace-nowrap"
+              className="px-4 py-2 overflow-hidden text-xs font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-600 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
-              MARK ALL UNWATCHED
+              <span className="sm:hidden">UNWATCH ALL</span>
+              <span className="hidden sm:inline">MARK ALL UNWATCHED</span>
             </button>
           </div>
 
@@ -505,7 +511,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           <select
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
-            className="px-2 py-1 text-sm text-yellow-400 bg-gray-800 border rounded-md border-yellow-600/30"
+            className="px-4 py-2 text-sm font-semibold text-yellow-300 bg-gray-800 border border-yellow-500 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
             <option value="episode_asc">Episode ↑</option>
             <option value="episode_desc">Episode ↓</option>
@@ -553,11 +559,12 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleAllEpisodesInSeason(seasonNumber, episodes);
                       }}
-                      className={`px-2 py-1 text-xs rounded-md border ${
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
                         watchedCount === totalEpisodes && totalEpisodes > 0
                           ? "bg-green-600 text-white border-green-700"
                           : "bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600"
@@ -567,8 +574,12 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                         ? "Watched"
                         : "Mark All"}
                     </button>
-                    <span className="text-yellow-400 transition-transform duration-300 transform">
-                      {isExpanded ? "▼" : "▶"}
+                    <span
+                      className={`text-yellow-400 transition-transform duration-200 transform ${
+                        isExpanded ? "rotate-90" : ""
+                      }`}
+                    >
+                      ▶
                     </span>
                   </div>
                 </div>
@@ -588,6 +599,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                   {/* Simplified batch operations - optimized for mobile with separated controls */}
                   <div className="flex justify-between mb-3">
                     <button
+                      type="button"
                       onClick={() =>
                         toggleFilteredEpisodes(
                           seasonNumber,
@@ -596,11 +608,12 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                           "unseen"
                         )
                       }
-                      className="px-2 py-1 text-xs text-white rounded-md bg-green-700/70 hover:bg-green-700"
+                      className="px-3 py-2 text-xs font-semibold text-white rounded-xl bg-green-700/70 hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                     >
                       Mark Unseen
                     </button>
                     <button
+                      type="button"
                       onClick={() =>
                         toggleFilteredEpisodes(
                           seasonNumber,
@@ -609,7 +622,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                           "seen"
                         )
                       }
-                      className="px-2 py-1 text-xs text-white rounded-md bg-gray-700/70 hover:bg-gray-700"
+                      className="px-3 py-2 text-xs font-semibold text-white rounded-xl bg-gray-700/70 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                     >
                       Unmark Seen
                     </button>
@@ -666,6 +679,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                           </div>
 
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation(); // <-- hindra att onClick på raden körs
                               updateEpisodeWatched(
