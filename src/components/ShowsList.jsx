@@ -197,7 +197,7 @@ const ShowsList = () => {
   };
 
   const addToFavorites = async (show) => {
-    const favorites = loadFavorites();
+    const favorites = await loadFavorites();
     const normalizedShow = {
       ...show,
       mediaType: "tv",
@@ -214,7 +214,8 @@ const ShowsList = () => {
       ...favorites,
       { ...normalizedShow, dateAdded: new Date().toISOString() },
     ];
-    saveFavorites(updatedFavorites);
+    const ok = await saveFavorites(updatedFavorites);
+    if (!ok) return;
 
     await removeShow(show.id);
   };

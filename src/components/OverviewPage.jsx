@@ -222,7 +222,7 @@ const OverviewPage = () => {
         setErrorMessage("");
         const allWatched = await loadWatchedAll();
         setWatched(allWatched || []);
-        setFavorites(loadFavorites());
+        setFavorites(await loadFavorites());
       } catch (err) {
         console.error("Failed to load overview data", err);
         setWatched([]);
@@ -263,10 +263,21 @@ const OverviewPage = () => {
     return Array.from(ids);
   }, [watchedShows, favorites]);
 
+  const isoDateToTime = (iso) => {
+    if (!iso) return Number.NaN;
+    const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+
+    const t = Date.parse(String(iso));
+    return Number.isNaN(t) ? Number.NaN : t;
+  };
+
   const fmtDate = (iso) => {
     if (!iso) return "";
     try {
-      const d = new Date(iso);
+      const t = isoDateToTime(iso);
+      if (!Number.isFinite(t)) return iso;
+      const d = new Date(t);
       if (Number.isNaN(d.getTime())) return iso;
       return d.toLocaleDateString(undefined, {
         year: "numeric",
@@ -280,7 +291,9 @@ const OverviewPage = () => {
 
   const relativeLabel = (iso) => {
     if (!iso) return "";
-    const d = new Date(iso);
+    const t = isoDateToTime(iso);
+    if (!Number.isFinite(t)) return "";
+    const d = new Date(t);
     if (Number.isNaN(d.getTime())) return "";
 
     const startOfDay = (x) =>
@@ -310,7 +323,9 @@ const OverviewPage = () => {
       setUpcomingLoading(true);
       setUpcomingError("");
       try {
-        const ids = premiereCandidateIds.slice(0, 10);
+        // Fetch a wider set, then sort by air date and trim.
+        // If we slice too early we might miss the soonest upcoming item.
+        const ids = premiereCandidateIds.slice(0, 30);
         const details = await Promise.all(
           ids.map((id) =>
             cachedFetchJson(`${TMDB_BASE_URL}/tv/${id}?api_key=${API_KEY}`, {
@@ -326,8 +341,8 @@ const OverviewPage = () => {
             const next = d?.next_episode_to_air;
             const airDate = next?.air_date;
             if (!airDate) return null;
-            const t = new Date(airDate).getTime();
-            if (Number.isNaN(t)) return null;
+            const t = isoDateToTime(airDate);
+            if (!Number.isFinite(t)) return null;
             return {
               id: d.id,
               mediaType: "tv",
@@ -337,10 +352,17 @@ const OverviewPage = () => {
               air_date: airDate,
               season_number: next?.season_number,
               episode_number: next?.episode_number,
+              _air_time: t,
             };
           })
           .filter(Boolean)
-          .sort((a, b) => new Date(a.air_date) - new Date(b.air_date));
+          .sort(
+            (a, b) =>
+              (a._air_time || 0) - (b._air_time || 0) ||
+              String(a.name || a.title || "").localeCompare(
+                String(b.name || b.title || "")
+              )
+          );
 
         // Keep it short and relevant
         setUpcoming(items.slice(0, 8));
@@ -396,11 +418,13 @@ const OverviewPage = () => {
   const recentWatched = [...watched].slice(-5).reverse();
   const recentFavorites = [...favorites].slice(-5).reverse();
 
-  const toggleFavorite = (item) => {
+  const toggleFavorite = async (item) => {
     const normalizedItem = {
       ...item,
       mediaType: item.mediaType || (item.first_air_date ? "tv" : "movie"),
     };
+
+    const prevFavorites = favorites;
 
     const exists = favorites.some(
       (f) => favoriteIdentity(f) === favoriteIdentity(normalizedItem)
@@ -412,7 +436,12 @@ const OverviewPage = () => {
       : [...favorites, normalizedItem];
 
     setFavorites(updated);
-    saveFavorites(updated);
+    const ok = await saveFavorites(updated);
+    if (!ok) {
+      setFavorites(prevFavorites);
+      notify("Could not save favorites (storage blocked or full).");
+      return;
+    }
     notify(
       exists
         ? `"${item.title || item.name}" removed from favorites.`

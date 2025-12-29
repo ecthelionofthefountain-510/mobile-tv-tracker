@@ -108,12 +108,6 @@ export default function Navbar() {
             className={`nav-link ${
               index === activeIndex ? "nav-link-active" : ""
             } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900`}
-            style={{
-              flex: 1,
-              textAlign: "center",
-              position: "relative",
-              zIndex: 2,
-            }}
             aria-current={index === activeIndex ? "page" : undefined}
           >
             <div className="nav-icon">{item.icon}</div>
@@ -125,9 +119,7 @@ export default function Navbar() {
         <div
           className="navbar-floating-icon"
           style={{
-            left: `calc(${
-              (activeIndex + 0.5) * (100 / navItems.length)
-            }% - 28px)`,
+            "--active-x": (activeIndex + 0.5) * (100 / navItems.length) + "%",
           }}
           aria-hidden="true"
         >

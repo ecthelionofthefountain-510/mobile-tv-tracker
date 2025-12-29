@@ -223,7 +223,7 @@ const ProfilePage = () => {
     (async () => {
       setProfileLoadError("");
       try {
-        const favs = loadFavorites(activeUser);
+        const favs = await loadFavorites(activeUser);
         const watched = await loadWatchedAll(activeUser);
 
         if (!cancelled) {
@@ -459,6 +459,8 @@ const ProfilePage = () => {
       ...item,
       mediaType: item?.mediaType || (item?.first_air_date ? "tv" : "movie"),
     };
+
+    const prevFavorites = favorites;
     const exists = favorites.some(
       (f) => favoriteIdentity(f) === favoriteIdentity(normalizedItem)
     );
@@ -469,7 +471,10 @@ const ProfilePage = () => {
       : [...favorites, normalizedItem];
 
     setFavorites(updated);
-    saveFavorites(updated, activeUser);
+    (async () => {
+      const ok = await saveFavorites(updated, activeUser);
+      if (!ok) setFavorites(prevFavorites);
+    })();
   };
 
   const toggleWatched = async (item) => {

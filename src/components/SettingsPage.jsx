@@ -452,6 +452,11 @@ const SettingsPage = () => {
     } catch {
       // ignore
     }
+    try {
+      await idbDel(favoritesKeyForUser(user));
+    } catch {
+      // ignore
+    }
 
     setStatus("Account deleted.");
 

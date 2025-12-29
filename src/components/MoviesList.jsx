@@ -125,7 +125,7 @@ const MoviesList = () => {
   };
 
   const addToFavorites = async (movie) => {
-    const favorites = loadFavorites();
+    const favorites = await loadFavorites();
     const normalizedMovie = {
       ...movie,
       mediaType: "movie",
@@ -142,7 +142,8 @@ const MoviesList = () => {
       ...favorites,
       { ...normalizedMovie, dateAdded: new Date().toISOString() },
     ];
-    saveFavorites(updatedFavorites);
+    const ok = await saveFavorites(updatedFavorites);
+    if (!ok) return;
 
     await removeMovie(movie.id);
   };

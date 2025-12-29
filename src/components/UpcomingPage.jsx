@@ -46,7 +46,8 @@ const UpcomingPage = () => {
       }
 
       try {
-        if (!cancelled) setFavorites(loadFavorites());
+        const favs = await loadFavorites();
+        if (!cancelled) setFavorites(favs);
       } catch (e) {
         console.error("Failed to load favorites", e);
         if (!cancelled) setFavorites([]);
@@ -85,10 +86,21 @@ const UpcomingPage = () => {
     return Array.from(ids);
   }, [watchedShows, favorites]);
 
+  const isoDateToTime = (iso) => {
+    if (!iso) return Number.NaN;
+    const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+
+    const t = Date.parse(String(iso));
+    return Number.isNaN(t) ? Number.NaN : t;
+  };
+
   const fmtDate = (iso) => {
     if (!iso) return "";
     try {
-      const d = new Date(iso);
+      const t = isoDateToTime(iso);
+      if (!Number.isFinite(t)) return iso;
+      const d = new Date(t);
       if (Number.isNaN(d.getTime())) return iso;
       return d.toLocaleDateString(undefined, {
         year: "numeric",
@@ -102,7 +114,9 @@ const UpcomingPage = () => {
 
   const relativeLabel = (iso) => {
     if (!iso) return "";
-    const d = new Date(iso);
+    const t = isoDateToTime(iso);
+    if (!Number.isFinite(t)) return "";
+    const d = new Date(t);
     if (Number.isNaN(d.getTime())) return "";
 
     const startOfDay = (x) =>
@@ -152,8 +166,8 @@ const UpcomingPage = () => {
             const next = d?.next_episode_to_air;
             const airDate = next?.air_date;
             if (!airDate) return null;
-            const t = new Date(airDate).getTime();
-            if (Number.isNaN(t)) return null;
+            const t = isoDateToTime(airDate);
+            if (!Number.isFinite(t)) return null;
             return {
               id: d.id,
               mediaType: "tv",
@@ -163,10 +177,17 @@ const UpcomingPage = () => {
               air_date: airDate,
               season_number: next?.season_number,
               episode_number: next?.episode_number,
+              _air_time: t,
             };
           })
           .filter(Boolean)
-          .sort((a, b) => new Date(a.air_date) - new Date(b.air_date));
+          .sort(
+            (a, b) =>
+              (a._air_time || 0) - (b._air_time || 0) ||
+              String(a.name || a.title || "").localeCompare(
+                String(b.name || b.title || "")
+              )
+          );
 
         setUpcoming(items);
       } catch (err) {

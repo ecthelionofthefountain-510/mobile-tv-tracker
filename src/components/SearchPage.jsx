@@ -55,7 +55,7 @@ const SearchPage = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const [watched, setWatched] = useState([]);
-  const [favorites, setFavorites] = useState(() => loadFavorites());
+  const [favorites, setFavorites] = useState([]);
 
   const [searchType, setSearchType] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
@@ -105,7 +105,14 @@ const SearchPage = () => {
 
   // Ladda favorites (user-scoped) när sidan mountar
   useEffect(() => {
-    setFavorites(loadFavorites());
+    (async () => {
+      try {
+        setFavorites(await loadFavorites());
+      } catch (e) {
+        console.error("Could not load favorites", e);
+        setFavorites([]);
+      }
+    })();
   }, []);
 
   // Debounce-sök
@@ -451,8 +458,10 @@ const SearchPage = () => {
     notify(`"${item.title || item.name}" added to watched.`);
   };
 
-  const toggleFavorite = (item, e) => {
+  const toggleFavorite = async (item, e) => {
     e?.stopPropagation?.();
+
+    const prevFavorites = favorites;
 
     const normalizedItem = {
       ...item,
@@ -469,7 +478,14 @@ const SearchPage = () => {
       : [...favorites, normalizedItem];
 
     setFavorites(updatedFavorites);
-    saveFavorites(updatedFavorites);
+    const ok = await saveFavorites(updatedFavorites);
+    if (!ok) {
+      setFavorites(prevFavorites);
+      notify(
+        "Could not save favorites on this device (storage blocked or full)."
+      );
+      return;
+    }
     notify(
       isFavorited
         ? `"${item.title || item.name}" removed from favorites.`

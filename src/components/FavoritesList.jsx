@@ -37,19 +37,22 @@ const FavoritesList = ({ embedded = false } = {}) => {
       (b?.mediaType || (b?.first_air_date ? "tv" : "movie"));
 
   useEffect(() => {
-    // Load favorites from localStorage
-    const loadFavorites = () => {
+    let cancelled = false;
+
+    const loadFavorites = async () => {
       try {
         setErrorMessage("");
-        const storedFavorites = loadFavoritesFromStorage();
+        const storedFavorites = await loadFavoritesFromStorage();
 
         // Sort favorites alphabetically by title
         const sortedFavorites = sortFavorites(storedFavorites, sortBy);
 
+        if (cancelled) return;
         setFavorites(sortedFavorites);
         setFilteredFavorites(sortedFavorites);
       } catch (error) {
         console.error("Error loading favorites:", error);
+        if (cancelled) return;
         setFavorites([]);
         setFilteredFavorites([]);
         setErrorMessage("Could not load your favorites.");
@@ -73,6 +76,10 @@ const FavoritesList = ({ embedded = false } = {}) => {
 
     loadFavorites();
     loadWatched();
+
+    return () => {
+      cancelled = true;
+    };
   }, [sortBy]);
 
   // Show notification function
@@ -147,7 +154,7 @@ const FavoritesList = ({ embedded = false } = {}) => {
   };
 
   // Remove an item from favorites
-  const removeFromFavorites = (itemOrId) => {
+  const removeFromFavorites = async (itemOrId) => {
     const refItem =
       itemOrId && typeof itemOrId === "object"
         ? itemOrId
@@ -164,7 +171,11 @@ const FavoritesList = ({ embedded = false } = {}) => {
           .includes(searchTerm.toLowerCase())
       )
     );
-    saveFavorites(updatedList);
+    const ok = await saveFavorites(updatedList);
+    if (!ok) {
+      showNotification("Could not save favorites (storage blocked or full).");
+      return;
+    }
 
     // Close modal if the removed item is currently selected
     if (
@@ -244,7 +255,11 @@ const FavoritesList = ({ embedded = false } = {}) => {
             .includes(searchTerm.toLowerCase())
         )
       );
-      saveFavorites(updatedFavorites);
+      const ok = await saveFavorites(updatedFavorites);
+      if (!ok) {
+        showNotification("Could not save favorites (storage blocked or full).");
+        return;
+      }
 
       // Show notification instead of alert
       showNotification(`"${item.title}" has been added to your watched list`);
