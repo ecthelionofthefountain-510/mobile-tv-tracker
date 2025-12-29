@@ -65,7 +65,7 @@ function AppShell() {
     <div className="flex flex-col h-screen">
       <div
         className={
-          "flex-grow overflow-auto main-content" + (hideNavbar ? "" : " pb-16")
+          "flex-grow overflow-auto main-content" + (hideNavbar ? "" : " pb-20")
         }
       >
         <Routes>
