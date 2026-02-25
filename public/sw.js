@@ -1,4 +1,4 @@
-const CACHE_NAME = "tv-tracker-cache-v1";
+const CACHE_NAME = "tv-tracker-cache-v2";
 
 // Lägg till de viktigaste filerna här
 const URLS_TO_CACHE = [
@@ -14,7 +14,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(URLS_TO_CACHE);
-    })
+    }),
   );
 });
 
@@ -27,9 +27,9 @@ self.addEventListener("activate", (event) => {
         Promise.all(
           keys
             .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        )
-      )
+            .map((key) => caches.delete(key)),
+        ),
+      ),
   );
 });
 
@@ -58,7 +58,7 @@ self.addEventListener("message", (event) => {
 
     const iconUrl = new URL(
       "icons/tv_tracker_192.png",
-      self.registration.scope
+      self.registration.scope,
     ).toString();
 
     event.waitUntil(
@@ -67,7 +67,7 @@ self.addEventListener("message", (event) => {
         icon: iconUrl,
         badge: iconUrl,
         data: { url },
-      })
+      }),
     );
   }
 });
@@ -101,6 +101,6 @@ self.addEventListener("notificationclick", (event) => {
       }
 
       await clients.openWindow(url);
-    })()
+    })(),
   );
 });

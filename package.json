@@ -9,6 +9,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "round:icons": "node scripts/round-pwa-icons.mjs",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
@@ -37,6 +38,7 @@
     "gh-pages": "^6.3.0",
     "globals": "^15.14.0",
     "postcss": "^8.5.2",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.3.3",
     "vite": "^6.1.0"
   }
