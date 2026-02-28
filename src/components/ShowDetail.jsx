@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import NotificationModal from "./NotificationModal";
 import CongratsToast from "./CongratsToast";
-import ReactConfetti from "react-confetti";
-import { useWindowSize } from "react-use"; // valfritt, för att få rätt storlek
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
 
@@ -29,7 +27,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [filteredMovies, setFilteredMovies] = useState([]);
   const [selectedEpisode, setSelectedEpisode] = useState(null);
   const [showCongrats, setShowCongrats] = useState(false);
-  const { width, height } = useWindowSize(); // valfritt
+  const prevCompletionRef = useRef(false);
 
   const sameEntry = (a, b) =>
     String(a?.id) === String(b?.id) &&
@@ -53,7 +51,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     (async () => {
       const allWatched = await loadWatchedAll();
       const found = allWatched.find((item) =>
-        sameEntry(item, { id: show.id, mediaType: "tv" })
+        sameEntry(item, { id: show.id, mediaType: "tv" }),
       );
       if (found && found.seasons && !Array.isArray(found.seasons)) {
         setSeasons(found.seasons);
@@ -65,12 +63,12 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     (nextSeasons) => {
       const watchedCount = Object.values(nextSeasons || {}).reduce(
         (sum, season) => sum + (season?.watchedEpisodes?.length || 0),
-        0
+        0,
       );
 
       const totalFromEpisodesData = Object.keys(episodesData).reduce(
         (sum, seasonNum) => sum + ((episodesData[seasonNum] || []).length || 0),
-        0
+        0,
       );
 
       const totalEpisodes =
@@ -81,8 +79,19 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
       return totalEpisodes > 0 && watchedCount === totalEpisodes;
     },
-    [episodesData, show?.number_of_episodes]
+    [episodesData, show?.number_of_episodes],
   );
+
+  // Fire celebration exactly when we transition to 100% watched (after user changes)
+  useEffect(() => {
+    const isCompletedNow = computeCompletion(seasons);
+
+    if (hasChanges && isCompletedNow && !prevCompletionRef.current) {
+      setShowCongrats(true);
+    }
+
+    prevCompletionRef.current = isCompletedNow;
+  }, [computeCompletion, hasChanges, seasons]);
 
   // Function to save changes to storage (robust: upsert + id-typ-säker)
   const saveChangesToStorage = useCallback(async () => {
@@ -90,7 +99,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     const isCompleted = computeCompletion(seasons);
 
     const idx = allWatched.findIndex((item) =>
-      sameEntry(item, { id: show.id, mediaType: "tv" })
+      sameEntry(item, { id: show.id, mediaType: "tv" }),
     );
     let updatedAll;
 
@@ -103,7 +112,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
               seasons,
               completed: isCompleted,
             }
-          : item
+          : item,
       );
     } else {
       const toAdd = {
@@ -207,7 +216,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     try {
       const data = await cachedFetchJson(
         `${TMDB_BASE_URL}/tv/${show.id}/season/${seasonNumber}?api_key=${API_KEY}`,
-        { ttlMs: 24 * 60 * 60 * 1000 }
+        { ttlMs: 24 * 60 * 60 * 1000 },
       );
 
       setEpisodesData((prev) => ({
@@ -236,11 +245,11 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     switch (sortOption) {
       case "episode_asc":
         return sortedEpisodes.sort(
-          (a, b) => a.episode_number - b.episode_number
+          (a, b) => a.episode_number - b.episode_number,
         );
       case "episode_desc":
         return sortedEpisodes.sort(
-          (a, b) => b.episode_number - a.episode_number
+          (a, b) => b.episode_number - a.episode_number,
         );
       case "name_asc":
         return sortedEpisodes.sort((a, b) => a.name.localeCompare(b.name));
@@ -252,11 +261,11 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
         return sortedEpisodes.sort((a, b) => b.vote_average - a.vote_average);
       case "air_date_asc":
         return sortedEpisodes.sort(
-          (a, b) => new Date(a.air_date || 0) - new Date(b.air_date || 0)
+          (a, b) => new Date(a.air_date || 0) - new Date(b.air_date || 0),
         );
       case "air_date_desc":
         return sortedEpisodes.sort(
-          (a, b) => new Date(b.air_date || 0) - new Date(a.air_date || 0)
+          (a, b) => new Date(b.air_date || 0) - new Date(a.air_date || 0),
         );
       default:
         return sortedEpisodes;
@@ -284,7 +293,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     const currentSeason = seasons[seasonNumber] || { watchedEpisodes: [] };
     const allEpisodes = episodes.map((ep) => ep.episode_number);
     const isAllWatched = allEpisodes.every((epNum) =>
-      currentSeason.watchedEpisodes?.includes(epNum)
+      currentSeason.watchedEpisodes?.includes(epNum),
     );
 
     updateSeasonsInState(seasonNumber, isAllWatched ? [] : allEpisodes);
@@ -295,7 +304,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     seasonNumber,
     episodes,
     watched,
-    filter
+    filter,
   ) => {
     const currentSeason = seasons[seasonNumber] || { watchedEpisodes: [] };
     let updatedWatchedEpisodes = new Set(currentSeason.watchedEpisodes || []);
@@ -345,7 +354,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     try {
       setIsLoading(true);
       setLoadingText(
-        `Marking all episodes as ${watched ? "watched" : "unwatched"}...`
+        `Marking all episodes as ${watched ? "watched" : "unwatched"}...`,
       );
 
       const updatedSeasons = {};
@@ -377,9 +386,6 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       setSeasons(updatedSeasons);
       setHasChanges(true);
       setIsLoading(false);
-      if (watched) {
-        setShowCongrats(true);
-      }
     } catch (error) {
       console.error("Error marking all seasons:", error);
       setIsLoading(false);
@@ -405,11 +411,11 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const sortMovies = (movies, sortBy) => {
     if (sortBy === "title") {
       return [...movies].sort((a, b) =>
-        a.title.toLowerCase().localeCompare(b.title.toLowerCase())
+        a.title.toLowerCase().localeCompare(b.title.toLowerCase()),
       );
     } else if (sortBy === "dateAdded") {
       return [...movies].sort(
-        (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0)
+        (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0),
       );
     }
     return movies;
@@ -432,7 +438,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     let filtered = watchedMovies;
     if (value.trim() !== "") {
       filtered = watchedMovies.filter((movie) =>
-        movie.title.toLowerCase().includes(value.toLowerCase())
+        movie.title.toLowerCase().includes(value.toLowerCase()),
       );
     }
     setFilteredMovies(sortMovies(filtered, sortBy));
@@ -605,7 +611,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                           seasonNumber,
                           episodes,
                           true,
-                          "unseen"
+                          "unseen",
                         )
                       }
                       className="px-3 py-2 text-xs font-semibold text-white rounded-xl bg-green-700/70 hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
@@ -619,7 +625,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                           seasonNumber,
                           episodes,
                           false,
-                          "seen"
+                          "seen",
                         )
                       }
                       className="px-3 py-2 text-xs font-semibold text-white rounded-xl bg-gray-700/70 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
@@ -632,7 +638,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {sortedEpisodes.map((episode) => {
                       const isWatched = season.watchedEpisodes?.includes(
-                        episode.episode_number
+                        episode.episode_number,
                       );
                       const airDate = episode.air_date
                         ? new Date(episode.air_date)
@@ -685,7 +691,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                               updateEpisodeWatched(
                                 seasonNumber,
                                 episode.episode_number,
-                                !isWatched
+                                !isWatched,
                               );
                             }}
                             className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -770,17 +776,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       )}
 
       {/* Congrats Toast and Confetti - when all episodes are marked as watched */}
-      {showCongrats && (
-        <>
-          <CongratsToast onClose={() => setShowCongrats(false)} />
-          <ReactConfetti
-            width={width}
-            height={height}
-            numberOfPieces={180}
-            recycle={false}
-          />
-        </>
-      )}
+      {showCongrats && <CongratsToast onClose={() => setShowCongrats(false)} />}
     </div>
   );
 };

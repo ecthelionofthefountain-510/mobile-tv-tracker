@@ -20,7 +20,7 @@ const MoviesList = () => {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [sortBy, setSortBy] = useState("title"); // "title" | "dateAdded"
+  const [sortBy, setSortBy] = useState("dateAdded"); // "title" | "dateAdded"
   const [showSwipeInfo, setShowSwipeInfo] = useState(false);
 
   // Här behöver vi ingen normalize-funktion – filmer är alltid “klara”
@@ -38,11 +38,11 @@ const MoviesList = () => {
       return [...movies].sort((a, b) =>
         (a.title || "")
           .toLowerCase()
-          .localeCompare((b.title || "").toLowerCase())
+          .localeCompare((b.title || "").toLowerCase()),
       );
     } else if (sortBy === "dateAdded") {
       return [...movies].sort(
-        (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0)
+        (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0),
       );
     }
     return movies;
@@ -55,7 +55,7 @@ const MoviesList = () => {
     if (search.trim()) {
       const q = search.toLowerCase();
       filtered = filtered.filter((m) =>
-        (m.title || "").toLowerCase().includes(q)
+        (m.title || "").toLowerCase().includes(q),
       );
     }
 
@@ -86,15 +86,15 @@ const MoviesList = () => {
       const [details, credits, videos] = await Promise.all([
         cachedFetchJson(
           `${TMDB_BASE_URL}/movie/${movieId}?api_key=${API_KEY}`,
-          { ttlMs: 6 * 60 * 60 * 1000 }
+          { ttlMs: 6 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/movie/${movieId}/credits?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/movie/${movieId}/videos?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
       ]);
       setMovieDetails({ ...details, credits, videos });
@@ -132,7 +132,7 @@ const MoviesList = () => {
     };
     if (
       favorites.some(
-        (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedMovie)
+        (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedMovie),
       )
     ) {
       return;

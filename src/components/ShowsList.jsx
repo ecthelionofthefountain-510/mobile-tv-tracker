@@ -23,7 +23,7 @@ const ShowsList = () => {
   const [showForModal, setShowForModal] = useState(null);
   const [showDetails, setShowDetails] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [sortBy, setSortBy] = useState("title");
+  const [sortBy, setSortBy] = useState("dateAdded");
   const [showSwipeInfo, setShowSwipeInfo] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all"); // "all", "inProgress", "done"
 
@@ -40,7 +40,7 @@ const ShowsList = () => {
         const allSeasonsComplete = item.seasons.every(
           (season) =>
             Array.isArray(season.episodes) &&
-            season.episodes.every((ep) => !!ep.watched)
+            season.episodes.every((ep) => !!ep.watched),
         );
         const completedFlag = !!allSeasonsComplete;
         if (completedFlag) changed = true;
@@ -78,11 +78,11 @@ const ShowsList = () => {
       return [...shows].sort((a, b) =>
         (a.title || a.name || "")
           .toLowerCase()
-          .localeCompare((b.title || b.name || "").toLowerCase())
+          .localeCompare((b.title || b.name || "").toLowerCase()),
       );
     } else if (sortBy === "dateAdded") {
       return [...shows].sort(
-        (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0)
+        (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0),
       );
     }
     return shows;
@@ -100,7 +100,7 @@ const ShowsList = () => {
     if (search.trim()) {
       const q = search.toLowerCase();
       filtered = filtered.filter((s) =>
-        (s.title || s.name || "").toLowerCase().includes(q)
+        (s.title || s.name || "").toLowerCase().includes(q),
       );
     }
 
@@ -133,11 +133,11 @@ const ShowsList = () => {
         }),
         cachedFetchJson(
           `${TMDB_BASE_URL}/tv/${showId}/credits?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/tv/${showId}/videos?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
       ]);
       setShowDetails({ ...details, credits, videos });
@@ -158,7 +158,7 @@ const ShowsList = () => {
       setErrorMessage("");
       const details = await cachedFetchJson(
         `${TMDB_BASE_URL}/tv/${show.id}?api_key=${API_KEY}`,
-        { ttlMs: 6 * 60 * 60 * 1000 }
+        { ttlMs: 6 * 60 * 60 * 1000 },
       );
       // TMDB details innehåller `seasons` som en array (metadata) och kan annars skriva över
       // vår progress-`seasons` (object med watchedEpisodes). Bevara progress-strukturen.
@@ -204,7 +204,7 @@ const ShowsList = () => {
     };
     if (
       favorites.some(
-        (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedShow)
+        (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedShow),
       )
     ) {
       return;
