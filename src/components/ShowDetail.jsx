@@ -14,7 +14,6 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [episodesData, setEpisodesData] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
-  const [sortOption, setSortOption] = useState("episode_asc");
   const [notification, setNotification] = useState({
     show: false,
     message: "",
@@ -240,36 +239,8 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const getSortedEpisodes = (episodes) => {
     if (!episodes) return [];
 
-    const sortedEpisodes = [...episodes];
-
-    switch (sortOption) {
-      case "episode_asc":
-        return sortedEpisodes.sort(
-          (a, b) => a.episode_number - b.episode_number,
-        );
-      case "episode_desc":
-        return sortedEpisodes.sort(
-          (a, b) => b.episode_number - a.episode_number,
-        );
-      case "name_asc":
-        return sortedEpisodes.sort((a, b) => a.name.localeCompare(b.name));
-      case "name_desc":
-        return sortedEpisodes.sort((a, b) => b.name.localeCompare(a.name));
-      case "rating_asc":
-        return sortedEpisodes.sort((a, b) => a.vote_average - b.vote_average);
-      case "rating_desc":
-        return sortedEpisodes.sort((a, b) => b.vote_average - a.vote_average);
-      case "air_date_asc":
-        return sortedEpisodes.sort(
-          (a, b) => new Date(a.air_date || 0) - new Date(b.air_date || 0),
-        );
-      case "air_date_desc":
-        return sortedEpisodes.sort(
-          (a, b) => new Date(b.air_date || 0) - new Date(a.air_date || 0),
-        );
-      default:
-        return sortedEpisodes;
-    }
+    // Default: episode order (ascending)
+    return [...episodes].sort((a, b) => a.episode_number - b.episode_number);
   };
 
   // Update single episode watched status
@@ -445,338 +416,327 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   };
 
   return (
-    <div className="min-h-screen p-4 pb-20 bg-gray-900">
-      {/* Header with progress bar */}
-      <div className="sticky top-0 z-20 pt-2 pb-4 bg-gray-900">
-        <div className="flex items-center justify-between mb-3">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="flex items-center text-yellow-400 hover:text-yellow-300"
-          >
-            <span className="mr-1">←</span> Back
-          </button>
-          <h2 className="text-xl font-semibold text-yellow-400 truncate max-w-[50%]">
-            {show.title || show.name}
-          </h2>
-          <button
-            type="button"
-            onClick={() => onRemove(show.id)}
-            className="px-3 py-1 text-sm text-white rounded-md bg-red-600/80 hover:bg-red-700"
-          >
-            Remove
-          </button>
-        </div>
-
-        {/* Overall progress bar */}
-        <div className="mb-4">
-          <div className="flex justify-between mb-1 text-sm">
-            <span className="text-gray-300">Episodes</span>
-            <span className="text-yellow-400">
-              {stats.watched}/{stats.total} (
-              {stats.total > 0
-                ? Math.round((stats.watched / stats.total) * 100)
-                : 0}
-              %)
-            </span>
-          </div>
-          <div className="w-full bg-gray-700 rounded-full h-2.5">
-            <div
-              className="bg-yellow-500 h-2.5 rounded-full"
-              style={{
-                width: `${
-                  stats.total > 0 ? (stats.watched / stats.total) * 100 : 0
-                }%`,
-              }}
-            ></div>
-          </div>
-        </div>
-
-        {/* Global actions - optimized for small screens */}
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => markAllSeasonsAs(true)}
-              className="px-4 py-2 overflow-hidden text-xs font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-            >
-              <span className="sm:hidden">WATCH ALL</span>
-              <span className="hidden sm:inline">MARK ALL WATCHED</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => markAllSeasonsAs(false)}
-              className="px-4 py-2 overflow-hidden text-xs font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-600 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-            >
-              <span className="sm:hidden">UNWATCH ALL</span>
-              <span className="hidden sm:inline">MARK ALL UNWATCHED</span>
-            </button>
-          </div>
-
-          {/* Sort options */}
-          <select
-            value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
-            className="px-4 py-2 text-sm font-semibold text-yellow-300 bg-gray-800 border border-yellow-500 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-          >
-            <option value="episode_asc">Episode ↑</option>
-            <option value="episode_desc">Episode ↓</option>
-            <option value="name_asc">Name A-Z</option>
-            <option value="name_desc">Name Z-A</option>
-            <option value="rating_asc">Rating ↑</option>
-            <option value="rating_desc">Rating ↓</option>
-            <option value="air_date_asc">Air Date ↑</option>
-            <option value="air_date_desc">Air Date ↓</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Seasons list */}
-      <div className="space-y-4">
-        {[...Array(show.number_of_seasons)].map((_, idx) => {
-          const seasonNumber = idx + 1;
-          const season = seasons[seasonNumber] || {};
-          const episodes = episodesData[seasonNumber] || [];
-          const sortedEpisodes = getSortedEpisodes(episodes);
-          const watchedCount = season.watchedEpisodes?.length || 0;
-          const totalEpisodes = episodes.length || 0;
-          const isExpanded = expandedSeason === seasonNumber;
-          const progressPercent =
-            totalEpisodes > 0 ? (watchedCount / totalEpisodes) * 100 : 0;
-
-          return (
-            <div
-              key={seasonNumber}
-              className="overflow-hidden border rounded-lg border-yellow-900/20 bg-gray-800"
-            >
-              {/* Season header */}
-              <div
-                onClick={() => toggleSeason(seasonNumber)}
-                className="p-3 transition-colors cursor-pointer bg-gray-800 hover:bg-gray-700"
+    <div className="app-page">
+      <div className="app-container">
+        {/* Header with progress bar */}
+        <div className="sticky top-0 z-20 mb-4 app-panel">
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-3">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="app-button-ghost px-3 py-2 text-xs"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center">
-                    <span className="mr-2 font-medium text-yellow-400">
-                      Season {seasonNumber}
-                    </span>
-                    <span className="text-sm text-gray-400">
-                      {watchedCount}/{totalEpisodes} Episodes
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleAllEpisodesInSeason(seasonNumber, episodes);
-                      }}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
-                        watchedCount === totalEpisodes && totalEpisodes > 0
-                          ? "bg-green-600 text-white border-green-700"
-                          : "bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600"
-                      }`}
-                    >
-                      {watchedCount === totalEpisodes && totalEpisodes > 0
-                        ? "Watched"
-                        : "Mark All"}
-                    </button>
-                    <span
-                      className={`text-yellow-400 transition-transform duration-200 transform ${
-                        isExpanded ? "rotate-90" : ""
-                      }`}
-                    >
-                      ▶
-                    </span>
-                  </div>
-                </div>
+                <span className="mr-1">←</span> Back
+              </button>
+              <h2 className="text-xl font-semibold text-gray-100 truncate max-w-[50%]">
+                {show.title || show.name}
+              </h2>
+              <button
+                type="button"
+                onClick={() => onRemove(show.id)}
+                className="app-button-danger px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              >
+                Remove
+              </button>
+            </div>
 
-                {/* Progress bar */}
-                <div className="w-full bg-gray-700 rounded-full h-1.5">
-                  <div
-                    className="bg-yellow-500 h-1.5 rounded-full transition-all duration-500"
-                    style={{ width: `${progressPercent}%` }}
-                  ></div>
-                </div>
+            {/* Overall progress bar */}
+            <div className="mb-4">
+              <div className="flex justify-between mb-1 text-sm">
+                <span className="text-gray-400">Episodes</span>
+                <span className="text-gray-100">
+                  {stats.watched}/{stats.total} (
+                  {stats.total > 0
+                    ? Math.round((stats.watched / stats.total) * 100)
+                    : 0}
+                  %)
+                </span>
               </div>
+              <div className="w-full h-2.5 rounded-full bg-white/10">
+                <div
+                  className="h-2.5 rounded-full bg-yellow-400"
+                  style={{
+                    width: `${
+                      stats.total > 0 ? (stats.watched / stats.total) * 100 : 0
+                    }%`,
+                  }}
+                ></div>
+              </div>
+            </div>
 
-              {/* Episodes list - only show when expanded */}
-              {isExpanded && (
-                <div className="p-3 bg-gray-800">
-                  {/* Simplified batch operations - optimized for mobile with separated controls */}
-                  <div className="flex justify-between mb-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleFilteredEpisodes(
-                          seasonNumber,
-                          episodes,
-                          true,
-                          "unseen",
-                        )
-                      }
-                      className="px-3 py-2 text-xs font-semibold text-white rounded-xl bg-green-700/70 hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-                    >
-                      Mark Unseen
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleFilteredEpisodes(
-                          seasonNumber,
-                          episodes,
-                          false,
-                          "seen",
-                        )
-                      }
-                      className="px-3 py-2 text-xs font-semibold text-white rounded-xl bg-gray-700/70 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-                    >
-                      Unmark Seen
-                    </button>
+            {/* Global actions - optimized for small screens */}
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => markAllSeasonsAs(true)}
+                  className="app-button-success px-4 py-2 overflow-hidden text-xs whitespace-nowrap"
+                >
+                  <span className="sm:hidden">WATCH ALL</span>
+                  <span className="hidden sm:inline">MARK ALL WATCHED</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => markAllSeasonsAs(false)}
+                  className="app-button-ghost px-4 py-2 overflow-hidden text-xs whitespace-nowrap"
+                >
+                  <span className="sm:hidden">UNWATCH ALL</span>
+                  <span className="hidden sm:inline">MARK ALL UNWATCHED</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Seasons list */}
+        <div className="space-y-4">
+          {[...Array(show.number_of_seasons)].map((_, idx) => {
+            const seasonNumber = idx + 1;
+            const season = seasons[seasonNumber] || {};
+            const episodes = episodesData[seasonNumber] || [];
+            const sortedEpisodes = getSortedEpisodes(episodes);
+            const watchedCount = season.watchedEpisodes?.length || 0;
+            const totalEpisodes = episodes.length || 0;
+            const isExpanded = expandedSeason === seasonNumber;
+            const progressPercent =
+              totalEpisodes > 0 ? (watchedCount / totalEpisodes) * 100 : 0;
+
+            return (
+              <div key={seasonNumber} className="app-card">
+                {/* Season header */}
+                <div
+                  onClick={() => toggleSeason(seasonNumber)}
+                  className="p-3 transition-colors cursor-pointer hover:bg-white/5"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center">
+                      <span className="mr-2 font-medium text-gray-100">
+                        Season {seasonNumber}
+                      </span>
+                      <span className="text-sm text-gray-400">
+                        {watchedCount}/{totalEpisodes} Episodes
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleAllEpisodesInSeason(seasonNumber, episodes);
+                        }}
+                        className={
+                          watchedCount === totalEpisodes && totalEpisodes > 0
+                            ? "app-button-success px-3 py-1.5 text-xs"
+                            : "app-button-ghost px-3 py-1.5 text-xs"
+                        }
+                      >
+                        {watchedCount === totalEpisodes && totalEpisodes > 0
+                          ? "Watched"
+                          : "Mark All"}
+                      </button>
+                      <span
+                        className={`text-gray-300 transition-transform duration-200 transform ${
+                          isExpanded ? "rotate-90" : ""
+                        }`}
+                      >
+                        ▶
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Episodes grid for larger screens, list for mobile */}
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {sortedEpisodes.map((episode) => {
-                      const isWatched = season.watchedEpisodes?.includes(
-                        episode.episode_number,
-                      );
-                      const airDate = episode.air_date
-                        ? new Date(episode.air_date)
-                        : null;
+                  {/* Progress bar */}
+                  <div className="w-full h-1.5 rounded-full bg-white/10">
+                    <div
+                      className="h-1.5 rounded-full bg-yellow-400 transition-all duration-500"
+                      style={{ width: `${progressPercent}%` }}
+                    ></div>
+                  </div>
+                </div>
 
-                      return (
-                        <div
-                          key={episode.id}
-                          className={`p-3 rounded-md flex items-center justify-between cursor-pointer ${
-                            isWatched
-                              ? "bg-green-800/20 border border-green-800/30"
-                              : "bg-gray-700/30 border border-gray-700/30"
-                          }`}
-                          onClick={() => setSelectedEpisode(episode)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            {/* Episode Image (if available) */}
-                            {episode.still_path && (
-                              <img
-                                src={`${IMAGE_BASE_URL}${episode.still_path}`}
-                                alt={episode.name}
-                                className="object-cover w-12 h-8 border-0 rounded"
-                              />
-                            )}
+                {/* Episodes list - only show when expanded */}
+                {isExpanded && (
+                  <div className="p-3">
+                    {/* Simplified batch operations - optimized for mobile with separated controls */}
+                    <div className="flex justify-between mb-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          toggleFilteredEpisodes(
+                            seasonNumber,
+                            episodes,
+                            true,
+                            "unseen",
+                          )
+                        }
+                        className="app-button-success px-3 py-2 text-xs"
+                      >
+                        Mark Unseen
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          toggleFilteredEpisodes(
+                            seasonNumber,
+                            episodes,
+                            false,
+                            "seen",
+                          )
+                        }
+                        className="app-button-ghost px-3 py-2 text-xs"
+                      >
+                        Unmark Seen
+                      </button>
+                    </div>
 
-                            <div>
-                              <div className="text-sm text-yellow-400">
-                                Episode {episode.episode_number}
-                                {episode.vote_average > 0 && (
-                                  <span className="ml-2 text-gray-400">
-                                    ★ {episode.vote_average.toFixed(1)}
-                                  </span>
+                    {/* Episodes grid for larger screens, list for mobile */}
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {sortedEpisodes.map((episode) => {
+                        const isWatched = season.watchedEpisodes?.includes(
+                          episode.episode_number,
+                        );
+                        const airDate = episode.air_date
+                          ? new Date(episode.air_date)
+                          : null;
+
+                        return (
+                          <div
+                            key={episode.id}
+                            className={`app-card app-card-hover flex items-center justify-between p-3 cursor-pointer ${
+                              isWatched
+                                ? "ring-1 ring-inset ring-emerald-500/20 bg-emerald-500/5"
+                                : ""
+                            }`}
+                            onClick={() => setSelectedEpisode(episode)}
+                          >
+                            <div className="flex items-center space-x-3">
+                              {/* Episode Image (if available) */}
+                              {episode.still_path && (
+                                <img
+                                  src={`${IMAGE_BASE_URL}${episode.still_path}`}
+                                  alt={episode.name}
+                                  className="object-cover w-12 h-8 border-0 rounded"
+                                />
+                              )}
+
+                              <div>
+                                <div className="text-sm font-semibold text-gray-100">
+                                  Episode {episode.episode_number}
+                                  {episode.vote_average > 0 && (
+                                    <span className="ml-2 text-xs font-normal text-gray-400">
+                                      Rating {episode.vote_average.toFixed(1)}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-sm font-medium text-gray-300">
+                                  {episode.name}
+                                </div>
+                                {airDate && (
+                                  <div className="text-xs text-gray-400">
+                                    {airDate.toLocaleDateString()}
+                                  </div>
                                 )}
                               </div>
-                              <div className="text-sm font-medium text-gray-300">
-                                {episode.name}
-                              </div>
-                              {airDate && (
-                                <div className="text-xs text-gray-400">
-                                  {airDate.toLocaleDateString()}
-                                </div>
-                              )}
                             </div>
-                          </div>
 
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation(); // <-- hindra att onClick på raden körs
-                              updateEpisodeWatched(
-                                seasonNumber,
-                                episode.episode_number,
-                                !isWatched,
-                              );
-                            }}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              isWatched
-                                ? "bg-green-600 hover:bg-green-700"
-                                : "bg-gray-600 hover:bg-gray-700"
-                            }`}
-                          >
-                            {isWatched && <span className="text-white">✓</span>}
-                          </button>
-                        </div>
-                      );
-                    })}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation(); // <-- hindra att onClick på raden körs
+                                updateEpisodeWatched(
+                                  seasonNumber,
+                                  episode.episode_number,
+                                  !isWatched,
+                                );
+                              }}
+                              className={`flex items-center justify-center w-8 h-8 border rounded-full border-white/10 ${
+                                isWatched
+                                  ? "bg-green-600/80 hover:bg-green-600"
+                                  : "bg-white/10 hover:bg-white/15"
+                              }`}
+                            >
+                              {isWatched && (
+                                <span className="text-white">✓</span>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Loading Indicator */}
+        {isLoading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75">
+            <div className="app-panel-solid p-6 text-center">
+              <div className="mb-3 text-lg text-gray-100">{loadingText}</div>
+              <div className="w-12 h-12 mx-auto mb-3 border-4 border-white/15 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+          </div>
+        )}
+
+        {/* Notification Modal - only used for errors now */}
+        {notification.show && (
+          <NotificationModal
+            message={notification.message}
+            onClose={closeNotification}
+            autoCloseTime={2000}
+          />
+        )}
+
+        {/* Episode Detail Modal */}
+        {selectedEpisode && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+            <div className="app-panel-solid relative w-full max-w-md p-6">
+              <button
+                className="app-button-ghost absolute top-3 right-3 flex items-center gap-2 px-4 py-2 text-base"
+                onClick={() => setSelectedEpisode(null)}
+                aria-label="Stäng avsnittsinfo"
+              >
+                <span className="text-lg">×</span>
+              </button>
+              <h3 className="mb-2 text-xl font-bold text-gray-100">
+                {selectedEpisode.name}
+              </h3>
+              <div className="mb-2 text-gray-400">
+                Säsong {selectedEpisode.season_number}, Avsnitt{" "}
+                {selectedEpisode.episode_number}
+              </div>
+              {selectedEpisode.still_path && (
+                <img
+                  src={`${IMAGE_BASE_URL}${selectedEpisode.still_path}`}
+                  alt={selectedEpisode.name}
+                  className="w-full mb-3 rounded"
+                />
+              )}
+              <div className="mb-2 text-gray-300">
+                {selectedEpisode.overview || "Ingen beskrivning tillgänglig."}
+              </div>
+              {selectedEpisode.vote_average > 0 && (
+                <div className="mb-1 text-sm text-gray-300">
+                  Rating {selectedEpisode.vote_average.toFixed(1)}
+                </div>
+              )}
+              {selectedEpisode.air_date && (
+                <div className="text-xs text-gray-400">
+                  Sändes:{" "}
+                  {new Date(selectedEpisode.air_date).toLocaleDateString()}
                 </div>
               )}
             </div>
-          );
-        })}
+          </div>
+        )}
+
+        {/* Congrats Toast and Confetti - when all episodes are marked as watched */}
+        {showCongrats && (
+          <CongratsToast onClose={() => setShowCongrats(false)} />
+        )}
       </div>
-
-      {/* Loading Indicator */}
-      {isLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
-          <div className="p-6 text-center bg-gray-800 rounded-lg">
-            <div className="mb-3 text-lg text-yellow-400">{loadingText}</div>
-            <div className="w-12 h-12 mx-auto mb-3 border-4 border-yellow-400 rounded-full border-t-transparent animate-spin"></div>
-          </div>
-        </div>
-      )}
-
-      {/* Notification Modal - only used for errors now */}
-      {notification.show && (
-        <NotificationModal
-          message={notification.message}
-          onClose={closeNotification}
-          autoCloseTime={2000}
-        />
-      )}
-
-      {/* Episode Detail Modal */}
-      {selectedEpisode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-          <div className="relative w-full max-w-md p-6 bg-gray-900 rounded-lg">
-            <button
-              className="absolute flex items-center gap-2 px-4 py-2 text-base font-bold text-gray-900 transition bg-yellow-400 rounded-full shadow-lg top-3 right-3 hover:bg-yellow-500"
-              onClick={() => setSelectedEpisode(null)}
-              aria-label="Stäng avsnittsinfo"
-            >
-              <span className="text-lg">✖</span>
-            </button>
-            <h3 className="mb-2 text-xl font-bold text-yellow-400">
-              {selectedEpisode.name}
-            </h3>
-            <div className="mb-2 text-gray-400">
-              Säsong {selectedEpisode.season_number}, Avsnitt{" "}
-              {selectedEpisode.episode_number}
-            </div>
-            {selectedEpisode.still_path && (
-              <img
-                src={`${IMAGE_BASE_URL}${selectedEpisode.still_path}`}
-                alt={selectedEpisode.name}
-                className="w-full mb-3 rounded"
-              />
-            )}
-            <div className="mb-2 text-gray-300">
-              {selectedEpisode.overview || "Ingen beskrivning tillgänglig."}
-            </div>
-            {selectedEpisode.vote_average > 0 && (
-              <div className="mb-1 text-yellow-300">
-                ★ {selectedEpisode.vote_average.toFixed(1)}
-              </div>
-            )}
-            {selectedEpisode.air_date && (
-              <div className="text-xs text-gray-400">
-                Sändes:{" "}
-                {new Date(selectedEpisode.air_date).toLocaleDateString()}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Congrats Toast and Confetti - when all episodes are marked as watched */}
-      {showCongrats && <CongratsToast onClose={() => setShowCongrats(false)} />}
     </div>
   );
 };

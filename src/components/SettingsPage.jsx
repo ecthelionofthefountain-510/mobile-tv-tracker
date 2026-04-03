@@ -85,14 +85,14 @@ const SettingsPage = () => {
   const navigate = useNavigate();
 
   const [users, setUsers] = useState(
-    () => JSON.parse(localStorage.getItem("users")) || []
+    () => JSON.parse(localStorage.getItem("users")) || [],
   );
   const [currentUser, setCurrentUser] = useState(() =>
-    JSON.parse(localStorage.getItem("currentUser"))
+    JSON.parse(localStorage.getItem("currentUser")),
   );
   const [newUser, setNewUser] = useState("");
   const [profileImages, setProfileImages] = useState(
-    () => JSON.parse(localStorage.getItem("profileImages")) || {}
+    () => JSON.parse(localStorage.getItem("profileImages")) || {},
   );
 
   const [activeTab, setActiveTab] = useState("account");
@@ -106,32 +106,32 @@ const SettingsPage = () => {
   const [prefDisplayLanguage, setPrefDisplayLanguage] = useState(() =>
     safeJsonParse(
       localStorage.getItem(makeSettingKey(activeUser, "displayLanguage")),
-      false
-    )
+      false,
+    ),
   );
   const [prefAutoPlayVideos, setPrefAutoPlayVideos] = useState(() =>
     safeJsonParse(
       localStorage.getItem(makeSettingKey(activeUser, "autoPlayVideos")),
-      false
-    )
+      false,
+    ),
   );
   const [prefHideWatchedEpisodes, setPrefHideWatchedEpisodes] = useState(() =>
     safeJsonParse(
       localStorage.getItem(makeSettingKey(activeUser, "hideWatchedEpisodes")),
-      false
-    )
+      false,
+    ),
   );
   const [prefProfilePrivate, setPrefProfilePrivate] = useState(() =>
     safeJsonParse(
       localStorage.getItem(makeSettingKey(activeUser, "profilePrivate")),
-      false
-    )
+      false,
+    ),
   );
   const [prefTheme, setPrefTheme] = useState(() =>
     safeJsonParse(
       localStorage.getItem(makeSettingKey(activeUser, "theme")),
-      "dark"
-    )
+      "dark",
+    ),
   );
 
   useEffect(() => {
@@ -139,32 +139,32 @@ const SettingsPage = () => {
     setPrefDisplayLanguage(
       safeJsonParse(
         localStorage.getItem(makeSettingKey(activeUser, "displayLanguage")),
-        false
-      )
+        false,
+      ),
     );
     setPrefAutoPlayVideos(
       safeJsonParse(
         localStorage.getItem(makeSettingKey(activeUser, "autoPlayVideos")),
-        false
-      )
+        false,
+      ),
     );
     setPrefHideWatchedEpisodes(
       safeJsonParse(
         localStorage.getItem(makeSettingKey(activeUser, "hideWatchedEpisodes")),
-        false
-      )
+        false,
+      ),
     );
     setPrefProfilePrivate(
       safeJsonParse(
         localStorage.getItem(makeSettingKey(activeUser, "profilePrivate")),
-        false
-      )
+        false,
+      ),
     );
     setPrefTheme(
       safeJsonParse(
         localStorage.getItem(makeSettingKey(activeUser, "theme")),
-        "dark"
-      )
+        "dark",
+      ),
     );
   }, [activeUser]);
 
@@ -172,7 +172,7 @@ const SettingsPage = () => {
     try {
       localStorage.setItem(
         makeSettingKey(activeUser, "displayLanguage"),
-        JSON.stringify(!!prefDisplayLanguage)
+        JSON.stringify(!!prefDisplayLanguage),
       );
     } catch {
       // ignore
@@ -183,7 +183,7 @@ const SettingsPage = () => {
     try {
       localStorage.setItem(
         makeSettingKey(activeUser, "autoPlayVideos"),
-        JSON.stringify(!!prefAutoPlayVideos)
+        JSON.stringify(!!prefAutoPlayVideos),
       );
     } catch {
       // ignore
@@ -194,7 +194,7 @@ const SettingsPage = () => {
     try {
       localStorage.setItem(
         makeSettingKey(activeUser, "hideWatchedEpisodes"),
-        JSON.stringify(!!prefHideWatchedEpisodes)
+        JSON.stringify(!!prefHideWatchedEpisodes),
       );
     } catch {
       // ignore
@@ -205,7 +205,7 @@ const SettingsPage = () => {
     try {
       localStorage.setItem(
         makeSettingKey(activeUser, "profilePrivate"),
-        JSON.stringify(!!prefProfilePrivate)
+        JSON.stringify(!!prefProfilePrivate),
       );
     } catch {
       // ignore
@@ -216,7 +216,7 @@ const SettingsPage = () => {
     try {
       localStorage.setItem(
         makeSettingKey(activeUser, "theme"),
-        JSON.stringify("dark")
+        JSON.stringify("dark"),
       );
     } catch {
       // ignore
@@ -246,7 +246,7 @@ const SettingsPage = () => {
             } catch {
               return [u, null];
             }
-          })
+          }),
         );
 
         if (cancelled) return;
@@ -416,7 +416,7 @@ const SettingsPage = () => {
     try {
       const displayNames = safeJsonParse(
         localStorage.getItem("profileDisplayNames"),
-        {}
+        {},
       );
       const info = safeJsonParse(localStorage.getItem("profileInfo"), {});
       const images = safeJsonParse(localStorage.getItem("profileImages"), {});
@@ -605,12 +605,12 @@ const SettingsPage = () => {
                         placeholder="Enter new user name"
                         value={newUser}
                         onChange={(e) => setNewUser(e.target.value)}
-                        className="flex-1 min-w-0 p-2 text-white placeholder-gray-400 bg-gray-800 border rounded-md border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                        className="app-input flex-1 min-w-0"
                       />
                       <button
                         type="button"
                         onClick={addUser}
-                        className="px-4 py-2 text-sm font-semibold text-gray-900 bg-yellow-500 rounded-md hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                        className="app-button-primary px-4 py-2"
                       >
                         Add
                       </button>
@@ -673,7 +673,7 @@ const SettingsPage = () => {
                                 <button
                                   type="button"
                                   onClick={() => switchUser(user)}
-                                  className="px-4 py-3 text-xs font-semibold text-white bg-gray-700 rounded-xl hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                                  className="app-button-ghost px-4 py-3 text-xs"
                                 >
                                   Switch
                                 </button>
@@ -682,7 +682,7 @@ const SettingsPage = () => {
                               <button
                                 type="button"
                                 onClick={() => removeUser(user)}
-                                className="px-6 py-3 text-xs font-semibold text-white rounded-xl bg-red-700/80 hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                                className="app-button-danger px-6 py-3 text-xs"
                               >
                                 Remove
                               </button>
@@ -699,7 +699,7 @@ const SettingsPage = () => {
                 <button
                   type="button"
                   onClick={logOut}
-                  className="w-full px-4 py-4 text-base font-semibold text-gray-900 bg-yellow-500 rounded-full hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                  className="app-button-primary w-full px-4 py-4 text-base"
                 >
                   Log out
                 </button>
@@ -791,7 +791,7 @@ const SettingsPage = () => {
               <button
                 type="button"
                 onClick={clearTmdbCache}
-                className="w-full px-4 py-4 text-base font-semibold text-gray-900 bg-yellow-500 rounded-full hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                className="app-button-primary w-full px-4 py-4 text-base"
               >
                 Clear cache
               </button>
@@ -804,7 +804,7 @@ const SettingsPage = () => {
             <button
               type="button"
               onClick={() => navigate("/upcoming")}
-              className="w-full px-4 py-4 text-base font-semibold text-gray-900 bg-yellow-500 rounded-full hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+              className="app-button-primary w-full px-4 py-4 text-base"
             >
               Open Upcoming
             </button>

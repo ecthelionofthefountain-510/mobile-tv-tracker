@@ -24,10 +24,10 @@ export default function BackupControls({ onRestore }) {
       a.remove();
       URL.revokeObjectURL(url);
 
-      setStatus("Backup exported ✅");
+      setStatus("Backup exported ✓");
     } catch (e) {
       console.error(e);
-      setStatus("Export failed ❌");
+      setStatus("Export failed ×");
     }
   };
 
@@ -46,7 +46,7 @@ export default function BackupControls({ onRestore }) {
         const parsed = JSON.parse(text);
 
         if (!Array.isArray(parsed)) {
-          setStatus("Invalid file: expected an array ❌");
+          setStatus("Invalid file: expected an array ×");
           return;
         }
 
@@ -56,10 +56,10 @@ export default function BackupControls({ onRestore }) {
           await onRestore();
         }
 
-        setStatus("Backup imported ✅");
+        setStatus("Backup imported ✓");
       } catch (err) {
         console.error(err);
-        setStatus("Import failed ❌");
+        setStatus("Import failed ×");
       } finally {
         e.target.value = "";
       }
@@ -69,7 +69,7 @@ export default function BackupControls({ onRestore }) {
   };
 
   return (
-    <div className="p-3 mt-8 space-y-2 text-sm text-gray-300 border border-gray-800 rounded-lg bg-gray-900/80">
+    <div className="app-panel p-4 mt-8 space-y-2 text-sm text-gray-300">
       <div className="font-semibold text-yellow-400">Backup & restore</div>
       <p className="text-xs text-gray-400">
         Exporterar / importerar hela din "watched"-lista som en JSON-fil.
@@ -78,14 +78,14 @@ export default function BackupControls({ onRestore }) {
         <button
           type="button"
           onClick={handleExport}
-          className="px-3 py-1 text-xs font-semibold text-gray-900 transition bg-yellow-500 rounded hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+          className="app-button-primary px-3 py-1 text-xs"
         >
           Export backup
         </button>
         <button
           type="button"
           onClick={handleImportClick}
-          className="px-3 py-1 text-xs text-gray-100 transition bg-gray-700 rounded hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+          className="app-button-ghost px-3 py-1 text-xs"
         >
           Import backup
         </button>

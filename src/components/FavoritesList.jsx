@@ -6,6 +6,7 @@ import NotificationModal from "./NotificationModal";
 import SwipeableFavoriteCard from "./SwipeableFavoriteCard";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import SearchIcon from "../icons/SearchIcon";
 import {
   loadFavorites as loadFavoritesFromStorage,
   saveFavorites,
@@ -109,7 +110,7 @@ const FavoritesList = ({ embedded = false } = {}) => {
       const filtered = favorites.filter((item) =>
         (item.title || item.name || "")
           .toLowerCase()
-          .includes(value.toLowerCase())
+          .includes(value.toLowerCase()),
       );
       setFilteredFavorites(filtered);
     }
@@ -127,15 +128,15 @@ const FavoritesList = ({ embedded = false } = {}) => {
       const [details, credits, videos] = await Promise.all([
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`,
-          { ttlMs: 6 * 60 * 60 * 1000 }
+          { ttlMs: 6 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
       ]);
       setItemDetails({ ...details, credits, videos });
@@ -168,8 +169,8 @@ const FavoritesList = ({ embedded = false } = {}) => {
       updatedList.filter((item) =>
         (item.title || item.name || "")
           .toLowerCase()
-          .includes(searchTerm.toLowerCase())
-      )
+          .includes(searchTerm.toLowerCase()),
+      ),
     );
     const ok = await saveFavorites(updatedList);
     if (!ok) {
@@ -194,7 +195,7 @@ const FavoritesList = ({ embedded = false } = {}) => {
 
     // Check if already in watched list
     const isAlreadyWatched = watched.some((watchedItem) =>
-      sameEntry(watchedItem, { ...item, mediaType })
+      sameEntry(watchedItem, { ...item, mediaType }),
     );
 
     if (isAlreadyWatched) {
@@ -216,7 +217,7 @@ const FavoritesList = ({ embedded = false } = {}) => {
         if (!item.number_of_seasons || !item.number_of_episodes) {
           const tvDetails = await cachedFetchJson(
             `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`,
-            { ttlMs: 6 * 60 * 60 * 1000 }
+            { ttlMs: 6 * 60 * 60 * 1000 },
           );
           itemToAdd.number_of_seasons =
             itemToAdd.number_of_seasons || tvDetails.number_of_seasons;
@@ -245,15 +246,15 @@ const FavoritesList = ({ embedded = false } = {}) => {
       // Remove from favorites
       const updatedFavorites = favorites.filter(
         (fav) =>
-          favoriteIdentity(fav) !== favoriteIdentity({ ...item, mediaType })
+          favoriteIdentity(fav) !== favoriteIdentity({ ...item, mediaType }),
       );
       setFavorites(updatedFavorites);
       setFilteredFavorites(
         updatedFavorites.filter((item) =>
           (item.title || item.name || "")
             .toLowerCase()
-            .includes(searchTerm.toLowerCase())
-        )
+            .includes(searchTerm.toLowerCase()),
+        ),
       );
       const ok = await saveFavorites(updatedFavorites);
       if (!ok) {
@@ -286,179 +287,179 @@ const FavoritesList = ({ embedded = false } = {}) => {
       return [...items].sort((a, b) =>
         (a.title || a.name)
           .toLowerCase()
-          .localeCompare((b.title || b.name).toLowerCase())
+          .localeCompare((b.title || b.name).toLowerCase()),
       );
     } else if (sortBy === "dateAdded") {
       return [...items].sort(
-        (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0)
+        (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0),
       );
     }
     return items;
   };
 
   return (
-    <div className={embedded ? "" : "min-h-screen p-4 pb-20 bg-gray-900"}>
-      {errorMessage && (
-        <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
-      )}
-      {/* Header with search section - enhanced background */}
-      <div
-        className={
-          embedded
-            ? "mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900"
-            : "sticky top-0 z-20 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900"
-        }
-      >
-        <div className="p-1">
-          {/* Search input */}
-          <div className="flex items-center space-x-2">
-            <div className="relative flex-grow">
-              <input
-                type="text"
-                placeholder="Search your favorites..."
-                value={searchTerm}
-                onChange={handleSearch}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    handleSearch({ target: { value: searchTerm } });
-                  }
-                }}
-                className="w-full p-2 pl-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
-              />
-              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
-                🔍
-              </div>
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setFilteredFavorites(favorites);
+    <div className={embedded ? "" : "app-page"}>
+      <div className={embedded ? "" : "app-container"}>
+        {errorMessage && (
+          <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
+        )}
+        {/* Header with search section - enhanced background */}
+        <div
+          className={
+            embedded ? "mb-4 app-panel" : "sticky top-0 z-20 mb-4 app-panel"
+          }
+        >
+          <div className="p-3">
+            {/* Search input */}
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-grow">
+                <input
+                  type="text"
+                  placeholder="Search your favorites..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch({ target: { value: searchTerm } });
+                    }
                   }}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-                  aria-label="Clear search"
-                >
-                  ✖️
-                </button>
-              )}
+                  className="app-input pl-9 pr-10"
+                />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                  <SearchIcon className="text-gray-400" size={18} />
+                </div>
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setFilteredFavorites(favorites);
+                    }}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                    aria-label="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSearch({ target: { value: searchTerm } })}
+                className="app-button-primary px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              >
+                GO!
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => handleSearch({ target: { value: searchTerm } })}
-              className="p-2 font-bold text-gray-900 transition duration-300 bg-yellow-500 rounded-md hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-            >
-              GO!
-            </button>
+
+            {searchTerm && (
+              <div className="mt-2 text-sm text-gray-400">
+                Found {filteredFavorites.length}{" "}
+                {filteredFavorites.length === 1 ? "item" : "items"}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Favorites List with updated styling to match Movies/Shows */}
+        <div className="grid grid-cols-1 gap-4">
+          {/* Header for favorites section */}
+          {!embedded && (
+            <div className="flex items-center justify-between mb-4">
+              <div className="font-semibold text-gray-100">Your Favorites</div>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="app-select focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              >
+                <option value="title">A-\u00d6</option>
+                <option value="dateAdded">Most recent</option>
+              </select>
+            </div>
+          )}
+
+          {embedded && (
+            <div className="flex items-center justify-end mb-2">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="app-select focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                aria-label="Sort favorites"
+              >
+                <option value="title">A-\u00d6</option>
+                <option value="dateAdded">Most recent</option>
+              </select>
+            </div>
+          )}
+          <div className="space-y-4">
+            {filteredFavorites.map((item) => (
+              <SwipeableFavoriteCard
+                key={favoriteIdentity(item) || item.id}
+                item={item}
+                swipeStartThreshold={30}
+                onSelect={viewDetails}
+                onRemove={removeFromFavorites}
+                onAddToWatched={addToWatched}
+                alreadyWatched={isInWatchedList(item)}
+              />
+            ))}
           </div>
 
-          {searchTerm && (
-            <div className="mt-2 text-sm text-gray-400">
-              Found {filteredFavorites.length}{" "}
-              {filteredFavorites.length === 1 ? "item" : "items"}
+          {/* Empty State */}
+          {filteredFavorites.length === 0 && (
+            <div className="py-10 text-center">
+              {favorites.length === 0 ? (
+                <>
+                  <p className="text-gray-400">No favorites added yet.</p>
+                  <p className="mt-2 text-gray-300">
+                    Start adding your favorite movies and shows!
+                  </p>
+                </>
+              ) : (
+                <p className="text-gray-400">No favorites match your search</p>
+              )}
             </div>
           )}
         </div>
-      </div>
 
-      {/* Favorites List with updated styling to match Movies/Shows */}
-      <div className="grid grid-cols-1 gap-4">
-        {/* Header for favorites section */}
-        {!embedded && (
-          <div className="flex items-center justify-between mb-4">
-            <div className="font-semibold text-yellow-400">Your Favorites</div>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
-            >
-              <option value="title">A-\u00d6</option>
-              <option value="dateAdded">Most recent</option>
-            </select>
-          </div>
-        )}
-
-        {embedded && (
-          <div className="flex items-center justify-end mb-2">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-2 py-1 text-sm text-white bg-gray-800 border border-yellow-500 rounded"
-              aria-label="Sort favorites"
-            >
-              <option value="title">A-\u00d6</option>
-              <option value="dateAdded">Most recent</option>
-            </select>
-          </div>
-        )}
-        <div className="space-y-4">
-          {filteredFavorites.map((item) => (
-            <SwipeableFavoriteCard
-              key={favoriteIdentity(item) || item.id}
-              item={item}
-              swipeStartThreshold={30}
-              onSelect={viewDetails}
-              onRemove={removeFromFavorites}
-              onAddToWatched={addToWatched}
-              alreadyWatched={isInWatchedList(item)}
-            />
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {filteredFavorites.length === 0 && (
-          <div className="py-10 text-center">
-            {favorites.length === 0 ? (
-              <>
-                <p className="text-gray-400">No favorites added yet.</p>
-                <p className="mt-2 text-yellow-500">
-                  Start adding your favorite movies and shows!
-                </p>
-              </>
-            ) : (
-              <p className="text-gray-400">No favorites match your search</p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Loading Indicator */}
-      {isLoading && selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
-          <div className="p-6 text-center bg-gray-800 rounded-lg">
-            <div className="mb-3 text-lg text-yellow-400">
-              Loading details...
+        {/* Loading Indicator */}
+        {isLoading && selectedItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+            <div className="app-panel-solid p-6 text-center">
+              <div className="mb-3 text-lg text-gray-100">
+                Loading details...
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="app-button-ghost px-4 py-2"
+              >
+                Cancel
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={closeModal}
-              className="px-4 py-2 text-white bg-gray-700 rounded-md hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-            >
-              Cancel
-            </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Show Detail Modal */}
-      {selectedItem &&
-        !isLoading &&
-        itemDetails &&
-        (selectedItem.mediaType === "tv" ||
-        itemDetails.seasons ||
-        itemDetails.number_of_seasons ? (
-          <ShowDetailModal show={itemDetails} onClose={closeModal} />
-        ) : (
-          <MovieDetailModal movie={itemDetails} onClose={closeModal} />
-        ))}
+        {/* Show Detail Modal */}
+        {selectedItem &&
+          !isLoading &&
+          itemDetails &&
+          (selectedItem.mediaType === "tv" ||
+          itemDetails.seasons ||
+          itemDetails.number_of_seasons ? (
+            <ShowDetailModal show={itemDetails} onClose={closeModal} />
+          ) : (
+            <MovieDetailModal movie={itemDetails} onClose={closeModal} />
+          ))}
 
-      {/* NotificationModal */}
-      {notification.show && (
-        <NotificationModal
-          message={notification.message}
-          onClose={closeNotification}
-          autoCloseTime={3000}
-        />
-      )}
+        {/* NotificationModal */}
+        {notification.show && (
+          <NotificationModal
+            message={notification.message}
+            onClose={closeNotification}
+            autoCloseTime={3000}
+          />
+        )}
+      </div>
     </div>
   );
 };

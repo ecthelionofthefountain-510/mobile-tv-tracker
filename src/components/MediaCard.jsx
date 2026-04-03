@@ -18,7 +18,7 @@ const MediaCard = ({
 
   return (
     <div
-      className="mb-4 relative overflow-hidden rounded-lg border border-yellow-900/30 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+      className="app-card app-card-hover mb-4 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
       onClick={() => onSelect(item)}
       role="button"
       tabIndex={0}
@@ -26,7 +26,7 @@ const MediaCard = ({
       aria-label={`Open details for ${item.title}`}
     >
       {/* Bakgrundsbild med mörkare overlay */}
-      <div className="absolute inset-0 bg-gray-900"></div>
+      <div className="absolute inset-0 bg-gray-950/60"></div>
 
       <div className="flex p-3 relative z-10">
         {/* Poster/Thumbnail */}
@@ -34,17 +34,17 @@ const MediaCard = ({
           <img
             src={`${IMAGE_BASE_URL}${item.poster_path}`}
             alt={item.title}
-            className="w-full h-full object-cover rounded-md shadow-lg border-2 border-yellow-600/30"
+            className="w-full h-full object-cover app-poster"
           />
         </div>
 
         {/* Innehåll */}
         <div className="ml-4 flex-1 min-w-0">
-          <h3 className="text-xl font-bold text-yellow-400 mb-1 truncate">
+          <h3 className="text-xl font-bold text-gray-100 mb-1 truncate">
             {item.title}
           </h3>
 
-          <div className="text-sm text-yellow-300/70 mb-1">
+          <div className="text-sm text-gray-400 mb-1">
             {item.mediaType === "tv" ? "TV SERIES" : "MOVIE"}
           </div>
 
@@ -60,7 +60,7 @@ const MediaCard = ({
             <div className="text-sm text-gray-400 mb-1">
               {Object.values(item.seasons).reduce(
                 (sum, season) => sum + (season.watchedEpisodes?.length || 0),
-                0
+                0,
               )}{" "}
               EPISODES WATCHED
             </div>
@@ -83,7 +83,7 @@ const MediaCard = ({
                   e.stopPropagation();
                   onAddToWatched(item, e);
                 }}
-                className="w-8 h-8 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                className="app-button-success w-8 h-8 rounded-full p-0 text-base"
                 title="Add to watched"
                 aria-label="Add to watched"
               >
@@ -97,7 +97,7 @@ const MediaCard = ({
                 e.stopPropagation();
                 onRemove(item.id, e);
               }}
-              className="w-8 h-8 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              className="flex items-center justify-center w-8 h-8 text-white border rounded-full border-white/10 bg-red-600/80 hover:bg-red-600"
               title="Remove"
               aria-label="Remove"
             >
@@ -109,7 +109,7 @@ const MediaCard = ({
 
       {/* Status badge */}
       {alreadyWatched && (
-        <div className="absolute top-0 right-0 bg-green-600 text-white text-xs px-2 py-1 rounded-bl">
+        <div className="absolute top-0 right-0 bg-green-600 text-white text-xs px-2 py-1 rounded-bl-xl">
           WATCHED
         </div>
       )}

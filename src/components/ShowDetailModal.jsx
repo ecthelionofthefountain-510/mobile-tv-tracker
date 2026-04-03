@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import { useModalA11y } from "../hooks/useModalA11y";
 
 const ShowDetailModal = ({
   show,
@@ -13,8 +14,15 @@ const ShowDetailModal = ({
 }) => {
   const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
-  const previouslyFocusedElementRef = useRef(null);
   const titleId = useId();
+
+  const isOpen = !!show;
+  const { handleDialogKeyDown } = useModalA11y({
+    enabled: isOpen,
+    dialogRef,
+    initialFocusRef: closeButtonRef,
+    onClose,
+  });
 
   // Simple touch handling for swipe down
   const handleTouchStart = (e) => {
@@ -33,8 +41,6 @@ const ShowDetailModal = ({
       onClose();
     }
   };
-
-  if (!show) return null;
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) onClose();
@@ -81,7 +87,7 @@ const ShowDetailModal = ({
       try {
         const data = await cachedFetchJson(
           `${TMDB_BASE_URL}/tv/${displayShow.id}/watch/providers?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         );
         if (cancelled) return;
         const picked = pickProviders(data?.results);
@@ -103,101 +109,18 @@ const ShowDetailModal = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayShow?.id]);
 
-  const getFocusableElements = () => {
-    const dialogEl = dialogRef.current;
-    if (!dialogEl) return [];
-    const elements = dialogEl.querySelectorAll(
-      [
-        "a[href]",
-        "button:not([disabled])",
-        "input:not([disabled])",
-        "select:not([disabled])",
-        "textarea:not([disabled])",
-        "[tabindex]:not([tabindex='-1'])",
-      ].join(",")
-    );
-    return Array.from(elements).filter(
-      (el) =>
-        !el.hasAttribute("disabled") &&
-        el.getAttribute("aria-hidden") !== "true"
-    );
-  };
-
-  const handleDialogKeyDown = (e) => {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      onClose();
-      return;
-    }
-
-    if (e.key !== "Tab") return;
-
-    const focusables = getFocusableElements();
-    if (focusables.length === 0) {
-      e.preventDefault();
-      return;
-    }
-
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    const active = document.activeElement;
-
-    if (e.shiftKey) {
-      if (active === first || !dialogRef.current?.contains(active)) {
-        e.preventDefault();
-        last.focus();
-      }
-      return;
-    }
-
-    if (active === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
-  useEffect(() => {
-    previouslyFocusedElementRef.current = document.activeElement;
-
-    const focusInitial = () => {
-      if (closeButtonRef.current) {
-        closeButtonRef.current.focus({ preventScroll: true });
-        return;
-      }
-
-      const focusables = getFocusableElements();
-      if (focusables[0]?.focus) {
-        focusables[0].focus({ preventScroll: true });
-        return;
-      }
-
-      dialogRef.current?.focus?.({ preventScroll: true });
-    };
-
-    const raf = requestAnimationFrame(focusInitial);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      const prev = previouslyFocusedElementRef.current;
-      try {
-        prev?.focus?.({ preventScroll: true });
-      } catch {
-        // ignore
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  if (!show) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 bg-black bg-opacity-75 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 sm:items-center sm:p-4"
       onClick={handleBackdropClick}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
     >
       <div
         ref={dialogRef}
-        className="relative bg-gray-800 rounded-none sm:rounded-lg shadow-xl w-full max-w-full sm:max-w-2xl max-h-[100vh] sm:max-h-[90vh] overflow-y-auto hide-scrollbar"
+        className="relative app-panel-solid w-full max-w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto hide-scrollbar rounded-t-3xl sm:rounded-2xl shadow-xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -205,140 +128,151 @@ const ShowDetailModal = ({
         onKeyDown={handleDialogKeyDown}
         tabIndex={-1}
       >
-        <button
-          ref={closeButtonRef}
-          type="button"
-          onClick={onClose}
-          className="absolute z-20 p-1 transition rounded top-2 right-2 hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-          aria-label="Close"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-6 h-6 text-gray-300 hover:text-yellow-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
+        <div className="relative">
+          {displayShow.backdrop_path ? (
+            <div className="relative h-52 sm:h-60 overflow-hidden">
+              <img
+                src={`${IMAGE_BASE_URL}${displayShow.backdrop_path}`}
+                alt={`${displayShow.title || displayShow.name} backdrop`}
+                className="object-cover w-full h-full"
+              />
+            </div>
+          ) : (
+            <div className="h-28 sm:h-36 bg-gray-950/40" />
+          )}
+
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/80 to-gray-950/10" />
+
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={onClose}
+            className="absolute right-3 top-3 z-20 inline-flex items-center justify-center rounded-xl border border-white/10 bg-black/30 p-2 text-gray-200 backdrop-blur-md transition-colors hover:bg-black/45 hover:text-yellow-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            aria-label="Close"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
 
-        {displayShow.backdrop_path && (
-          <div className="relative w-full h-40 overflow-hidden md:h-56">
-            <img
-              src={`${IMAGE_BASE_URL}${displayShow.backdrop_path}`}
-              alt={`${displayShow.title || displayShow.name} backdrop`}
-              className="object-cover w-full h-full"
-            />
-            <div className="absolute inset-0 z-0 bg-black bg-opacity-70"></div>
-          </div>
-        )}
-        <div className="relative z-10 flex flex-col items-center mb-4 -mt-16">
-          <img
-            src={
-              displayShow.poster_path
-                ? `${IMAGE_BASE_URL}${displayShow.poster_path}`
-                : "/no-profile.png"
-            }
-            alt={displayShow.title || displayShow.name}
-            className="bg-gray-900 border-2 rounded-md shadow-lg w-28 sm:w-32 md:w-40 border-yellow-600/30"
-          />
+          <div className="relative z-10 px-5 pb-4 pt-10 sm:px-6 sm:pt-12">
+            <div className="flex items-end gap-4">
+              <img
+                src={
+                  displayShow.poster_path
+                    ? `${IMAGE_BASE_URL}${displayShow.poster_path}`
+                    : "/no-profile.png"
+                }
+                alt={displayShow.title || displayShow.name}
+                className="w-20 sm:w-24 md:w-28 flex-none object-cover app-poster bg-gray-900"
+              />
 
-          {showActions && (
-            <div className="flex gap-2 mt-3">
-              <button
-                type="button"
-                onClick={() => onAddToWatched?.(displayShow)}
-                disabled={!onAddToWatched}
-                className={`px-3 py-2 text-xs font-semibold rounded transition
-                  ${
-                    isWatched
-                      ? "bg-green-600 text-white cursor-default"
-                      : "bg-yellow-500 text-gray-900 hover:bg-yellow-600"
-                  }
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900
-                `}
-              >
-                {isWatched ? "Remove Watched" : "Add to Watched"}
-              </button>
+              <div className="min-w-0 flex-1">
+                <h2
+                  id={titleId}
+                  className="mb-1 text-2xl sm:text-3xl font-bold text-yellow-300 truncate"
+                >
+                  {displayShow.title || displayShow.name}
+                </h2>
 
-              <button
-                type="button"
-                onClick={() => onAddToFavorites?.(displayShow)}
-                disabled={!onAddToFavorites}
-                className={`px-3 py-2 text-xs font-semibold rounded transition
-                  ${
-                    isFavorited
-                      ? "bg-yellow-400 text-gray-900 cursor-default"
-                      : "bg-gray-700 text-yellow-400 hover:bg-yellow-600 hover:text-gray-900"
-                  }
-                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900
-                `}
-              >
-                {isFavorited ? "Unfavorite" : "Favorite"}
-              </button>
+                {displayShow.tagline && (
+                  <div className="mb-2 text-sm sm:text-base italic text-yellow-200/90 line-clamp-2">
+                    “{displayShow.tagline}”
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {displayShow.vote_average > 0 && (
+                    <span className="app-badge">
+                      ★ {displayShow.vote_average.toFixed(1)}
+                    </span>
+                  )}
+                  {displayShow.vote_count > 0 && (
+                    <span className="app-pill">
+                      {displayShow.vote_count} votes
+                    </span>
+                  )}
+                  {displayShow.first_air_date && (
+                    <span className="app-pill">
+                      First aired{" "}
+                      {new Date(displayShow.first_air_date).getFullYear()}
+                    </span>
+                  )}
+                  {displayShow.last_air_date && (
+                    <span className="app-pill">
+                      Last aired{" "}
+                      {new Date(displayShow.last_air_date).getFullYear()}
+                    </span>
+                  )}
+                  {typeof displayShow.number_of_seasons === "number" && (
+                    <span className="app-pill">
+                      {displayShow.number_of_seasons}{" "}
+                      {displayShow.number_of_seasons === 1
+                        ? "Season"
+                        : "Seasons"}
+                      {displayShow.number_of_episodes
+                        ? ` • ${displayShow.number_of_episodes} Episodes`
+                        : ""}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-        <div className="px-6 mt-2 text-left">
-          <h2 id={titleId} className="mb-1 text-3xl font-bold text-yellow-400">
-            {displayShow.title || displayShow.name}
-          </h2>
-          {displayShow.tagline && (
-            <div className="mb-2 text-lg italic text-yellow-300">
-              "{displayShow.tagline}"
-            </div>
-          )}
-          <div className="flex items-center gap-2 mb-2">
-            {displayShow.vote_average > 0 && (
-              <span className="inline-block px-2 py-1 text-sm font-semibold text-white bg-yellow-600 rounded">
-                {displayShow.vote_average.toFixed(1)} / 10
-              </span>
+
+            {displayShow.genres?.length > 0 && (
+              <div className="mt-3 text-sm text-gray-200/90">
+                {displayShow.genres.map((g) => g.name).join(", ")}
+              </div>
             )}
-            {displayShow.vote_count > 0 && (
-              <span className="text-sm text-gray-200">
-                {displayShow.vote_count} votes
-              </span>
+
+            {showActions && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onAddToWatched?.(displayShow)}
+                  disabled={!onAddToWatched}
+                  className={`px-3 py-2 text-xs font-semibold rounded-xl transition-colors disabled:opacity-60
+                    ${
+                      isWatched
+                        ? "app-button-success text-xs cursor-default"
+                        : "app-button-primary text-xs"
+                    }
+                  `}
+                >
+                  {isWatched ? "Remove Watched" : "Add to Watched"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onAddToFavorites?.(displayShow)}
+                  disabled={!onAddToFavorites}
+                  className={`px-3 py-2 text-xs font-semibold rounded-xl transition-colors disabled:opacity-60
+                    app-button-ghost text-xs
+                    ${isFavorited ? "border-yellow-500/25 text-yellow-200" : "text-gray-100"}
+                  `}
+                >
+                  {isFavorited ? "Unfavorite" : "Favorite"}
+                </button>
+              </div>
             )}
           </div>
-          <div className="mb-2 text-base font-medium text-gray-200">
-            {displayShow.genres &&
-              displayShow.genres.map((g) => g.name).join(", ")}
-          </div>
-          {displayShow.first_air_date && (
-            <div className="mb-1 text-sm text-gray-200">
-              First aired: {new Date(displayShow.first_air_date).getFullYear()}
-            </div>
-          )}
-          {displayShow.last_air_date && (
-            <div className="mb-1 text-sm text-gray-200">
-              Last aired: {new Date(displayShow.last_air_date).getFullYear()}
-            </div>
-          )}
-          <div className="mb-1 text-sm text-gray-200">
-            {displayShow.number_of_seasons}{" "}
-            {displayShow.number_of_seasons === 1 ? "Season" : "Seasons"}
-            {displayShow.number_of_episodes &&
-              ` • ${displayShow.number_of_episodes} Episodes`}
-          </div>
-          {/* {displayShow.networks && displayShow.networks.length > 0 && (
-            <div className="mt-2 text-xs text-gray-400">
-              {displayShow.networks.length === 1
-                ? "Original network: "
-                : "Original networks: "}
-              {displayShow.networks.map((n) => n.name).join(", ")}
-            </div>
-          )} */}
         </div>
-        <div className="p-6 pt-3 pb-28">
+
+        <div className="px-5 sm:px-6 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-5">
           {displayShow.overview && (
             <div className="mb-4">
-              <h3 className="mb-2 text-lg font-semibold text-yellow-400">
+              <h3 className="mb-2 text-lg font-semibold text-yellow-300">
                 Overview
               </h3>
               <p className="text-gray-300">{displayShow.overview}</p>
@@ -348,49 +282,63 @@ const ShowDetailModal = ({
           {/* Where to watch */}
           {(providersLoading || providersError || providers) && (
             <div className="mb-4">
-              <h3 className="mb-2 text-lg font-semibold text-yellow-400">
-                Where to watch
-              </h3>
+              <div className="app-card p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-semibold text-yellow-300">
+                    Where to watch
+                  </h3>
 
-              {providersLoading && (
-                <div className="text-sm text-gray-400">Loading…</div>
-              )}
-
-              {!providersLoading && providersError && (
-                <div className="text-sm text-red-300">{providersError}</div>
-              )}
-
-              {!providersLoading && !providersError && providers && (
-                <div className="space-y-3">
-                  {uniqProviders(providers.flatrate).length > 0 && (
-                    <div>
-                      <div className="mb-1 text-xs font-semibold tracking-wide text-gray-400 uppercase">
-                        Stream
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {uniqProviders(providers.flatrate).map((p) => (
-                          <div
-                            key={p.provider_id}
-                            className="flex items-center gap-2 px-2 py-1 border border-gray-700 rounded bg-gray-900/60"
-                          >
-                            {p.logo_path && (
-                              <img
-                                src={`https://image.tmdb.org/t/p/w45${p.logo_path}`}
-                                alt={p.provider_name}
-                                className="w-5 h-5 rounded"
-                                loading="lazy"
-                              />
-                            )}
-                            <span className="text-xs text-gray-200">
-                              {p.provider_name}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  {providers?.link && (
+                    <a
+                      href={providers.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="app-button-ghost px-3 py-1 text-xs"
+                    >
+                      View on TMDB
+                    </a>
                   )}
+                </div>
 
-                  {/* {uniqProviders(providers.rent).length > 0 && (
+                {providersLoading && (
+                  <div className="text-sm text-gray-400">Loading…</div>
+                )}
+
+                {!providersLoading && providersError && (
+                  <div className="text-sm text-red-300">{providersError}</div>
+                )}
+
+                {!providersLoading && !providersError && providers && (
+                  <div className="space-y-3">
+                    {uniqProviders(providers.flatrate).length > 0 && (
+                      <div>
+                        <div className="mb-2">
+                          <span className="app-badge">Stream</span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {uniqProviders(providers.flatrate).map((p) => (
+                            <div
+                              key={p.provider_id}
+                              className="app-pill w-full flex items-center gap-2"
+                            >
+                              {p.logo_path && (
+                                <img
+                                  src={`https://image.tmdb.org/t/p/w45${p.logo_path}`}
+                                  alt={p.provider_name}
+                                  className="h-5 w-5 rounded-md"
+                                  loading="lazy"
+                                />
+                              )}
+                              <span className="min-w-0 text-xs text-gray-200 truncate">
+                                {p.provider_name}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* {uniqProviders(providers.rent).length > 0 && (
                     <div>
                       <div className="mb-1 text-xs font-semibold tracking-wide text-gray-400 uppercase">
                         Rent
@@ -399,7 +347,7 @@ const ShowDetailModal = ({
                         {uniqProviders(providers.rent).map((p) => (
                           <div
                             key={p.provider_id}
-                            className="flex items-center gap-2 px-2 py-1 border border-gray-700 rounded bg-gray-900/60"
+                            className="app-pill flex items-center gap-2"
                           >
                             {p.logo_path && (
                               <img
@@ -427,7 +375,7 @@ const ShowDetailModal = ({
                         {uniqProviders(providers.buy).map((p) => (
                           <div
                             key={p.provider_id}
-                            className="flex items-center gap-2 px-2 py-1 border border-gray-700 rounded bg-gray-900/60"
+                            className="app-pill flex items-center gap-2"
                           >
                             {p.logo_path && (
                               <img
@@ -446,29 +394,26 @@ const ShowDetailModal = ({
                     </div>
                   )} */}
 
-                  {providers?.link && (
-                    <a
-                      href={providers.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block text-sm font-semibold text-yellow-400 underline underline-offset-4"
-                    >
-                      View on TMDB
-                    </a>
-                  )}
-                </div>
-              )}
+                    {uniqProviders(providers.flatrate).length === 0 &&
+                      !providers?.link && (
+                        <div className="text-sm text-gray-400">
+                          No streaming providers found.
+                        </div>
+                      )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
           {displayShow.credits && displayShow.credits.cast && (
             <div className="mb-4">
-              <h3 className="mb-2 text-lg font-semibold text-yellow-400">
+              <h3 className="mb-2 text-lg font-semibold text-yellow-300">
                 Cast
               </h3>
               <div className="grid grid-cols-5 gap-4 py-2 sm:gap-6 md:gap-4 lg:gap-6">
                 {displayShow.credits.cast.slice(0, 10).map((actor) => (
                   <div key={actor.id} className="flex flex-col items-center">
-                    <div className="relative flex-shrink-0 w-16 h-16 mb-2 overflow-hidden bg-gray-900 border-2 rounded-full border-yellow-600/30">
+                    <div className="relative flex-shrink-0 w-16 h-16 mb-2 overflow-hidden rounded-full border border-white/10 bg-gray-950/40">
                       <img
                         src={
                           actor.profile_path
@@ -491,19 +436,22 @@ const ShowDetailModal = ({
             displayShow.videos.results &&
             displayShow.videos.results.length > 0 && (
               <div className="mb-4">
-                <div className="flex flex-row items-center justify-between gap-3">
+                <h3 className="mb-2 text-lg font-semibold text-yellow-300">
+                  Trailer
+                </h3>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <a
                     href={`https://www.youtube.com/watch?v=${displayShow.videos.results[0].key}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-6 py-2 text-base font-bold text-gray-900 transition bg-yellow-400 rounded-full shadow-lg hover:bg-yellow-500"
+                    className="app-button-primary w-full px-6 py-2 text-base sm:w-auto"
                   >
                     ▶️ Watch trailer
                   </a>
                   <button
                     type="button"
                     onClick={onClose}
-                    className="px-6 py-2 text-base font-bold text-gray-900 transition bg-yellow-400 rounded-full shadow-lg hover:bg-yellow-500"
+                    className="app-button-ghost w-full px-6 py-2 text-base sm:w-auto"
                     style={{ minWidth: 80 }}
                   >
                     Close
@@ -512,7 +460,7 @@ const ShowDetailModal = ({
               </div>
             )}
         </div>
-        <div className="sticky bottom-0 left-0 z-30 flex justify-end w-full p-4 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent"></div>
+        <div className="pointer-events-none sticky bottom-0 left-0 z-30 h-16 w-full bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent" />
       </div>
     </div>
   );

@@ -155,8 +155,8 @@ const UpcomingPage = () => {
             cachedFetchJson(`${TMDB_BASE_URL}/tv/${id}?api_key=${API_KEY}`, {
               ttlMs: 6 * 60 * 60 * 1000,
               cacheKey: `tv:${id}:details`,
-            })
-          )
+            }),
+          ),
         );
 
         if (cancelled) return;
@@ -185,8 +185,8 @@ const UpcomingPage = () => {
             (a, b) =>
               (a._air_time || 0) - (b._air_time || 0) ||
               String(a.name || a.title || "").localeCompare(
-                String(b.name || b.title || "")
-              )
+                String(b.name || b.title || ""),
+              ),
           );
 
         setUpcoming(items);
@@ -221,13 +221,13 @@ const UpcomingPage = () => {
           `${TMDB_BASE_URL}/tv/${item.id}/credits?api_key=${API_KEY}`,
           {
             ttlMs: 24 * 60 * 60 * 1000,
-          }
+          },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/tv/${item.id}/videos?api_key=${API_KEY}`,
           {
             ttlMs: 24 * 60 * 60 * 1000,
-          }
+          },
         ),
       ]);
 
@@ -247,118 +247,122 @@ const UpcomingPage = () => {
   };
 
   return (
-    <div className="min-h-screen p-4 pb-20 bg-gray-900">
-      <div className="sticky top-0 z-20 pt-2 pb-4 bg-gray-900">
-        <div className="flex items-center justify-between mb-3">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="flex items-center text-yellow-400 hover:text-yellow-300"
-          >
-            <span className="mr-1">←</span> Back
-          </button>
-          <h2 className="text-xl font-semibold text-yellow-400 truncate max-w-[60%]">
-            Upcoming
-          </h2>
-          <button
-            type="button"
-            onClick={() => navigate("/overview")}
-            className="px-3 py-2 text-xs font-semibold text-yellow-300 bg-gray-800 border border-yellow-500 rounded-xl hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-          >
-            Overview
-          </button>
-        </div>
-      </div>
-
-      {upcomingLoading && (
-        <div className="py-2 text-sm text-gray-400">Loading…</div>
-      )}
-      {!upcomingLoading && upcomingError && (
-        <div className="py-2 text-sm text-red-300">{upcomingError}</div>
-      )}
-      {!upcomingLoading && !upcomingError && upcoming.length === 0 && (
-        <div className="py-6 text-center">
-          <div className="text-gray-300">No upcoming episodes found.</div>
-          <div className="mt-1 text-sm text-gray-400">
-            Add some shows to watched or favorites.
+    <div className="app-page">
+      <div className="app-container">
+        <div className="sticky top-0 z-20 mb-4 app-panel">
+          <div className="p-3">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex items-center text-yellow-400 hover:text-yellow-300"
+              >
+                <span className="mr-1">←</span> Back
+              </button>
+              <h2 className="text-xl font-semibold text-yellow-400 truncate max-w-[60%]">
+                Upcoming
+              </h2>
+              <button
+                type="button"
+                onClick={() => navigate("/overview")}
+                className="app-button-ghost px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              >
+                Overview
+              </button>
+            </div>
           </div>
         </div>
-      )}
 
-      {!upcomingLoading && !upcomingError && upcoming.length > 0 && (
-        <div className="space-y-2">
-          {upcoming.map((u) => {
-            const rel = relativeLabel(u.air_date);
-            const isSeasonPremiere = u.episode_number === 1;
+        {upcomingLoading && (
+          <div className="py-2 text-sm text-gray-400">Loading…</div>
+        )}
+        {!upcomingLoading && upcomingError && (
+          <div className="py-2 text-sm text-red-300">{upcomingError}</div>
+        )}
+        {!upcomingLoading && !upcomingError && upcoming.length === 0 && (
+          <div className="py-6 text-center">
+            <div className="text-gray-300">No upcoming episodes found.</div>
+            <div className="mt-1 text-sm text-gray-400">
+              Add some shows to watched or favorites.
+            </div>
+          </div>
+        )}
 
-            return (
-              <button
-                key={`upcoming:${u.id}:${u.air_date}`}
-                type="button"
-                onClick={() => openDetails(u)}
-                className="flex w-full overflow-hidden text-left transition border border-gray-800 rounded-lg bg-gray-900/80 hover:border-yellow-500/80 hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-              >
-                <div className="flex-shrink-0 w-16 sm:w-20">
-                  {u.poster_path ? (
-                    <img
-                      src={`${IMAGE_BASE_URL}${u.poster_path}`}
-                      alt={u.name}
-                      className="object-cover w-full h-full"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-800">
-                      No image
-                    </div>
-                  )}
-                </div>
+        {!upcomingLoading && !upcomingError && upcoming.length > 0 && (
+          <div className="space-y-2">
+            {upcoming.map((u) => {
+              const rel = relativeLabel(u.air_date);
+              const isSeasonPremiere = u.episode_number === 1;
 
-                <div className="flex-1 px-3 py-2">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <div className="text-sm font-bold text-yellow-400 sm:text-base">
-                      {(u.name || "").toUpperCase()}
-                    </div>
-                    {rel && (
-                      <div className="text-[10px] font-semibold tracking-wide text-gray-400">
-                        {rel.toUpperCase()}
+              return (
+                <button
+                  key={`upcoming:${u.id}:${u.air_date}`}
+                  type="button"
+                  onClick={() => openDetails(u)}
+                  className="app-card app-card-hover flex w-full overflow-hidden text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                >
+                  <div className="flex-shrink-0 w-16 sm:w-20">
+                    {u.poster_path ? (
+                      <img
+                        src={`${IMAGE_BASE_URL}${u.poster_path}`}
+                        alt={u.name}
+                        className="object-cover w-full h-full"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-800">
+                        No image
                       </div>
                     )}
                   </div>
 
-                  <div className="mt-0.5 text-xs text-gray-300">
-                    {isSeasonPremiere ? "SEASON PREMIERE" : "NEXT EPISODE"}
-                    {typeof u.season_number === "number" &&
-                      typeof u.episode_number === "number" && (
-                        <>
-                          {" "}
-                          • S{u.season_number}E{u.episode_number}
-                        </>
+                  <div className="flex-1 px-3 py-2">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <div className="text-sm font-bold text-yellow-400 sm:text-base">
+                        {(u.name || "").toUpperCase()}
+                      </div>
+                      {rel && (
+                        <div className="text-[10px] font-semibold tracking-wide text-gray-400">
+                          {rel.toUpperCase()}
+                        </div>
                       )}
-                    {u.air_date && <> • {fmtDate(u.air_date)}</>}
+                    </div>
+
+                    <div className="mt-0.5 text-xs text-gray-300">
+                      {isSeasonPremiere ? "SEASON PREMIERE" : "NEXT EPISODE"}
+                      {typeof u.season_number === "number" &&
+                        typeof u.episode_number === "number" && (
+                          <>
+                            {" "}
+                            • S{u.season_number}E{u.episode_number}
+                          </>
+                        )}
+                      {u.air_date && <> • {fmtDate(u.air_date)}</>}
+                    </div>
                   </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {isLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
-          <div className="p-6 text-center bg-gray-800 rounded-lg">
-            <div className="mb-3 text-lg text-yellow-400">Loading…</div>
-            <div className="w-12 h-12 mx-auto mb-3 border-4 border-yellow-400 rounded-full border-t-transparent animate-spin" />
+                </button>
+              );
+            })}
           </div>
-        </div>
-      )}
+        )}
 
-      {errorMessage && (
-        <div className="mt-3 text-sm text-red-300">{errorMessage}</div>
-      )}
+        {isLoading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75">
+            <div className="app-panel-solid p-6 text-center">
+              <div className="mb-3 text-lg text-yellow-400">Loading…</div>
+              <div className="w-12 h-12 mx-auto mb-3 border-4 border-yellow-400 rounded-full border-t-transparent animate-spin" />
+            </div>
+          </div>
+        )}
 
-      {selectedItem && itemDetails && (
-        <ShowDetailModal tv={itemDetails} onClose={closeModal} />
-      )}
+        {errorMessage && (
+          <div className="mt-3 text-sm text-red-300">{errorMessage}</div>
+        )}
+
+        {selectedItem && itemDetails && (
+          <ShowDetailModal tv={itemDetails} onClose={closeModal} />
+        )}
+      </div>
     </div>
   );
 };

@@ -115,8 +115,8 @@ const SwipeableFavoriteCard = ({
           transition: animating
             ? "transform 0.2s"
             : deltaX === 0
-            ? "transform 0.2s"
-            : "none",
+              ? "transform 0.2s"
+              : "none",
           pointerEvents: animating ? "none" : "auto",
         }}
       >
@@ -133,7 +133,7 @@ const SwipeableFavoriteCard = ({
         <div
           className={`absolute inset-0 z-0 flex items-center ${
             deltaX < 0 ? "justify-end pr-6" : "justify-start pl-6"
-          } ${bg} rounded-lg transition-all`}
+          } ${bg} rounded-2xl transition-all`}
         >
           {icon}
         </div>

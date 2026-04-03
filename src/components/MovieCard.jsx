@@ -63,7 +63,7 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
 
   return (
     <div
-      className={`relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg bg-gray-800 border-yellow-900/30 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
+      className={`app-card app-card-hover ring-1 ring-inset ring-white/5 mb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
         isSelectable ? "cursor-pointer" : ""
       }`}
       onClick={isSelectable ? () => onSelect(displayItem) : undefined}
@@ -81,13 +81,13 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
                 : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='168' viewBox='0 0 112 168'%3E%3Crect width='112' height='168' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='0.3em' fill='%236B7280' font-family='Arial' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E"
             }
             alt={titleText}
-            className="object-cover w-full h-full rounded-md shadow-lg border-2 border-yellow-600/30"
+            className="object-cover w-full h-full app-poster"
           />
         </div>
 
         <div className="flex flex-col justify-between flex-1 min-w-0 ml-4">
           <div>
-            <h3 className="text-xl font-bold text-yellow-400 line-clamp-1">
+            <h3 className="text-xl font-bold text-gray-100 line-clamp-1">
               {titleText}
             </h3>
 
@@ -131,7 +131,7 @@ const MovieCard = ({ item, onSelect, onRemove, showRemoveButton = true }) => {
                   e.stopPropagation();
                   onRemove(displayItem.id);
                 }}
-                className="px-3 py-1 text-sm font-medium text-white transition-colors duration-150 rounded-md bg-red-600/80 hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                className="app-button-danger px-3 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               >
                 Remove
               </button>

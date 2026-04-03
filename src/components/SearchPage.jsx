@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
+import SearchIcon from "../icons/SearchIcon";
 
 import { createWatchedShow, createWatchedMovie } from "../utils/watchedMapper";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
@@ -135,27 +136,29 @@ const SearchPage = () => {
     try {
       setErrorMessage("");
       const pages = [1, 2, 3]; // top ~60, men filtrerar sen
-      const responses = await Promise.all(
+      const pagesData = await Promise.all(
         pages.map((page) =>
-          fetch(
+          cachedFetchJson(
             `${TMDB_BASE_URL}/discover/movie?` +
               `api_key=${API_KEY}` +
               `&language=en-US` +
               `&sort_by=popularity.desc` +
               `&with_original_language=${ALLOWED_LANGS.join("|")}` +
               `&page=${page}` +
-              `&region=SE`
-          )
-        )
+              `&region=SE`,
+            {
+              ttlMs: 60 * 60 * 1000,
+              cacheKey: `discover:movie:popular:${page}`,
+            },
+          ),
+        ),
       );
 
-      const allResults = (
-        await Promise.all(responses.map((res) => res.json()))
-      ).flatMap((data) => data.results || []);
+      const allResults = pagesData.flatMap((data) => data?.results || []);
 
       // extra safeguard if TMDB ändå skickar annat
       const filtered = allResults.filter((item) =>
-        ALLOWED_LANGS.includes(item.original_language)
+        ALLOWED_LANGS.includes(item.original_language),
       );
 
       const shuffled = [...filtered].sort(() => Math.random() - 0.5);
@@ -175,25 +178,27 @@ const SearchPage = () => {
     try {
       setErrorMessage("");
       const pages = [1, 2, 3];
-      const responses = await Promise.all(
+      const pagesData = await Promise.all(
         pages.map((page) =>
-          fetch(
+          cachedFetchJson(
             `${TMDB_BASE_URL}/discover/tv?` +
               `api_key=${API_KEY}` +
               `&language=en-US` +
               `&sort_by=popularity.desc` +
               `&with_original_language=${ALLOWED_LANGS.join("|")}` +
-              `&page=${page}`
-          )
-        )
+              `&page=${page}`,
+            {
+              ttlMs: 60 * 60 * 1000,
+              cacheKey: `discover:tv:popular:${page}`,
+            },
+          ),
+        ),
       );
 
-      const allResults = (
-        await Promise.all(responses.map((res) => res.json()))
-      ).flatMap((data) => data.results || []);
+      const allResults = pagesData.flatMap((data) => data?.results || []);
 
       const filtered = allResults.filter((item) =>
-        ALLOWED_LANGS.includes(item.original_language)
+        ALLOWED_LANGS.includes(item.original_language),
       );
 
       const shuffled = [...filtered].sort(() => Math.random() - 0.5);
@@ -234,12 +239,12 @@ const SearchPage = () => {
 
   const pickLatestWatched = (type) => {
     const list = (Array.isArray(watched) ? watched : []).filter(
-      (w) => mediaTypeOf(w) === type
+      (w) => mediaTypeOf(w) === type,
     );
     list.sort(
       (a, b) =>
         new Date(b?.dateAdded || 0).getTime() -
-        new Date(a?.dateAdded || 0).getTime()
+        new Date(a?.dateAdded || 0).getTime(),
     );
     return list[0] || null;
   };
@@ -253,7 +258,7 @@ const SearchPage = () => {
     const data = await cachedFetchJson(url, { ttlMs: 6 * 60 * 60 * 1000 });
     const items = Array.isArray(data?.results) ? data.results : [];
     const filtered = items.filter((it) =>
-      ALLOWED_LANGS.includes(it?.original_language)
+      ALLOWED_LANGS.includes(it?.original_language),
     );
     return filtered.slice(0, 8);
   };
@@ -321,12 +326,15 @@ const SearchPage = () => {
 
     try {
       if (searchType === "all" || searchType === "movies") {
-        const movieResponse = await fetch(
+        const movieData = await cachedFetchJson(
           `${TMDB_BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(
-            query
-          )}`
+            query,
+          )}`,
+          {
+            ttlMs: 10 * 60 * 1000,
+            cacheKey: `search:movie:${query}`,
+          },
         );
-        const movieData = await movieResponse.json();
         const movieResults = (movieData.results || []).map((item) => ({
           ...item,
           mediaType: "movie",
@@ -335,12 +343,15 @@ const SearchPage = () => {
       }
 
       if (searchType === "all" || searchType === "tv") {
-        const tvResponse = await fetch(
+        const tvData = await cachedFetchJson(
           `${TMDB_BASE_URL}/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(
-            query
-          )}`
+            query,
+          )}`,
+          {
+            ttlMs: 10 * 60 * 1000,
+            cacheKey: `search:tv:${query}`,
+          },
         );
-        const tvData = await tvResponse.json();
 
         // Undvik N+1: hämta inte tv-detaljer per sökträff.
         // Detaljer hämtas när man öppnar modal eller när "Add to watched" behöver totaldata.
@@ -418,7 +429,7 @@ const SearchPage = () => {
         if (needsDetailsFetch) {
           tvDetails = await cachedFetchJson(
             `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`,
-            { ttlMs: 6 * 60 * 60 * 1000 }
+            { ttlMs: 6 * 60 * 60 * 1000 },
           );
         }
 
@@ -469,11 +480,11 @@ const SearchPage = () => {
     };
 
     const isFavorited = favorites.some(
-      (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedItem)
+      (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedItem),
     );
     const updatedFavorites = isFavorited
       ? favorites.filter(
-          (fav) => favoriteIdentity(fav) !== favoriteIdentity(normalizedItem)
+          (fav) => favoriteIdentity(fav) !== favoriteIdentity(normalizedItem),
         )
       : [...favorites, normalizedItem];
 
@@ -482,14 +493,14 @@ const SearchPage = () => {
     if (!ok) {
       setFavorites(prevFavorites);
       notify(
-        "Could not save favorites on this device (storage blocked or full)."
+        "Could not save favorites on this device (storage blocked or full).",
       );
       return;
     }
     notify(
       isFavorited
         ? `"${item.title || item.name}" removed from favorites.`
-        : `"${item.title || item.name}" added to favorites.`
+        : `"${item.title || item.name}" added to favorites.`,
     );
   };
 
@@ -518,15 +529,15 @@ const SearchPage = () => {
       const [details, credits, videos] = await Promise.all([
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`,
-          { ttlMs: 6 * 60 * 60 * 1000 }
+          { ttlMs: 6 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
       ]);
       setItemDetails({ ...details, credits, videos });
@@ -557,13 +568,13 @@ const SearchPage = () => {
     const id = identityOf(normalizedItem);
     const isWatched = watched.some((w) => identityOf(w) === id);
     const isFavorited = favorites.some(
-      (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedItem)
+      (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedItem),
     );
 
     return (
       <div
         key={`${normalizedItem.mediaType}-${normalizedItem.id}`}
-        className="relative mb-4 overflow-hidden transition-colors duration-200 bg-gray-800 border rounded-lg cursor-pointer border-yellow-900/30 hover:bg-gray-700 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+        className="app-card app-card-hover mb-4 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
         onClick={() => viewDetails(normalizedItem)}
         role="button"
         tabIndex={0}
@@ -578,10 +589,10 @@ const SearchPage = () => {
               <img
                 src={`${IMAGE_BASE_URL}${normalizedItem.poster_path}`}
                 alt={normalizedItem.title || normalizedItem.name}
-                className="object-cover w-full h-full border-2 rounded-md shadow-lg border-yellow-600/30"
+                className="object-cover w-full h-full app-poster"
               />
             ) : (
-              <div className="w-full h-full bg-gray-800 border-2 rounded-md border-yellow-600/30" />
+              <div className="w-full h-full bg-gray-950/40 rounded-xl border border-white/10" />
             )}
           </div>
 
@@ -598,7 +609,7 @@ const SearchPage = () => {
               {typeof normalizedItem.vote_average === "number" &&
                 normalizedItem.vote_average > 0 && (
                   <span>
-                    ⭐ {Number(normalizedItem.vote_average).toFixed(1)}
+                    Rating {Number(normalizedItem.vote_average).toFixed(1)}
                   </span>
                 )}
               {Array.isArray(normalizedItem.genre_ids) &&
@@ -638,12 +649,8 @@ const SearchPage = () => {
             <div className="flex gap-2 mt-2">
               <button
                 type="button"
-                className={`px-3 py-1 text-xs font-semibold rounded transition
-                  ${
-                    isWatched
-                      ? "bg-green-600 text-white"
-                      : "bg-yellow-500 text-gray-900 hover:bg-yellow-600"
-                  }
+                className={`px-3 py-2 text-xs font-semibold rounded-xl transition-colors
+                  ${isWatched ? "app-button-success text-xs" : "app-button-primary text-xs"}
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900
                 `}
                 onClick={(e) => {
@@ -660,12 +667,9 @@ const SearchPage = () => {
 
               <button
                 type="button"
-                className={`px-3 py-1 text-xs font-semibold rounded transition
-                  ${
-                    isFavorited
-                      ? "bg-yellow-400 text-gray-900"
-                      : "bg-gray-700 text-yellow-400 hover:bg-yellow-600 hover:text-gray-900"
-                  }
+                className={`px-3 py-2 text-xs font-semibold rounded-xl transition-colors
+                  app-button-ghost text-xs
+                  ${isFavorited ? "border-yellow-500/25 text-yellow-200" : "text-gray-100"}
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900
                 `}
                 onClick={(e) => {
@@ -687,96 +691,110 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="min-h-screen p-4 pb-20 bg-gray-900">
-      {showToast && (
-        <div className="fixed z-50 -translate-x-1/2 left-1/2 bottom-24">
-          <button
-            type="button"
-            onClick={() => setShowToast(false)}
-            className="px-4 py-2 text-sm text-gray-100 bg-gray-900 border border-gray-700 rounded-lg shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-          >
-            {toastMessage}
-          </button>
-        </div>
-      )}
-
-      <div className="sticky top-0 z-20 mb-4 bg-gray-900 border border-gray-800 rounded-lg shadow-lg">
-        <div className="p-1 space-y-3">
-          <div className="flex items-center space-x-2">
-            <div className="relative flex-grow">
-              <input
-                type="text"
-                placeholder="Search content ..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full p-2 pl-8 pr-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
-              />
-              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
-                🔍
-              </div>
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery("");
-                    setResults([]);
-                  }}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-lg text-gray-300 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-                  aria-label="Clear search"
-                >
-                  ✖
-                </button>
-              )}
-            </div>
-
+    <div className="app-page">
+      <div className="app-container">
+        {showToast && (
+          <div className="fixed z-50 -translate-x-1/2 left-1/2 bottom-24">
             <button
               type="button"
-              onClick={searchContent}
-              className="p-2 font-bold text-gray-900 transition-all bg-yellow-500 rounded-lg hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              onClick={() => setShowToast(false)}
+              className="app-button-ghost px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
-              GO!
+              {toastMessage}
             </button>
           </div>
-        </div>
-      </div>
+        )}
 
-      {errorMessage && (
-        <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
-      )}
-
-      {query && (
-        <>
-          {isSearching ? (
-            <div className="py-12 text-center text-yellow-400">
-              Searching...
-            </div>
-          ) : results.length > 0 ? (
-            <div className="space-y-4">{results.map(renderContentItem)}</div>
-          ) : null}
-        </>
-      )}
-
-      {!query && (
-        <div className="space-y-8">
-          <div>
-            <h2 className="mb-2 text-lg font-bold text-yellow-400">
-              {movieRecSeedTitle
-                ? `Because you watched ${movieRecSeedTitle}`
-                : "Popular movies"}
-            </h2>
-            {movieRecSeedTitle ? (
-              isRecommendedMoviesLoading ? (
-                <div className="py-4 text-yellow-400">Laddar...</div>
-              ) : recommendedMovies.length > 0 ? (
-                <div className="space-y-4">
-                  {recommendedMovies.map((item) =>
-                    renderContentItem({
-                      ...item,
-                      mediaType: "movie",
-                      title: item.title || item.name,
-                    })
-                  )}
+        <div className="sticky top-0 z-20 mb-4 app-panel">
+          <div className="p-3 space-y-3">
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-grow">
+                <input
+                  type="text"
+                  placeholder="Search content ..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="app-input pl-9 pr-10"
+                />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                  <SearchIcon className="text-gray-400" size={18} />
                 </div>
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery("");
+                      setResults([]);
+                    }}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-lg text-gray-300 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                    aria-label="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={searchContent}
+                className="app-button-primary px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              >
+                GO!
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {errorMessage && (
+          <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
+        )}
+
+        {query && (
+          <>
+            {isSearching ? (
+              <div className="py-12 text-center text-yellow-400">
+                Searching...
+              </div>
+            ) : results.length > 0 ? (
+              <div className="space-y-4">{results.map(renderContentItem)}</div>
+            ) : null}
+          </>
+        )}
+
+        {!query && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="mb-2 text-lg font-bold text-yellow-400">
+                {movieRecSeedTitle
+                  ? `Because you watched ${movieRecSeedTitle}`
+                  : "Popular movies"}
+              </h2>
+              {movieRecSeedTitle ? (
+                isRecommendedMoviesLoading ? (
+                  <div className="py-4 text-yellow-400">Laddar...</div>
+                ) : recommendedMovies.length > 0 ? (
+                  <div className="space-y-4">
+                    {recommendedMovies.map((item) =>
+                      renderContentItem({
+                        ...item,
+                        mediaType: "movie",
+                        title: item.title || item.name,
+                      }),
+                    )}
+                  </div>
+                ) : isPopularMoviesLoading ? (
+                  <div className="py-4 text-yellow-400">Laddar...</div>
+                ) : (
+                  <div className="space-y-4">
+                    {popularMovies.map((item) =>
+                      renderContentItem({
+                        ...item,
+                        mediaType: "movie",
+                        title: item.title || item.name,
+                      }),
+                    )}
+                  </div>
+                )
               ) : isPopularMoviesLoading ? (
                 <div className="py-4 text-yellow-400">Laddar...</div>
               ) : (
@@ -786,43 +804,43 @@ const SearchPage = () => {
                       ...item,
                       mediaType: "movie",
                       title: item.title || item.name,
-                    })
+                    }),
                   )}
                 </div>
-              )
-            ) : isPopularMoviesLoading ? (
-              <div className="py-4 text-yellow-400">Laddar...</div>
-            ) : (
-              <div className="space-y-4">
-                {popularMovies.map((item) =>
-                  renderContentItem({
-                    ...item,
-                    mediaType: "movie",
-                    title: item.title || item.name,
-                  })
-                )}
-              </div>
-            )}
-          </div>
-          <div>
-            <h2 className="mb-2 text-lg font-bold text-yellow-400">
-              {tvRecSeedTitle
-                ? `Because you watched ${tvRecSeedTitle}`
-                : "Popular shows"}
-            </h2>
-            {tvRecSeedTitle ? (
-              isRecommendedTVLoading ? (
-                <div className="py-4 text-yellow-400">Laddar...</div>
-              ) : recommendedTV.length > 0 ? (
-                <div className="space-y-4">
-                  {recommendedTV.map((item) =>
-                    renderContentItem({
-                      ...item,
-                      mediaType: "tv",
-                      title: item.title || item.name,
-                    })
-                  )}
-                </div>
+              )}
+            </div>
+            <div>
+              <h2 className="mb-2 text-lg font-bold text-yellow-400">
+                {tvRecSeedTitle
+                  ? `Because you watched ${tvRecSeedTitle}`
+                  : "Popular shows"}
+              </h2>
+              {tvRecSeedTitle ? (
+                isRecommendedTVLoading ? (
+                  <div className="py-4 text-yellow-400">Laddar...</div>
+                ) : recommendedTV.length > 0 ? (
+                  <div className="space-y-4">
+                    {recommendedTV.map((item) =>
+                      renderContentItem({
+                        ...item,
+                        mediaType: "tv",
+                        title: item.title || item.name,
+                      }),
+                    )}
+                  </div>
+                ) : isPopularTVLoading ? (
+                  <div className="py-4 text-yellow-400">Laddar...</div>
+                ) : (
+                  <div className="space-y-4">
+                    {popularTV.map((item) =>
+                      renderContentItem({
+                        ...item,
+                        mediaType: "tv",
+                        title: item.title || item.name,
+                      }),
+                    )}
+                  </div>
+                )
               ) : isPopularTVLoading ? (
                 <div className="py-4 text-yellow-400">Laddar...</div>
               ) : (
@@ -832,91 +850,79 @@ const SearchPage = () => {
                       ...item,
                       mediaType: "tv",
                       title: item.title || item.name,
-                    })
+                    }),
                   )}
                 </div>
-              )
-            ) : isPopularTVLoading ? (
-              <div className="py-4 text-yellow-400">Laddar...</div>
-            ) : (
-              <div className="space-y-4">
-                {popularTV.map((item) =>
-                  renderContentItem({
-                    ...item,
-                    mediaType: "tv",
-                    title: item.title || item.name,
-                  })
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {selectedItem &&
-        !isLoading &&
-        itemDetails &&
-        (selectedItem.mediaType === "tv" ? (
-          <ShowDetailModal
-            show={itemDetails}
-            onClose={closeModal}
-            showActions
-            isWatched={watched.some(
-              (w) => identityOf(w) === identityOf(selectedItem)
-            )}
-            isFavorited={favorites.some(
-              (f) =>
-                favoriteIdentity(f) ===
-                favoriteIdentity({
-                  ...selectedItem,
-                  mediaType: mediaTypeOf(selectedItem),
-                })
-            )}
-            onAddToWatched={(show) => {
-              const actionItem = getActionItem();
-              if (actionItem) toggleWatched({ ...actionItem, ...show });
-            }}
-            onAddToFavorites={(show) => {
-              const actionItem = getActionItem();
-              if (actionItem) toggleFavorite({ ...actionItem, ...show });
-            }}
-          />
-        ) : (
-          <MovieDetailModal
-            movie={itemDetails}
-            onClose={closeModal}
-            showActions
-            isWatched={watched.some(
-              (w) => identityOf(w) === identityOf(selectedItem)
-            )}
-            isFavorited={favorites.some(
-              (f) =>
-                favoriteIdentity(f) ===
-                favoriteIdentity({
-                  ...selectedItem,
-                  mediaType: mediaTypeOf(selectedItem),
-                })
-            )}
-            onAddToWatched={(movie) => {
-              const actionItem = getActionItem();
-              if (actionItem) toggleWatched({ ...actionItem, ...movie });
-            }}
-            onAddToFavorites={(movie) => {
-              const actionItem = getActionItem();
-              if (actionItem) toggleFavorite({ ...actionItem, ...movie });
-            }}
-          />
-        ))}
+        {selectedItem &&
+          !isLoading &&
+          itemDetails &&
+          (selectedItem.mediaType === "tv" ? (
+            <ShowDetailModal
+              show={itemDetails}
+              onClose={closeModal}
+              showActions
+              isWatched={watched.some(
+                (w) => identityOf(w) === identityOf(selectedItem),
+              )}
+              isFavorited={favorites.some(
+                (f) =>
+                  favoriteIdentity(f) ===
+                  favoriteIdentity({
+                    ...selectedItem,
+                    mediaType: mediaTypeOf(selectedItem),
+                  }),
+              )}
+              onAddToWatched={(show) => {
+                const actionItem = getActionItem();
+                if (actionItem) toggleWatched({ ...actionItem, ...show });
+              }}
+              onAddToFavorites={(show) => {
+                const actionItem = getActionItem();
+                if (actionItem) toggleFavorite({ ...actionItem, ...show });
+              }}
+            />
+          ) : (
+            <MovieDetailModal
+              movie={itemDetails}
+              onClose={closeModal}
+              showActions
+              isWatched={watched.some(
+                (w) => identityOf(w) === identityOf(selectedItem),
+              )}
+              isFavorited={favorites.some(
+                (f) =>
+                  favoriteIdentity(f) ===
+                  favoriteIdentity({
+                    ...selectedItem,
+                    mediaType: mediaTypeOf(selectedItem),
+                  }),
+              )}
+              onAddToWatched={(movie) => {
+                const actionItem = getActionItem();
+                if (actionItem) toggleWatched({ ...actionItem, ...movie });
+              }}
+              onAddToFavorites={(movie) => {
+                const actionItem = getActionItem();
+                if (actionItem) toggleFavorite({ ...actionItem, ...movie });
+              }}
+            />
+          ))}
 
-      {!isSearching && results.length === 0 && query && (
-        <div className="flex flex-col items-center py-10 text-center text-gray-400">
-          <span className="mb-2 text-5xl">🤔</span>
-          <span>
-            No results found for{" "}
-            <span className="text-yellow-400">{query}</span>
-          </span>
-        </div>
-      )}
+        {!isSearching && results.length === 0 && query && (
+          <div className="flex flex-col items-center py-10 text-center text-gray-400">
+            <span className="mb-2 text-5xl">🤔</span>
+            <span>
+              No results found for{" "}
+              <span className="text-yellow-400">{query}</span>
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

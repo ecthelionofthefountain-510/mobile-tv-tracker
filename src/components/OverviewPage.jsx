@@ -89,7 +89,7 @@ const OverviewPage = () => {
       return 0;
     return Object.values(seasons).reduce(
       (sum, season) => sum + (season?.watchedEpisodes?.length || 0),
-      0
+      0,
     );
   };
 
@@ -111,7 +111,7 @@ const OverviewPage = () => {
         const inProgressShows = wat
           .filter(
             (i) =>
-              (i?.mediaType || (i?.first_air_date ? "tv" : "movie")) === "tv"
+              (i?.mediaType || (i?.first_air_date ? "tv" : "movie")) === "tv",
           )
           .map((s) => {
             const watchedEpisodes = computeWatchedEpisodeCount(s);
@@ -203,7 +203,7 @@ const OverviewPage = () => {
         setAiPicks(picks);
         if (picks.length === 0) {
           setAiError(
-            "Inga förslag just nu (lägg till en favorit eller börja titta på en serie)."
+            "Inga förslag just nu (lägg till en favorit eller börja titta på en serie).",
           );
         }
       } catch (e) {
@@ -231,6 +231,13 @@ const OverviewPage = () => {
       }
     })();
   }, []);
+
+  const mediaTypeOf = (item) =>
+    item?.mediaType ||
+    (item?.seasons ? "tv" : item?.first_air_date ? "tv" : "movie");
+
+  const sameEntry = (a, b) =>
+    String(a?.id) === String(b?.id) && mediaTypeOf(a) === mediaTypeOf(b);
 
   const isShow = (item) =>
     item.mediaType === "tv" || !!item.seasons || item.type === "show";
@@ -331,8 +338,8 @@ const OverviewPage = () => {
             cachedFetchJson(`${TMDB_BASE_URL}/tv/${id}?api_key=${API_KEY}`, {
               ttlMs: 6 * 60 * 60 * 1000,
               cacheKey: `tv:${id}:details`,
-            })
-          )
+            }),
+          ),
         );
         if (cancelled) return;
 
@@ -360,8 +367,8 @@ const OverviewPage = () => {
             (a, b) =>
               (a._air_time || 0) - (b._air_time || 0) ||
               String(a.name || a.title || "").localeCompare(
-                String(b.name || b.title || "")
-              )
+                String(b.name || b.title || ""),
+              ),
           );
 
         // Keep it short and relevant
@@ -387,7 +394,7 @@ const OverviewPage = () => {
     const seasons = show.seasons || {};
     const seasonEpisodeCount = Object.values(seasons).reduce(
       (s, season) => s + (season.watchedEpisodes?.length || 0),
-      0
+      0,
     );
     return sum + seasonEpisodeCount;
   }, 0);
@@ -427,11 +434,11 @@ const OverviewPage = () => {
     const prevFavorites = favorites;
 
     const exists = favorites.some(
-      (f) => favoriteIdentity(f) === favoriteIdentity(normalizedItem)
+      (f) => favoriteIdentity(f) === favoriteIdentity(normalizedItem),
     );
     const updated = exists
       ? favorites.filter(
-          (f) => favoriteIdentity(f) !== favoriteIdentity(normalizedItem)
+          (f) => favoriteIdentity(f) !== favoriteIdentity(normalizedItem),
         )
       : [...favorites, normalizedItem];
 
@@ -445,15 +452,11 @@ const OverviewPage = () => {
     notify(
       exists
         ? `"${item.title || item.name}" removed from favorites.`
-        : `"${item.title || item.name}" added to favorites.`
+        : `"${item.title || item.name}" added to favorites.`,
     );
   };
 
   const toggleWatched = async (item) => {
-    const sameEntry = (a, b) =>
-      String(a?.id) === String(b?.id) &&
-      (a?.mediaType || (a?.first_air_date ? "tv" : "movie")) ===
-        (b?.mediaType || (b?.first_air_date ? "tv" : "movie"));
     const allWatched = await loadWatchedAll();
     const alreadyExists = allWatched.some((w) => sameEntry(w, item));
     if (alreadyExists) {
@@ -499,7 +502,7 @@ const OverviewPage = () => {
         if (needsDetailsFetch) {
           tvDetails = await cachedFetchJson(
             `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`,
-            { ttlMs: 6 * 60 * 60 * 1000 }
+            { ttlMs: 6 * 60 * 60 * 1000 },
           );
         }
 
@@ -567,15 +570,15 @@ const OverviewPage = () => {
       const [details, credits, videos] = await Promise.all([
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`,
-          { ttlMs: 6 * 60 * 60 * 1000 }
+          { ttlMs: 6 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
       ]);
 
@@ -611,14 +614,14 @@ const OverviewPage = () => {
   const topRatedMovie =
     watchedMovies.length > 0
       ? watchedMovies.reduce((best, curr) =>
-          (curr.vote_average || 0) > (best.vote_average || 0) ? curr : best
+          (curr.vote_average || 0) > (best.vote_average || 0) ? curr : best,
         )
       : null;
 
   const topRatedShow =
     watchedShows.length > 0
       ? watchedShows.reduce((best, curr) =>
-          (curr.vote_average || 0) > (best.vote_average || 0) ? curr : best
+          (curr.vote_average || 0) > (best.vote_average || 0) ? curr : best,
         )
       : null;
 
@@ -636,7 +639,7 @@ const OverviewPage = () => {
     if (!watched || watched.length === 0) return;
 
     const candidates = watched.filter(
-      (i) => Array.isArray(i.genre_ids) && i.genre_ids.length > 0
+      (i) => Array.isArray(i.genre_ids) && i.genre_ids.length > 0,
     );
 
     if (candidates.length === 0) {
@@ -660,16 +663,23 @@ const OverviewPage = () => {
     });
 
     try {
-      const res = await fetch(
-        `${TMDB_BASE_URL}/discover/${endpoint}?api_key=${API_KEY}&with_genres=${chosenGenreId}&sort_by=popularity.desc`
+      const data = await cachedFetchJson(
+        `${TMDB_BASE_URL}/discover/${endpoint}?api_key=${API_KEY}&with_genres=${chosenGenreId}&sort_by=popularity.desc`,
+        {
+          ttlMs: 6 * 60 * 60 * 1000,
+          cacheKey: `discover:${endpoint}:genre:${chosenGenreId}`,
+        },
       );
-      const data = await res.json();
       const all = data.results || [];
 
-      const watchedIds = new Set(watched.map((w) => w.id));
+      const watchedIds = new Set(
+        watched
+          .filter((w) => mediaTypeOf(w) === mediaType)
+          .map((w) => String(w.id)),
+      );
 
       const cleaned = all
-        .filter((item) => !watchedIds.has(item.id))
+        .filter((item) => !watchedIds.has(String(item?.id)))
         .slice(0, 8)
         .map((item) => ({
           ...item,
@@ -710,7 +720,7 @@ const OverviewPage = () => {
         key={key}
         type="button"
         onClick={() => openDetails(item)}
-        className="flex w-full overflow-hidden text-left transition border border-gray-800 rounded-lg bg-gray-900/80 hover:border-yellow-500/80 hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+        className="app-card app-card-hover flex w-full text-left"
       >
         <div className="flex-shrink-0 w-16 sm:w-20">
           {item.poster_path ? (
@@ -729,7 +739,7 @@ const OverviewPage = () => {
           <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
             {label}
           </div>
-          <div className="text-sm font-bold text-yellow-400 sm:text-base">
+          <div className="text-sm font-bold text-gray-100 sm:text-base">
             {(item.title || item.name || "").toUpperCase()}
           </div>
           <div className="mt-0.5 text-xs text-gray-300">
@@ -746,7 +756,7 @@ const OverviewPage = () => {
                   {seasonsCount} SEASON{seasonsCount > 1 ? "S" : ""}{" "}
                 </>
               )}
-              {rating && <> ⭐ {rating}</>}
+              {rating && <> Rating {rating}</>}
             </div>
 
             {/* Rad 3: genres */}
@@ -762,127 +772,130 @@ const OverviewPage = () => {
   };
 
   return (
-    <div className="min-h-screen p-4 pb-20">
-      {showToast && (
-        <div className="fixed z-50 -translate-x-1/2 left-1/2 bottom-24">
-          <button
-            type="button"
-            onClick={() => setShowToast(false)}
-            className="px-4 py-2 text-sm text-gray-100 bg-gray-900 border border-gray-700 rounded-lg shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-          >
-            {toastMessage}
-          </button>
-        </div>
-      )}
-
-      <h1 className="mb-4 text-2xl font-bold text-yellow-400">Overview</h1>
-
-      {errorMessage && (
-        <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
-      )}
-
-      {/* Upcoming */}
-      {(upcomingLoading || upcomingError || upcoming.length > 0) && (
-        <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <h2 className="text-lg font-semibold text-yellow-400">Upcoming</h2>
+    <div className="app-page">
+      <div className="app-container">
+        {showToast && (
+          <div className="fixed z-50 -translate-x-1/2 left-1/2 bottom-24">
             <button
               type="button"
-              onClick={() => navigate("/upcoming")}
-              className="px-3 py-2 text-xs font-semibold text-yellow-300 bg-gray-800 border border-yellow-500 rounded-xl hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              onClick={() => setShowToast(false)}
+              className="app-panel-solid px-4 py-2 text-sm font-semibold text-gray-100"
             >
-              See all
+              {toastMessage}
             </button>
           </div>
+        )}
 
-          {upcomingLoading && (
-            <div className="py-1 text-sm text-gray-400">Loading…</div>
-          )}
+        <h1 className="mb-4 text-2xl font-bold text-gray-100">Overview</h1>
 
-          {!upcomingLoading && upcomingError && (
-            <div className="py-1 text-sm text-red-300">{upcomingError}</div>
-          )}
+        {errorMessage && (
+          <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
+        )}
 
-          {!upcomingLoading && !upcomingError && upcoming.length > 0 && (
-            <div className="space-y-2">
-              {upcoming.map((u) => {
-                const rel = relativeLabel(u.air_date);
-                const isSeasonPremiere = u.episode_number === 1;
-                return (
-                  <button
-                    key={`upcoming:${u.id}`}
-                    type="button"
-                    onClick={() => openDetails(u)}
-                    className="flex w-full overflow-hidden text-left transition border border-gray-800 rounded-lg bg-gray-900/80 hover:border-yellow-500/80 hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-                  >
-                    <div className="flex-shrink-0 w-16 sm:w-20">
-                      {u.poster_path ? (
-                        <img
-                          src={`${IMAGE_BASE_URL}${u.poster_path}`}
-                          alt={u.name}
-                          className="object-cover w-full h-full"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-800">
-                          No image
-                        </div>
-                      )}
-                    </div>
+        {/* Upcoming */}
+        {(upcomingLoading || upcomingError || upcoming.length > 0) && (
+          <div className="app-panel p-4 mb-6">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <h2 className="text-lg font-semibold text-gray-100">Upcoming</h2>
+              <button
+                type="button"
+                onClick={() => navigate("/upcoming")}
+                className="app-button-ghost px-3 py-2 text-xs"
+              >
+                See all
+              </button>
+            </div>
 
-                    <div className="flex-1 px-3 py-2">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <div className="text-sm font-bold text-yellow-400 sm:text-base">
-                          {(u.name || "").toUpperCase()}
-                        </div>
-                        {rel && (
-                          <div className="text-[10px] font-semibold tracking-wide text-gray-400">
-                            {rel.toUpperCase()}
+            {upcomingLoading && (
+              <div className="py-1 text-sm text-gray-400">Loading…</div>
+            )}
+
+            {!upcomingLoading && upcomingError && (
+              <div className="py-1 text-sm text-red-300">{upcomingError}</div>
+            )}
+
+            {!upcomingLoading && !upcomingError && upcoming.length > 0 && (
+              <div className="space-y-2">
+                {upcoming.map((u) => {
+                  const rel = relativeLabel(u.air_date);
+                  const isSeasonPremiere = u.episode_number === 1;
+                  return (
+                    <button
+                      key={`upcoming:${u.id}`}
+                      type="button"
+                      onClick={() => openDetails(u)}
+                      className="app-card app-card-hover flex w-full text-left"
+                    >
+                      <div className="flex-shrink-0 w-16 sm:w-20">
+                        {u.poster_path ? (
+                          <img
+                            src={`${IMAGE_BASE_URL}${u.poster_path}`}
+                            alt={u.name}
+                            className="object-cover w-full h-full"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-800">
+                            No image
                           </div>
                         )}
                       </div>
 
-                      <div className="mt-0.5 text-xs text-gray-300">
-                        {isSeasonPremiere ? "SEASON PREMIERE" : "NEXT EPISODE"}
-                        {typeof u.season_number === "number" &&
-                          typeof u.episode_number === "number" && (
-                            <>
-                              {" "}
-                              • S{u.season_number}E{u.episode_number}
-                            </>
+                      <div className="flex-1 px-3 py-2">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <div className="text-sm font-bold text-yellow-400 sm:text-base">
+                            {(u.name || "").toUpperCase()}
+                          </div>
+                          {rel && (
+                            <div className="text-[10px] font-semibold tracking-wide text-gray-400">
+                              {rel.toUpperCase()}
+                            </div>
                           )}
-                        {u.air_date && <> • {fmtDate(u.air_date)}</>}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                        </div>
 
-      {/* Snabba siffror */}
-      {/* <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
-        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
+                        <div className="mt-0.5 text-xs text-gray-300">
+                          {isSeasonPremiere
+                            ? "SEASON PREMIERE"
+                            : "NEXT EPISODE"}
+                          {typeof u.season_number === "number" &&
+                            typeof u.episode_number === "number" && (
+                              <>
+                                {" "}
+                                • S{u.season_number}E{u.episode_number}
+                              </>
+                            )}
+                          {u.air_date && <> • {fmtDate(u.air_date)}</>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Snabba siffror */}
+        {/* <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
+        <div className="app-panel p-3 text-center border-yellow-500/30">
           <div className="text-xs text-gray-400">Total watched</div>
           <div className="text-2xl font-bold text-yellow-400">
             {watched.length}
           </div>
         </div>
-        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
+        <div className="app-panel p-3 text-center border-yellow-500/30">
           <div className="text-xs text-gray-400">Movies</div>
           <div className="text-2xl font-bold text-yellow-400">
             {watchedMovies.length}
           </div>
         </div>
-        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
+        <div className="app-panel p-3 text-center border-yellow-500/30">
           <div className="text-xs text-gray-400">Shows</div>
           <div className="text-2xl font-bold text-yellow-400">
             {watchedShows.length}
           </div>
         </div>
-        <div className="p-3 text-center border rounded-lg bg-gray-900/80 border-yellow-500/60">
+        <div className="app-panel p-3 text-center border-yellow-500/30">
           <div className="text-xs text-gray-400">Favorites</div>
           <div className="text-2xl font-bold text-yellow-400">
             {favorites.length}
@@ -890,8 +903,8 @@ const OverviewPage = () => {
         </div>
       </div> */}
 
-      {/* Avsnitts-statistik */}
-      {/* <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
+        {/* Avsnitts-statistik */}
+        {/* <div className="app-panel p-4 mb-6">
         <h2 className="mb-2 text-lg font-semibold text-yellow-400">
           Episode progress
         </h2>
@@ -908,89 +921,90 @@ const OverviewPage = () => {
         </p>
       </div> */}
 
-      {/* AI pick */}
-      <div className="relative p-4 mb-6 overflow-hidden border rounded-lg border-orange-300/90 bg-gradient-to-br from-gray-900/80 via-gray-900/90 to-gray-800/60 ring-1 ring-yellow-500/15">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-yellow-400">
-                <span aria-hidden>✦</span>
-                AI pick
-              </h2>
+        {/* AI pick */}
+        <div className="relative p-4 mb-6 overflow-hidden border rounded-2xl border-white/10 bg-gradient-to-br from-gray-900/80 via-gray-900/90 to-gray-800/60 ring-1 ring-white/10">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-100">
+                  <span aria-hidden className="text-yellow-300">
+                    ✦
+                  </span>
+                  AI pick
+                </h2>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={pickClientSide}
+              disabled={aiLoading}
+              className="ai-pick-cta app-button-primary relative isolate overflow-hidden px-4 py-2.5 text-sm font-bold tracking-wide uppercase disabled:opacity-60"
+            >
+              {aiLoading ? "Thinking..." : "Pick something"}
+            </button>
+          </div>
+
+          <div className="mt-3 border-t border-white/10" />
+
+          {aiError && (
+            <div className="mt-3 text-sm text-red-300">{aiError}</div>
+          )}
+
+          {aiPicks.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {aiPicks.map((p, idx) => (
+                <button
+                  key={`${p.mediaType}:${p.id}`}
+                  type="button"
+                  onClick={() =>
+                    openDetails({
+                      id: p.id,
+                      mediaType: p.mediaType,
+                      title: p.title,
+                      name: p.title,
+                    })
+                  }
+                  className="app-card app-card-hover w-full p-3 text-left"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="text-sm font-bold text-gray-100">
+                      {(p.title || "").toUpperCase()}
+                    </div>
+                    <div className="text-[10px] font-semibold tracking-wide text-gray-400">
+                      #{idx + 1}
+                    </div>
+                  </div>
+                  {p.reason && (
+                    <div className="mt-1 text-xs text-gray-300">{p.reason}</div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Genre breakdown */}
+        {topGenres.length > 0 && (
+          <div className="app-panel p-4 mb-6">
+            <h2 className="mb-2 text-lg font-semibold text-yellow-400">
+              Top genres
+            </h2>
+            <p className="mb-3 text-sm text-gray-300">
+              Based on your watched movies and shows.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {topGenres.map(([name, count]) => (
+                <span key={name} className="app-badge uppercase tracking-wide">
+                  {name} <span className="text-gray-300">· {count}</span>
+                </span>
+              ))}
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={pickClientSide}
-            disabled={aiLoading}
-            className="ai-pick-cta relative isolate overflow-hidden px-4 py-2.5 text-sm font-bold tracking-wide text-gray-900 uppercase transition bg-yellow-500 rounded-lg shadow-lg hover:bg-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:opacity-60"
-          >
-            {aiLoading ? "Thinking..." : "Pick something"}
-          </button>
-        </div>
-
-        <div className="mt-3 border-t border-yellow-500/10" />
-
-        {aiError && <div className="mt-3 text-sm text-red-300">{aiError}</div>}
-
-        {aiPicks.length > 0 && (
-          <div className="mt-3 space-y-2">
-            {aiPicks.map((p, idx) => (
-              <button
-                key={`${p.mediaType}:${p.id}`}
-                type="button"
-                onClick={() =>
-                  openDetails({
-                    id: p.id,
-                    mediaType: p.mediaType,
-                    title: p.title,
-                    name: p.title,
-                  })
-                }
-                className="w-full p-3 text-left transition border rounded-lg border-yellow-500/20 bg-gray-900/70 hover:border-yellow-500/70 hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <div className="text-sm font-bold text-yellow-400">
-                    {(p.title || "").toUpperCase()}
-                  </div>
-                  <div className="text-[10px] font-semibold tracking-wide text-gray-400">
-                    #{idx + 1}
-                  </div>
-                </div>
-                {p.reason && (
-                  <div className="mt-1 text-xs text-gray-300">{p.reason}</div>
-                )}
-              </button>
-            ))}
-          </div>
         )}
-      </div>
 
-      {/* Genre breakdown */}
-      {topGenres.length > 0 && (
-        <div className="p-4 mb-6 border border-gray-700 rounded-lg bg-gray-900/80">
-          <h2 className="mb-2 text-lg font-semibold text-yellow-400">
-            Top genres
-          </h2>
-          <p className="mb-3 text-sm text-gray-300">
-            Based on your watched movies and shows.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {topGenres.map(([name, count]) => (
-              <span
-                key={name}
-                className="px-3 py-1 text-xs font-semibold tracking-wide text-yellow-300 uppercase border rounded-full border-yellow-500/70 bg-gray-900/90"
-              >
-                {name} <span className="text-gray-300">· {count}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Because you watched ... */}
-      {/* {(isRecLoading || recommendations.length > 0) && (
+        {/* Because you watched ... */}
+        {/* {(isRecLoading || recommendations.length > 0) && (
         <section className="mt-8">
           <h2 className="mb-2 text-xl font-bold tracking-wide text-yellow-400 uppercase">
             Because you watched{" "}
@@ -1020,43 +1034,48 @@ const OverviewPage = () => {
         </section>
       )} */}
 
-      {/* Detalj-modal */}
-      {selectedItem &&
-        !isLoading &&
-        itemDetails &&
-        (selectedItem.mediaType === "tv" ? (
-          <ShowDetailModal
-            show={itemDetails}
-            onClose={closeModal}
-            showActions
-            isWatched={watched.some((w) => w.id === selectedItem.id)}
-            isFavorited={favorites.some((f) => f.id === selectedItem.id)}
-            onAddToWatched={(show) => {
-              const actionItem = getActionItem();
-              if (actionItem) toggleWatched({ ...actionItem, ...show });
-            }}
-            onAddToFavorites={(show) => {
-              const actionItem = getActionItem();
-              if (actionItem) toggleFavorite({ ...actionItem, ...show });
-            }}
-          />
-        ) : (
-          <MovieDetailModal
-            movie={itemDetails}
-            onClose={closeModal}
-            showActions
-            isWatched={watched.some((w) => w.id === selectedItem.id)}
-            isFavorited={favorites.some((f) => f.id === selectedItem.id)}
-            onAddToWatched={(movie) => {
-              const actionItem = getActionItem();
-              if (actionItem) toggleWatched({ ...actionItem, ...movie });
-            }}
-            onAddToFavorites={(movie) => {
-              const actionItem = getActionItem();
-              if (actionItem) toggleFavorite({ ...actionItem, ...movie });
-            }}
-          />
-        ))}
+        {/* Detalj-modal */}
+        {selectedItem &&
+          !isLoading &&
+          itemDetails &&
+          (selectedItem.mediaType === "tv" ? (
+            <ShowDetailModal
+              show={itemDetails}
+              onClose={closeModal}
+              showActions
+              isWatched={watched.some((w) => sameEntry(w, selectedItem))}
+              isFavorited={favorites.some(
+                (f) => favoriteIdentity(f) === favoriteIdentity(selectedItem),
+              )}
+              onAddToWatched={(show) => {
+                const actionItem = getActionItem();
+                if (actionItem) toggleWatched({ ...actionItem, ...show });
+              }}
+              onAddToFavorites={(show) => {
+                const actionItem = getActionItem();
+                if (actionItem) toggleFavorite({ ...actionItem, ...show });
+              }}
+            />
+          ) : (
+            <MovieDetailModal
+              movie={itemDetails}
+              onClose={closeModal}
+              showActions
+              isWatched={watched.some((w) => sameEntry(w, selectedItem))}
+              isFavorited={favorites.some(
+                (f) => favoriteIdentity(f) === favoriteIdentity(selectedItem),
+              )}
+              onAddToWatched={(movie) => {
+                const actionItem = getActionItem();
+                if (actionItem) toggleWatched({ ...actionItem, ...movie });
+              }}
+              onAddToFavorites={(movie) => {
+                const actionItem = getActionItem();
+                if (actionItem) toggleFavorite({ ...actionItem, ...movie });
+              }}
+            />
+          ))}
+      </div>
     </div>
   );
 };

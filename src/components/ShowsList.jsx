@@ -7,6 +7,7 @@ import ShowDetailModal from "./ShowDetailModal";
 import BackupControls from "./BackupControls";
 import { useWatchedList } from "../hooks/useWatchedList";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import SearchIcon from "../icons/SearchIcon";
 import {
   loadFavorites,
   saveFavorites,
@@ -25,7 +26,6 @@ const ShowsList = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [sortBy, setSortBy] = useState("dateAdded");
   const [showSwipeInfo, setShowSwipeInfo] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("all"); // "all", "inProgress", "done"
 
   // Normalisering används av hooken (memoized för att undvika refresh-loop)
   const normalizeShows = useCallback((items) => {
@@ -88,14 +88,8 @@ const ShowsList = () => {
     return shows;
   };
 
-  const filterShows = (shows, search, status) => {
+  const filterShows = (shows, search) => {
     let filtered = [...shows];
-
-    if (status === "inProgress") {
-      filtered = filtered.filter((s) => !s.completed);
-    } else if (status === "done") {
-      filtered = filtered.filter((s) => s.completed);
-    }
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -110,9 +104,9 @@ const ShowsList = () => {
   // Bygg filteredShows varje gång basdata eller filter ändras
   useEffect(() => {
     const sorted = sortShows(watchedShowsRaw, sortBy);
-    const filtered = filterShows(sorted, searchTerm, statusFilter);
+    const filtered = filterShows(sorted, searchTerm);
     setFilteredShows(filtered);
-  }, [watchedShowsRaw, sortBy, searchTerm, statusFilter]);
+  }, [watchedShowsRaw, sortBy, searchTerm]);
 
   // Swipe-info som innan
   useEffect(() => {
@@ -246,134 +240,125 @@ const ShowsList = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 pb-20 bg-gray-900">
-      {/* Search */}
-      <div className="sticky top-0 z-20 mb-4 border border-gray-800 rounded-lg shadow-lg bg-gray-900">
-        <div className="p-1">
-          <div className="flex items-center space-x-2">
-            <div className="relative flex-grow">
-              <input
-                type="text"
-                placeholder="Search your shows..."
-                value={searchTerm}
-                onChange={handleSearch}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    handleSearch({ target: { value: searchTerm } });
-                  }
-                }}
-                className="w-full p-2 pl-8 text-white placeholder-gray-400 bg-gray-800 border border-yellow-500 rounded-md"
-              />
-              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
-                🔍
+    <div className="app-page">
+      <div className="app-container">
+        {/* Search */}
+        <div className="sticky top-0 z-20 mb-4 app-panel">
+          <div className="p-3">
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-grow">
+                <input
+                  type="text"
+                  placeholder="Search your shows..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch({ target: { value: searchTerm } });
+                    }
+                  }}
+                  className="pr-10 pl-9 app-input"
+                />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                  <SearchIcon className="text-gray-400" size={18} />
+                </div>
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                    aria-label="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm("")}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-                  aria-label="Clear search"
-                >
-                  ✖️
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => handleSearch({ target: { value: searchTerm } })}
+                className="px-4 app-button-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              >
+                GO!
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => handleSearch({ target: { value: searchTerm } })}
-              className="p-2 font-bold text-gray-900 transition duration-300 bg-yellow-500 rounded-md hover:bg-yellow-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-            >
-              GO!
-            </button>
+            {searchTerm && (
+              <div className="mt-2 text-sm text-gray-400">
+                Found {filteredShows.length}{" "}
+                {filteredShows.length === 1 ? "show" : "shows"}
+              </div>
+            )}
           </div>
-          {searchTerm && (
-            <div className="mt-2 text-sm text-gray-400">
-              Found {filteredShows.length}{" "}
-              {filteredShows.length === 1 ? "show" : "shows"}
-            </div>
-          )}
         </div>
-      </div>
 
-      {/* Sort + filterrad */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <div className="font-semibold text-yellow-400">
-          Watched ({watchedCount})
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 text-sm font-semibold text-white bg-gray-800 border border-yellow-500 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-          >
-            <option value="all">All</option>
-            <option value="inProgress">In progress</option>
-            <option value="done">Done</option>
-          </select>
-
+        {/* Sort + filterrad */}
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div className="font-semibold text-gray-100">
+            Watched ({watchedCount})
+          </div>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-4 py-2 text-sm font-semibold text-yellow-300 bg-gray-800 border border-yellow-500 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            className="app-select focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            aria-label="Sort watched shows"
           >
             <option value="title">A-Ö</option>
             <option value="dateAdded">Most recent</option>
           </select>
         </div>
+
+        {(watchedError || errorMessage) && (
+          <div className="mb-3 text-sm text-red-300">
+            {watchedError || errorMessage}
+          </div>
+        )}
+
+        {loading && (
+          <div className="py-8 text-center text-gray-400">Loading…</div>
+        )}
+
+        {/* Listan */}
+        {!loading && (
+          <div className="space-y-4">
+            {filteredShows.map((show) => (
+              <SwipeableShowCard
+                key={show.id}
+                show={show}
+                swipeStartThreshold={30}
+                onSelect={handleShowSelect}
+                onShowInfo={handleShowModalSelect}
+                onRemove={removeShow}
+                onAddToFavorites={addToFavorites}
+              />
+            ))}
+          </div>
+        )}
+
+        {!loading && filteredShows.length === 0 && (
+          <div className="py-10 text-center">
+            {watchedShowsRaw.length === 0 ? (
+              <>
+                <p className="text-gray-400">No shows in your watched list</p>
+                <p className="mt-2 text-yellow-500">Start adding some shows!</p>
+              </>
+            ) : (
+              <p className="text-gray-400">No shows match your search</p>
+            )}
+          </div>
+        )}
+
+        {showForModal && showDetails && (
+          <ShowDetailModal
+            show={showDetails}
+            onClose={() => {
+              closeShowModal();
+              refreshWatchedFromStorage();
+            }}
+            onWatchedChanged={refreshWatchedFromStorage}
+          />
+        )}
+
+        <BackupControls onRestore={refreshWatchedFromStorage} />
       </div>
-
-      {(watchedError || errorMessage) && (
-        <div className="mb-3 text-sm text-red-300">
-          {watchedError || errorMessage}
-        </div>
-      )}
-
-      {loading && (
-        <div className="py-8 text-center text-gray-400">Loading…</div>
-      )}
-
-      {/* Listan */}
-      {!loading && (
-        <div className="space-y-4">
-          {filteredShows.map((show) => (
-            <SwipeableShowCard
-              key={show.id}
-              show={show}
-              swipeStartThreshold={30}
-              onSelect={handleShowSelect}
-              onShowInfo={handleShowModalSelect}
-              onRemove={removeShow}
-              onAddToFavorites={addToFavorites}
-            />
-          ))}
-        </div>
-      )}
-
-      {!loading && filteredShows.length === 0 && (
-        <div className="py-10 text-center">
-          {watchedShowsRaw.length === 0 ? (
-            <>
-              <p className="text-gray-400">No shows in your watched list</p>
-              <p className="mt-2 text-yellow-500">Start adding some shows!</p>
-            </>
-          ) : (
-            <p className="text-gray-400">No shows match your search</p>
-          )}
-        </div>
-      )}
-
-      {showForModal && showDetails && (
-        <ShowDetailModal
-          show={showDetails}
-          onClose={() => {
-            closeShowModal();
-            refreshWatchedFromStorage();
-          }}
-          onWatchedChanged={refreshWatchedFromStorage}
-        />
-      )}
-
-      <BackupControls onRestore={refreshWatchedFromStorage} />
     </div>
   );
 };

@@ -21,6 +21,7 @@ import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
+import FavoritesTitlesModal from "./FavoritesTitlesModal";
 
 const profileAvatarKeyForUser = (user) =>
   user ? `profileAvatar_${user}` : "profileAvatar";
@@ -75,19 +76,19 @@ const imageFileToDataUrl = async (file, { maxSizePx, quality = 0.86 } = {}) => {
 const ProfilePage = () => {
   const navigate = useNavigate();
   const [currentUser] = useState(() =>
-    JSON.parse(localStorage.getItem("currentUser"))
+    JSON.parse(localStorage.getItem("currentUser")),
   );
   const [profileImages, setProfileImages] = useState(
-    () => JSON.parse(localStorage.getItem("profileImages")) || {}
+    () => JSON.parse(localStorage.getItem("profileImages")) || {},
   );
   const [profileCovers, setProfileCovers] = useState(
-    () => JSON.parse(localStorage.getItem("profileCovers")) || {}
+    () => JSON.parse(localStorage.getItem("profileCovers")) || {},
   );
   const [profileDisplayNames, setProfileDisplayNames] = useState(
-    () => JSON.parse(localStorage.getItem("profileDisplayNames")) || {}
+    () => JSON.parse(localStorage.getItem("profileDisplayNames")) || {},
   );
   const [profileInfo, setProfileInfo] = useState(
-    () => JSON.parse(localStorage.getItem("profileInfo")) || {}
+    () => JSON.parse(localStorage.getItem("profileInfo")) || {},
   );
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -110,6 +111,9 @@ const ProfilePage = () => {
   const [detailsError, setDetailsError] = useState("");
   const [profileLoadError, setProfileLoadError] = useState("");
 
+  const [favoritesTitlesModalType, setFavoritesTitlesModalType] =
+    useState(null);
+
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
 
@@ -131,7 +135,7 @@ const ProfilePage = () => {
           new Set([
             ...Object.keys(legacyImages || {}),
             ...Object.keys(legacyCovers || {}),
-          ])
+          ]),
         ).filter(Boolean);
 
         await Promise.all(
@@ -148,7 +152,7 @@ const ProfilePage = () => {
             } catch {
               // ignore
             }
-          })
+          }),
         );
 
         // Best effort cleanup to avoid quota problems from huge base64 strings.
@@ -333,7 +337,7 @@ const ProfilePage = () => {
     try {
       localStorage.setItem(
         "profileDisplayNames",
-        JSON.stringify(updatedDisplayNames)
+        JSON.stringify(updatedDisplayNames),
       );
     } catch {
       // ignore
@@ -427,15 +431,15 @@ const ProfilePage = () => {
       const [details, credits, videos] = await Promise.all([
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`,
-          { ttlMs: 6 * 60 * 60 * 1000 }
+          { ttlMs: 6 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
         cachedFetchJson(
           `${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 }
+          { ttlMs: 24 * 60 * 60 * 1000 },
         ),
       ]);
       setItemDetails({ ...details, credits, videos });
@@ -454,6 +458,14 @@ const ProfilePage = () => {
     setDetailsError("");
   };
 
+  const openFavoritesTitlesModal = (mediaType) => {
+    setFavoritesTitlesModalType(mediaType);
+  };
+
+  const closeFavoritesTitlesModal = () => {
+    setFavoritesTitlesModalType(null);
+  };
+
   const toggleFavorite = (item) => {
     const normalizedItem = {
       ...item,
@@ -462,11 +474,11 @@ const ProfilePage = () => {
 
     const prevFavorites = favorites;
     const exists = favorites.some(
-      (f) => favoriteIdentity(f) === favoriteIdentity(normalizedItem)
+      (f) => favoriteIdentity(f) === favoriteIdentity(normalizedItem),
     );
     const updated = exists
       ? favorites.filter(
-          (f) => favoriteIdentity(f) !== favoriteIdentity(normalizedItem)
+          (f) => favoriteIdentity(f) !== favoriteIdentity(normalizedItem),
         )
       : [...favorites, normalizedItem];
 
@@ -484,7 +496,7 @@ const ProfilePage = () => {
 
     if (existing) {
       const updated = watched.filter(
-        (w) => !sameEntry(w, { ...item, mediaType })
+        (w) => !sameEntry(w, { ...item, mediaType }),
       );
       setWatched(updated);
       await saveWatchedAll(updated, activeUser);
@@ -504,7 +516,7 @@ const ProfilePage = () => {
         if (needsDetails) {
           tvDetails = await cachedFetchJson(
             `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`,
-            { ttlMs: 6 * 60 * 60 * 1000 }
+            { ttlMs: 6 * 60 * 60 * 1000 },
           );
         }
 
@@ -543,32 +555,32 @@ const ProfilePage = () => {
   const favoritesShows = useMemo(
     () =>
       favorites.filter(
-        (f) => (f?.mediaType || (f?.first_air_date ? "tv" : "movie")) === "tv"
+        (f) => (f?.mediaType || (f?.first_air_date ? "tv" : "movie")) === "tv",
       ),
-    [favorites]
+    [favorites],
   );
   const favoritesMovies = useMemo(
     () =>
       favorites.filter(
         (f) =>
-          (f?.mediaType || (f?.first_air_date ? "tv" : "movie")) === "movie"
+          (f?.mediaType || (f?.first_air_date ? "tv" : "movie")) === "movie",
       ),
-    [favorites]
+    [favorites],
   );
   const watchedShows = useMemo(
     () =>
       watched.filter(
-        (w) => (w?.mediaType || (w?.first_air_date ? "tv" : "movie")) === "tv"
+        (w) => (w?.mediaType || (w?.first_air_date ? "tv" : "movie")) === "tv",
       ),
-    [watched]
+    [watched],
   );
   const watchedMovies = useMemo(
     () =>
       watched.filter(
         (w) =>
-          (w?.mediaType || (w?.first_air_date ? "tv" : "movie")) === "movie"
+          (w?.mediaType || (w?.first_air_date ? "tv" : "movie")) === "movie",
       ),
-    [watched]
+    [watched],
   );
 
   const primaryShows =
@@ -593,7 +605,7 @@ const ProfilePage = () => {
               className="flex-shrink-0 w-[94px] sm:w-[110px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
               aria-label={title ? `Open ${title}` : "Open item"}
             >
-              <div className="overflow-hidden border border-gray-800 rounded-xl bg-gray-900/70">
+              <div className="app-card app-card-hover">
                 {item?.poster_path ? (
                   <img
                     src={`${IMAGE_BASE_URL}${item.poster_path}`}
@@ -721,14 +733,15 @@ const ProfilePage = () => {
 
         {/* Shows section */}
         <div className="mt-10">
-          <Link
-            to="/shows"
-            className="flex items-center justify-between text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-            aria-label="Open shows"
+          <button
+            type="button"
+            onClick={() => openFavoritesTitlesModal("tv")}
+            className="flex w-full items-center justify-between text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            aria-label="Open favorite shows"
           >
             <span>Favorite Shows</span>
             <FaChevronRight className="text-gray-300" />
-          </Link>
+          </button>
 
           <div className="mt-4">
             <PosterRow
@@ -752,14 +765,15 @@ const ProfilePage = () => {
 
         {/* Movies section */}
         <div className="mt-10">
-          <Link
-            to="/movies"
-            className="flex items-center justify-between text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-            aria-label="Open movies"
+          <button
+            type="button"
+            onClick={() => openFavoritesTitlesModal("movie")}
+            className="flex w-full items-center justify-between text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            aria-label="Open favorite movies"
           >
             <span>Favorite Movies</span>
             <FaChevronRight className="text-gray-300" />
-          </Link>
+          </button>
 
           <div className="mt-4">
             <PosterRow
@@ -808,6 +822,22 @@ const ProfilePage = () => {
           </div>
         )}
 
+        {favoritesTitlesModalType && (
+          <FavoritesTitlesModal
+            title={
+              favoritesTitlesModalType === "tv"
+                ? "Favorite Shows"
+                : "Favorite Movies"
+            }
+            items={
+              favoritesTitlesModalType === "tv"
+                ? favoritesShows
+                : favoritesMovies
+            }
+            onClose={closeFavoritesTitlesModal}
+          />
+        )}
+
         {/* Details modal */}
         {selectedItem &&
           !isLoading &&
@@ -821,7 +851,7 @@ const ProfilePage = () => {
               showActions
               isWatched={watched.some((w) => sameEntry(w, selectedItem))}
               isFavorited={favorites.some(
-                (f) => favoriteIdentity(f) === favoriteIdentity(selectedItem)
+                (f) => favoriteIdentity(f) === favoriteIdentity(selectedItem),
               )}
               onAddToWatched={() => toggleWatched(selectedItem)}
               onAddToFavorites={() => toggleFavorite(selectedItem)}
@@ -833,7 +863,7 @@ const ProfilePage = () => {
               showActions
               isWatched={watched.some((w) => sameEntry(w, selectedItem))}
               isFavorited={favorites.some(
-                (f) => favoriteIdentity(f) === favoriteIdentity(selectedItem)
+                (f) => favoriteIdentity(f) === favoriteIdentity(selectedItem),
               )}
               onAddToWatched={() => toggleWatched(selectedItem)}
               onAddToFavorites={() => toggleFavorite(selectedItem)}
@@ -842,7 +872,7 @@ const ProfilePage = () => {
 
         {selectedItem && isLoading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-            <div className="w-full max-w-sm p-6 bg-gray-900 border border-white/10 rounded-2xl">
+            <div className="app-panel-solid w-full max-w-sm p-6">
               <div className="text-lg font-semibold text-yellow-400">
                 Loading…
               </div>
@@ -852,7 +882,7 @@ const ProfilePage = () => {
               <button
                 type="button"
                 onClick={closeModal}
-                className="px-4 py-2 mt-4 text-sm font-semibold text-white bg-gray-700 rounded-md hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                className="app-button-ghost mt-4 px-4 py-2"
               >
                 Cancel
               </button>

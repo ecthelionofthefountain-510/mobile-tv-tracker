@@ -9,7 +9,7 @@ const SwipeInfoToast = ({
     label: "VÄNSTER",
     text: "",
   },
-  rightAction = { icon: "👉", color: "text-red-400", label: "HÖGER", text: "" },
+  rightAction = { icon: "→", color: "text-red-400", label: "HÖGER", text: "" },
   title = "Swipe Info",
 }) => {
   useEffect(() => {
@@ -18,7 +18,7 @@ const SwipeInfoToast = ({
   }, [onClose, autoCloseTime]);
 
   return (
-    <div className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 px-6 py-5 rounded-xl shadow-2xl border-2 border-yellow-500 bg-[#181c24] text-white flex flex-col items-center gap-2 max-w-[90vw] w-[340px]">
+    <div className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 app-panel-solid ring-1 ring-inset ring-yellow-500/30 px-6 py-5 shadow-xl text-white flex flex-col items-center gap-2 max-w-[90vw] w-[340px]">
       <div className="mb-1 text-lg font-bold tracking-wide">{title}</div>
       <div className="flex flex-col items-center text-base">
         <div>
@@ -43,7 +43,7 @@ const SwipeInfoToast = ({
       <button
         type="button"
         onClick={onClose}
-        className="px-4 py-1 mt-4 font-bold text-gray-900 transition bg-yellow-500 rounded shadow hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+        className="app-button-primary mt-4 px-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
       >
         OK
       </button>

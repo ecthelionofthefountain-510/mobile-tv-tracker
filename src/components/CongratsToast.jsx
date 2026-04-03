@@ -16,7 +16,7 @@ const CongratsToast = ({ onClose }) => {
           <div className="congrats-halo congrats-halo-2" aria-hidden="true" />
         </div>
 
-        <div className="px-8 py-6 rounded-xl shadow-2xl border-2 border-yellow-500 bg-[#181c24] text-yellow-300 flex flex-col items-center gap-2 animate-congrats-toast pointer-events-auto">
+        <div className="app-panel-solid ring-1 ring-inset ring-yellow-500/30 px-8 py-6 shadow-xl text-yellow-200 flex flex-col items-center gap-2 animate-congrats-toast pointer-events-auto">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="congrats-check" aria-hidden="true" />
             <div className="text-2xl font-bold">Klar!</div>

@@ -98,7 +98,7 @@ const FavoriteCard = ({
 
   return (
     <div
-      className={`relative mb-4 overflow-hidden transition-colors duration-200 border rounded-lg bg-gray-800 border-yellow-900/30 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
+      className={`app-card app-card-hover mb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
         handleSelect ? "cursor-pointer" : ""
       }`}
       onClick={handleSelect ? handleMouseClick : undefined}
@@ -119,15 +119,15 @@ const FavoriteCard = ({
                 : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='168' viewBox='0 0 112 168'%3E%3Crect width='112' height='168' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='0.3em' fill='%236B7280' font-family='Arial' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E"
             }
             alt={item.title}
-            className="object-cover w-full h-full border-r border-yellow-900/30"
+            className="object-cover w-full h-full border-r border-white/10"
           />
         </div>
         <div className="flex flex-col justify-between flex-1 min-w-0 p-3">
           <div>
-            <h3 className="text-lg font-semibold text-yellow-400 sm:text-xl line-clamp-1">
+            <h3 className="text-lg font-semibold text-gray-100 sm:text-xl line-clamp-1">
               {item.title}
             </h3>
-            <span className="inline-block px-2 py-1 mt-1 text-xs text-yellow-400 rounded-full bg-yellow-600/20">
+            <span className="app-badge mt-1">
               {item.mediaType === "tv" ? "TV Series" : "Movie"}
             </span>
             {/* Genre-visning */}
@@ -152,7 +152,7 @@ const FavoriteCard = ({
                   e.stopPropagation();
                   onRemove(item.id, e);
                 }}
-                className="px-3 py-1 text-sm text-white transition-colors duration-200 rounded-md bg-red-600/80 hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                className="app-button-danger px-3 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               >
                 Remove
               </button>
@@ -164,11 +164,7 @@ const FavoriteCard = ({
                   onAddToWatched(item, e);
                 }}
                 disabled={alreadyWatched}
-                className={`px-3 py-1 text-white rounded-md transition-colors duration-200 text-sm ${
-                  alreadyWatched
-                    ? "bg-green-700 cursor-not-allowed"
-                    : "bg-green-600 hover:bg-green-700"
-                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900`}
+                className="app-button-success px-3 py-1 text-sm"
               >
                 {alreadyWatched ? "Already Watched" : "Add to Watched"}
               </button>
