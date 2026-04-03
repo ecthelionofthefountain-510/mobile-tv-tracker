@@ -1,5 +1,6 @@
 // SearchPage.jsx
 import React, { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
@@ -50,6 +51,7 @@ const identityOf = (item) => {
 };
 
 const SearchPage = () => {
+  const location = useLocation();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
 
@@ -80,6 +82,33 @@ const SearchPage = () => {
 
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
+
+  // Allow deep-linking into Search via URL params, e.g. /search?q=vikings&type=tv
+  useEffect(() => {
+    const params = new URLSearchParams(location.search || "");
+    const q = (params.get("q") || params.get("query") || "").trim();
+    const typeParam = (params.get("type") || params.get("mediaType") || "")
+      .trim()
+      .toLowerCase();
+
+    if (q && q !== query) {
+      setQuery(q);
+    }
+
+    if (typeParam) {
+      const nextType =
+        typeParam === "tv"
+          ? "tv"
+          : typeParam === "movie" || typeParam === "movies"
+            ? "movies"
+            : "all";
+      if (nextType !== searchType) {
+        setSearchType(nextType);
+      }
+    }
+    // Intentionally depends on location.search; query/searchType are read for idempotency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   useEffect(() => {
     if (!showToast) return;

@@ -1,13 +1,17 @@
 import React, { useId, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { IMAGE_BASE_URL } from "../config";
 import { useModalA11y } from "../hooks/useModalA11y";
 
 const getTitle = (item) => item?.title || item?.name || "";
+const getMediaType = (item) =>
+  item?.mediaType || (item?.first_air_date ? "tv" : "movie");
 
 const FavoritesTitlesModal = ({ title, items, onClose }) => {
   const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
   const titleId = useId();
+  const navigate = useNavigate();
 
   const { handleDialogKeyDown } = useModalA11y({
     enabled: true,
@@ -21,6 +25,17 @@ const FavoritesTitlesModal = ({ title, items, onClose }) => {
   };
 
   const safeItems = Array.isArray(items) ? items : [];
+
+  const navigateToSearch = (item) => {
+    const q = getTitle(item).trim();
+    if (!q) return;
+    const mt = getMediaType(item);
+    const type = mt === "tv" ? "tv" : "movies";
+    onClose?.();
+    navigate(
+      `/search?q=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}`,
+    );
+  };
 
   return (
     <div
@@ -101,7 +116,14 @@ const FavoritesTitlesModal = ({ title, items, onClose }) => {
                 const key = `${item?.mediaType || "x"}:${String(item?.id)}`;
                 const label = getTitle(item);
                 return (
-                  <div key={key} className="app-card overflow-hidden p-0">
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => navigateToSearch(item)}
+                    className="app-card app-card-hover overflow-hidden p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                    aria-label={label ? `Search for ${label}` : "Search"}
+                    title={label || "Search"}
+                  >
                     {item?.poster_path ? (
                       <img
                         src={`${IMAGE_BASE_URL}${item.poster_path}`}
@@ -114,7 +136,7 @@ const FavoritesTitlesModal = ({ title, items, onClose }) => {
                         No image
                       </div>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>
