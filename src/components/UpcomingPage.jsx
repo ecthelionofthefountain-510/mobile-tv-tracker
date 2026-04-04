@@ -26,6 +26,7 @@ const UpcomingPage = () => {
   const [upcoming, setUpcoming] = useState([]);
   const [upcomingLoading, setUpcomingLoading] = useState(false);
   const [upcomingError, setUpcomingError] = useState("");
+  const [upcomingRetryNonce, setUpcomingRetryNonce] = useState(0);
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
@@ -204,8 +205,7 @@ const UpcomingPage = () => {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [premiereCandidateIds.join("|")]);
+  }, [premiereCandidateIds.join("|"), upcomingRetryNonce]);
 
   const openDetails = async (item) => {
     setSelectedItem({ ...item, mediaType: "tv" });
@@ -274,10 +274,39 @@ const UpcomingPage = () => {
         </div>
 
         {upcomingLoading && (
-          <div className="py-2 text-sm text-gray-400">Loading…</div>
+          <div className="space-y-2" aria-label="Loading upcoming episodes">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={`upcoming-skel:${i}`}
+                className="app-card flex w-full overflow-hidden"
+              >
+                <div className="flex-shrink-0 w-16 sm:w-20 bg-white/5" />
+                <div className="flex-1 px-3 py-2">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="h-4 w-1/2 rounded-lg bg-white/5" />
+                    <div className="h-3 w-1/4 rounded-lg bg-white/5" />
+                  </div>
+                  <div className="mt-2 h-3 w-2/3 rounded-lg bg-white/5" />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
+
         {!upcomingLoading && upcomingError && (
-          <div className="py-2 text-sm text-red-300">{upcomingError}</div>
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="min-w-0 text-sm text-red-300">{upcomingError}</div>
+            <button
+              type="button"
+              onClick={() => {
+                setUpcomingError("");
+                setUpcomingRetryNonce((n) => n + 1);
+              }}
+              className="app-button-ghost flex-none px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            >
+              Try again
+            </button>
+          </div>
         )}
         {!upcomingLoading && !upcomingError && upcoming.length === 0 && (
           <div className="py-6 text-center">
@@ -356,7 +385,18 @@ const UpcomingPage = () => {
         )}
 
         {errorMessage && (
-          <div className="mt-3 text-sm text-red-300">{errorMessage}</div>
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="min-w-0 text-sm text-red-300">{errorMessage}</div>
+            {selectedItem?.id && (
+              <button
+                type="button"
+                onClick={() => openDetails(selectedItem)}
+                className="app-button-ghost flex-none px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              >
+                Try again
+              </button>
+            )}
+          </div>
         )}
 
         {selectedItem && itemDetails && (

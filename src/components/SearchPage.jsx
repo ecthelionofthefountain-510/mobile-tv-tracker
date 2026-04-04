@@ -41,6 +41,14 @@ const ALLOWED_LANGS = ["en", "sv", "de", "da"];
 
 const POPULAR_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minuter
 
+const RECENT_WINDOW_DAYS = 540; // ~18 months
+const NEW_MIX_WINDOW_DAYS = 183; // ~6 months
+
+const yyyyMmDd = (d) => {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 const mediaTypeOf = (item) =>
   item?.mediaType || (item?.first_air_date ? "tv" : "movie");
 
@@ -69,6 +77,9 @@ const SearchPage = () => {
   const [isPopularMoviesLoading, setIsPopularMoviesLoading] = useState(false);
   const [isPopularTVLoading, setIsPopularTVLoading] = useState(false);
 
+  const [newMix, setNewMix] = useState([]);
+  const [isNewMixLoading, setIsNewMixLoading] = useState(false);
+
   const [recommendedMovies, setRecommendedMovies] = useState([]);
   const [recommendedTV, setRecommendedTV] = useState([]);
   const [isRecommendedMoviesLoading, setIsRecommendedMoviesLoading] =
@@ -83,6 +94,8 @@ const SearchPage = () => {
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
 
+  const searchInputRef = useRef(null);
+
   // Allow deep-linking into Search via URL params, e.g. /search?q=vikings&type=tv
   useEffect(() => {
     const params = new URLSearchParams(location.search || "");
@@ -93,6 +106,16 @@ const SearchPage = () => {
 
     if (q && q !== query) {
       setQuery(q);
+    }
+
+    if (q) {
+      // Focus the input when arriving via deep-link (e.g. from favorites)
+      setTimeout(() => {
+        const el = searchInputRef.current;
+        if (!el) return;
+        el.focus();
+        if (typeof el.select === "function") el.select();
+      }, 0);
     }
 
     if (typeParam) {
@@ -124,6 +147,9 @@ const SearchPage = () => {
   const lastPopularFetchRef = useRef(0);
   const lastMovieRecSeedRef = useRef(null);
   const lastTVRecSeedRef = useRef(null);
+  const recRotationSeedRef = useRef(Math.floor(Math.random() * 1_000_000_000));
+
+  const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
   // Ladda watched från gemensam storage när sidan laddas
   useEffect(() => {
@@ -164,6 +190,13 @@ const SearchPage = () => {
     setIsPopularMoviesLoading(true);
     try {
       setErrorMessage("");
+
+      const today = new Date();
+      const from = new Date(today);
+      from.setDate(from.getDate() - RECENT_WINDOW_DAYS);
+      const gte = yyyyMmDd(from);
+      const lte = yyyyMmDd(today);
+
       const pages = [1, 2, 3]; // top ~60, men filtrerar sen
       const pagesData = await Promise.all(
         pages.map((page) =>
@@ -172,6 +205,8 @@ const SearchPage = () => {
               `api_key=${API_KEY}` +
               `&language=en-US` +
               `&sort_by=popularity.desc` +
+              `&primary_release_date.gte=${gte}` +
+              `&primary_release_date.lte=${lte}` +
               `&with_original_language=${ALLOWED_LANGS.join("|")}` +
               `&page=${page}` +
               `&region=SE`,
@@ -206,6 +241,13 @@ const SearchPage = () => {
     setIsPopularTVLoading(true);
     try {
       setErrorMessage("");
+
+      const today = new Date();
+      const from = new Date(today);
+      from.setDate(from.getDate() - RECENT_WINDOW_DAYS);
+      const gte = yyyyMmDd(from);
+      const lte = yyyyMmDd(today);
+
       const pages = [1, 2, 3];
       const pagesData = await Promise.all(
         pages.map((page) =>
@@ -214,6 +256,8 @@ const SearchPage = () => {
               `api_key=${API_KEY}` +
               `&language=en-US` +
               `&sort_by=popularity.desc` +
+              `&first_air_date.gte=${gte}` +
+              `&first_air_date.lte=${lte}` +
               `&with_original_language=${ALLOWED_LANGS.join("|")}` +
               `&page=${page}`,
             {
@@ -241,10 +285,83 @@ const SearchPage = () => {
     }
   };
 
+  const fetchNewMix = async () => {
+    setIsNewMixLoading(true);
+    try {
+      const today = new Date();
+      const from = new Date(today);
+      from.setDate(from.getDate() - NEW_MIX_WINDOW_DAYS);
+      const gte = yyyyMmDd(from);
+      const lte = yyyyMmDd(today);
+
+      const [movieData, tvData] = await Promise.all([
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/discover/movie?` +
+            `api_key=${API_KEY}` +
+            `&language=en-US` +
+            `&sort_by=popularity.desc` +
+            `&primary_release_date.gte=${gte}` +
+            `&primary_release_date.lte=${lte}` +
+            `&with_original_language=${ALLOWED_LANGS.join("|")}` +
+            `&page=1` +
+            `&region=SE`,
+          {
+            ttlMs: 60 * 60 * 1000,
+            cacheKey: `discover:mix:new:movie:${gte}:${lte}:1`,
+          },
+        ),
+        cachedFetchJson(
+          `${TMDB_BASE_URL}/discover/tv?` +
+            `api_key=${API_KEY}` +
+            `&language=en-US` +
+            `&sort_by=popularity.desc` +
+            `&first_air_date.gte=${gte}` +
+            `&first_air_date.lte=${lte}` +
+            `&with_original_language=${ALLOWED_LANGS.join("|")}` +
+            `&page=1`,
+          {
+            ttlMs: 60 * 60 * 1000,
+            cacheKey: `discover:mix:new:tv:${gte}:${lte}:1`,
+          },
+        ),
+      ]);
+
+      const movieItems = (movieData?.results || [])
+        .filter((it) => ALLOWED_LANGS.includes(it?.original_language))
+        .slice(0, 10)
+        .map((it) => ({
+          ...it,
+          mediaType: "movie",
+          title: it.title || it.name,
+        }));
+
+      const tvItems = (tvData?.results || [])
+        .filter((it) => ALLOWED_LANGS.includes(it?.original_language))
+        .slice(0, 10)
+        .map((it) => ({
+          ...it,
+          mediaType: "tv",
+          title: it.name || it.title,
+          seasons: {},
+        }));
+
+      setNewMix(shuffle([...movieItems, ...tvItems]).slice(0, 12));
+    } catch (err) {
+      console.error("Error fetching new mix", err);
+      setNewMix([]);
+    } finally {
+      setIsNewMixLoading(false);
+    }
+  };
+
   // Hämta båda när sidan laddas eller blir aktiv (med cooldown)
   useEffect(() => {
     const fetchAll = async () => {
-      await Promise.all([fetchPopularMovies(), fetchPopularTV()]);
+      await Promise.all([
+        fetchPopularMovies(),
+        fetchPopularTV(),
+        fetchNewMix(),
+      ]);
       lastPopularFetchRef.current = Date.now();
     };
 
@@ -266,16 +383,19 @@ const SearchPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const pickLatestWatched = (type) => {
-    const list = (Array.isArray(watched) ? watched : []).filter(
-      (w) => mediaTypeOf(w) === type,
-    );
-    list.sort(
-      (a, b) =>
-        new Date(b?.dateAdded || 0).getTime() -
-        new Date(a?.dateAdded || 0).getTime(),
-    );
-    return list[0] || null;
+  const pickRotatedWatched = (type) => {
+    const list = (Array.isArray(watched) ? watched : [])
+      .filter((w) => mediaTypeOf(w) === type)
+      .sort(
+        (a, b) =>
+          new Date(b?.dateAdded || 0).getTime() -
+          new Date(a?.dateAdded || 0).getTime(),
+      )
+      .slice(0, 12);
+
+    if (list.length === 0) return null;
+    const idx = recRotationSeedRef.current % list.length;
+    return list[idx] || list[0] || null;
   };
 
   const fetchRecommendations = async (type, seedId) => {
@@ -289,15 +409,18 @@ const SearchPage = () => {
     const filtered = items.filter((it) =>
       ALLOWED_LANGS.includes(it?.original_language),
     );
-    return filtered.slice(0, 8);
+
+    // Shuffle so the list can vary between reloads even with cached API responses.
+    const shuffled = shuffle(filtered);
+    return shuffled.slice(0, 8);
   };
 
   // Personliga rekommendationer: "Because you watched ..."
   useEffect(() => {
     if (query) return;
 
-    const movieSeed = pickLatestWatched("movie");
-    const tvSeed = pickLatestWatched("tv");
+    const movieSeed = pickRotatedWatched("movie");
+    const tvSeed = pickRotatedWatched("tv");
 
     const movieSeedId = movieSeed?.id != null ? String(movieSeed.id) : null;
     const tvSeedId = tvSeed?.id != null ? String(tvSeed.id) : null;
@@ -739,6 +862,7 @@ const SearchPage = () => {
             <div className="flex items-center space-x-2">
               <div className="relative flex-grow">
                 <input
+                  ref={searchInputRef}
                   type="text"
                   placeholder="Search content ..."
                   value={query}
@@ -775,7 +899,27 @@ const SearchPage = () => {
         </div>
 
         {errorMessage && (
-          <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="min-w-0 text-sm text-red-300">{errorMessage}</div>
+            <button
+              type="button"
+              onClick={() => {
+                setErrorMessage("");
+                if (query.trim().length > 1) {
+                  searchContent();
+                } else {
+                  Promise.all([
+                    fetchPopularMovies(),
+                    fetchPopularTV(),
+                    fetchNewMix(),
+                  ]).catch(() => {});
+                }
+              }}
+              className="app-button-ghost flex-none px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            >
+              Try again
+            </button>
+          </div>
         )}
 
         {query && (
@@ -792,6 +936,18 @@ const SearchPage = () => {
 
         {!query && (
           <div className="space-y-8">
+            <div>
+              <h2 className="mb-2 text-lg font-bold text-yellow-400">
+                New & hot
+              </h2>
+              {isNewMixLoading ? (
+                <div className="py-4 text-yellow-400">Laddar...</div>
+              ) : newMix.length > 0 ? (
+                <div className="space-y-4">
+                  {newMix.map((item) => renderContentItem(item))}
+                </div>
+              ) : null}
+            </div>
             <div>
               <h2 className="mb-2 text-lg font-bold text-yellow-400">
                 {movieRecSeedTitle

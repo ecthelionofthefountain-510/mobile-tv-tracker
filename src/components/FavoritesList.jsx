@@ -318,7 +318,7 @@ const FavoritesList = ({ embedded = false } = {}) => {
                   placeholder="Search your favorites..."
                   value={searchTerm}
                   onChange={handleSearch}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleSearch({ target: { value: searchTerm } });
                     }

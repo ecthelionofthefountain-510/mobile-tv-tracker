@@ -1,5 +1,5 @@
 // ShowsList.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
 import SwipeableShowCard from "./SwipeableShowCard";
@@ -26,6 +26,8 @@ const ShowsList = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [sortBy, setSortBy] = useState("dateAdded");
   const [showSwipeInfo, setShowSwipeInfo] = useState(false);
+
+  const listScrollYRef = useRef(0);
 
   // Normalisering används av hooken (memoized för att undvika refresh-loop)
   const normalizeShows = useCallback((items) => {
@@ -115,11 +117,11 @@ const ShowsList = () => {
     }
   }, []);
 
-  const handleSearch = (e) => {
+  const handleSearch = useCallback((e) => {
     setSearchTerm(e.target.value);
-  };
+  }, []);
 
-  const fetchShowDetails = async (showId) => {
+  const fetchShowDetails = useCallback(async (showId) => {
     try {
       const [details, credits, videos] = await Promise.all([
         cachedFetchJson(`${TMDB_BASE_URL}/tv/${showId}?api_key=${API_KEY}`, {
@@ -139,16 +141,21 @@ const ShowsList = () => {
       console.error(err);
       setErrorMessage("Could not load show details.");
     }
-  };
+  }, []);
 
-  const handleShowModalSelect = (show) => {
-    setErrorMessage("");
-    setShowForModal(show);
-    fetchShowDetails(show.id);
-  };
+  const handleShowModalSelect = useCallback(
+    (show) => {
+      setErrorMessage("");
+      setShowForModal(show);
+      fetchShowDetails(show.id);
+    },
+    [fetchShowDetails],
+  );
 
-  const handleShowSelect = async (show) => {
+  const handleShowSelect = useCallback(async (show) => {
     try {
+      listScrollYRef.current =
+        typeof window !== "undefined" ? window.scrollY : 0;
       setErrorMessage("");
       const details = await cachedFetchJson(
         `${TMDB_BASE_URL}/tv/${show.id}?api_key=${API_KEY}`,
@@ -171,57 +178,63 @@ const ShowsList = () => {
       console.error("Kunde inte hämta show-detaljer", err);
       setErrorMessage("Could not load show details.");
     }
-  };
+  }, []);
 
-  const closeShowModal = () => {
+  const closeShowModal = useCallback(() => {
     setShowForModal(null);
     setShowDetails(null);
     setErrorMessage("");
-  };
+  }, []);
 
-  const removeShow = async (id) => {
-    await remove(id);
+  const removeShow = useCallback(
+    async (id) => {
+      await remove(id);
 
-    if (showForModal && showForModal.id === id) {
-      closeShowModal();
-    }
-    if (selectedShow && selectedShow.id === id) {
-      setSelectedShow(null);
-    }
-  };
+      if (showForModal && showForModal.id === id) {
+        closeShowModal();
+      }
+      if (selectedShow && selectedShow.id === id) {
+        setSelectedShow(null);
+      }
+    },
+    [closeShowModal, remove, selectedShow, showForModal],
+  );
 
-  const addToFavorites = async (show) => {
-    const favorites = await loadFavorites();
-    const normalizedShow = {
-      ...show,
-      mediaType: "tv",
-    };
-    if (
-      favorites.some(
-        (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedShow),
-      )
-    ) {
-      return;
-    }
+  const addToFavorites = useCallback(
+    async (show) => {
+      const favorites = await loadFavorites();
+      const normalizedShow = {
+        ...show,
+        mediaType: "tv",
+      };
+      if (
+        favorites.some(
+          (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedShow),
+        )
+      ) {
+        return;
+      }
 
-    const updatedFavorites = [
-      ...favorites,
-      { ...normalizedShow, dateAdded: new Date().toISOString() },
-    ];
-    const ok = await saveFavorites(updatedFavorites);
-    if (!ok) return;
+      const updatedFavorites = [
+        ...favorites,
+        { ...normalizedShow, dateAdded: new Date().toISOString() },
+      ];
+      const ok = await saveFavorites(updatedFavorites);
+      if (!ok) return;
 
-    await removeShow(show.id);
-  };
+      await removeShow(show.id);
+    },
+    [removeShow],
+  );
 
-  const handleCloseSwipeInfo = () => {
+  const handleCloseSwipeInfo = useCallback(() => {
     setShowSwipeInfo(false);
     localStorage.setItem("swipeInfoSeen", "true");
-  };
+  }, []);
 
-  const refreshWatchedFromStorage = async () => {
+  const refreshWatchedFromStorage = useCallback(async () => {
     await refresh();
-  };
+  }, [refresh]);
 
   const watchedCount = watchedShowsRaw.length;
 
@@ -232,6 +245,10 @@ const ShowsList = () => {
         onBack={() => {
           refreshWatchedFromStorage();
           setSelectedShow(null);
+          setTimeout(() => {
+            if (typeof window === "undefined") return;
+            window.scrollTo({ top: listScrollYRef.current || 0, left: 0 });
+          }, 0);
         }}
         onRemove={removeShow}
         onWatchedChanged={refreshWatchedFromStorage}
@@ -252,7 +269,7 @@ const ShowsList = () => {
                   placeholder="Search your shows..."
                   value={searchTerm}
                   onChange={handleSearch}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleSearch({ target: { value: searchTerm } });
                     }
@@ -307,13 +324,38 @@ const ShowsList = () => {
         </div>
 
         {(watchedError || errorMessage) && (
-          <div className="mb-3 text-sm text-red-300">
-            {watchedError || errorMessage}
+          <div className="flex items-center justify-between gap-3 p-3 mb-3 border rounded-2xl border-white/10 bg-white/5">
+            <div className="min-w-0 text-sm text-red-300">
+              {watchedError || errorMessage}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setErrorMessage("");
+                refreshWatchedFromStorage();
+                if (showForModal?.id) fetchShowDetails(showForModal.id);
+              }}
+              className="flex-none px-3 py-1 text-sm app-button-ghost focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            >
+              Try again
+            </button>
           </div>
         )}
 
         {loading && (
-          <div className="py-8 text-center text-gray-400">Loading…</div>
+          <div className="space-y-4" aria-label="Loading shows">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-4 app-card">
+                <div className="flex items-center gap-3">
+                  <div className="flex-none w-12 h-16 rounded-xl bg-white/5" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="w-2/3 h-4 rounded-lg bg-white/5" />
+                    <div className="w-1/3 h-3 rounded-lg bg-white/5" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {/* Listan */}

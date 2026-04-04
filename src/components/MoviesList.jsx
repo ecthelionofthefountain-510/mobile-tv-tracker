@@ -1,5 +1,5 @@
 // MoviesList.jsx
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import { SwipeableList } from "react-swipeable-list";
@@ -32,6 +32,10 @@ const MoviesList = () => {
     refresh,
     remove,
   } = useWatchedList("movie");
+
+  const refreshWatchedFromStorage = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
 
   // Sorteringsfunktion
   const sortMovies = (movies, sortBy) => {
@@ -77,12 +81,12 @@ const MoviesList = () => {
     }
   }, []);
 
-  const handleSearch = (e) => {
+  const handleSearch = useCallback((e) => {
     setSearchTerm(e.target.value);
-  };
+  }, []);
 
   // Hämta detaljinformation för film
-  const fetchMovieDetails = async (movieId) => {
+  const fetchMovieDetails = useCallback(async (movieId) => {
     try {
       const [details, credits, videos] = await Promise.all([
         cachedFetchJson(
@@ -103,51 +107,60 @@ const MoviesList = () => {
       console.error(err);
       setErrorMessage("Could not load movie details.");
     }
-  };
+  }, []);
 
-  const handleMovieSelect = (movie) => {
-    setErrorMessage("");
-    setSelectedMovie(movie);
-    fetchMovieDetails(movie.id);
-  };
+  const handleMovieSelect = useCallback(
+    (movie) => {
+      setErrorMessage("");
+      setSelectedMovie(movie);
+      fetchMovieDetails(movie.id);
+    },
+    [fetchMovieDetails],
+  );
 
-  const closeMovieModal = () => {
+  const closeMovieModal = useCallback(() => {
     setSelectedMovie(null);
     setMovieDetails(null);
     setErrorMessage("");
-  };
+  }, []);
 
-  const removeMovie = async (id) => {
-    await remove(id);
+  const removeMovie = useCallback(
+    async (id) => {
+      await remove(id);
 
-    if (selectedMovie && selectedMovie.id === id) {
-      closeMovieModal();
-    }
-  };
+      if (selectedMovie && selectedMovie.id === id) {
+        closeMovieModal();
+      }
+    },
+    [closeMovieModal, remove, selectedMovie],
+  );
 
-  const addToFavorites = async (movie) => {
-    const favorites = await loadFavorites();
-    const normalizedMovie = {
-      ...movie,
-      mediaType: "movie",
-    };
-    if (
-      favorites.some(
-        (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedMovie),
-      )
-    ) {
-      return;
-    }
+  const addToFavorites = useCallback(
+    async (movie) => {
+      const favorites = await loadFavorites();
+      const normalizedMovie = {
+        ...movie,
+        mediaType: "movie",
+      };
+      if (
+        favorites.some(
+          (fav) => favoriteIdentity(fav) === favoriteIdentity(normalizedMovie),
+        )
+      ) {
+        return;
+      }
 
-    const updatedFavorites = [
-      ...favorites,
-      { ...normalizedMovie, dateAdded: new Date().toISOString() },
-    ];
-    const ok = await saveFavorites(updatedFavorites);
-    if (!ok) return;
+      const updatedFavorites = [
+        ...favorites,
+        { ...normalizedMovie, dateAdded: new Date().toISOString() },
+      ];
+      const ok = await saveFavorites(updatedFavorites);
+      if (!ok) return;
 
-    await removeMovie(movie.id);
-  };
+      await removeMovie(movie.id);
+    },
+    [removeMovie],
+  );
 
   const moviesCount = watchedMoviesRaw.length;
 
@@ -164,7 +177,7 @@ const MoviesList = () => {
                   placeholder="Search your movies..."
                   value={searchTerm}
                   onChange={handleSearch}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleSearch({ target: { value: searchTerm } });
                     }
@@ -219,13 +232,38 @@ const MoviesList = () => {
         </div>
 
         {(watchedError || errorMessage) && (
-          <div className="mb-3 text-sm text-red-300">
-            {watchedError || errorMessage}
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="min-w-0 text-sm text-red-300">
+              {watchedError || errorMessage}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setErrorMessage("");
+                refreshWatchedFromStorage();
+                if (selectedMovie?.id) fetchMovieDetails(selectedMovie.id);
+              }}
+              className="app-button-ghost flex-none px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            >
+              Try again
+            </button>
           </div>
         )}
 
         {loading && (
-          <div className="py-8 text-center text-gray-400">Loading…</div>
+          <div className="space-y-4" aria-label="Loading movies">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="app-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-16 w-12 flex-none rounded-xl bg-white/5" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-4 w-2/3 rounded-lg bg-white/5" />
+                    <div className="h-3 w-1/3 rounded-lg bg-white/5" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {/* List with swipe-cards */}
