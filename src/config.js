@@ -1,3 +1,3 @@
-export const API_KEY = "558e543e6cc18ea7707d040ea08a0533"; // Din TMDb API-nyckel
-export const TMDB_BASE_URL = "https://api.themoviedb.org/3";
-export const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
+export const API_KEY = import.meta.env.VITE_TMDB_API_KEY; // Din TMDb API-nyckel
+export const TMDB_BASE_URL = import.meta.env.VITE_TMDB_BASE_URL;
+export const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL;

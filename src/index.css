@@ -214,67 +214,68 @@ p {
   animation: fadeIn 0.5s ease-out forwards;
 }
 
-/* Congrats toast: quick pop + gentle exit */
-@keyframes congrats-toast-in {
+/* Congrats "Done" animation (inspired by a dot->circle->check + ripples) */
+@keyframes congrats-done-fade {
   0% {
     opacity: 0;
-    transform: translateY(10px) scale(0.96);
+    transform: scale(0.98);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  88% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.995);
+  }
+}
+
+@keyframes congrats-done-core {
+  0% {
+    transform: translate(-50%, -50%) scale(0.16);
+  }
+  45% {
+    transform: translate(-50%, -50%) scale(1);
   }
   60% {
-    opacity: 1;
-    transform: translateY(0) scale(1.02);
+    transform: translate(-50%, -50%) scale(0.96);
   }
   100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
-@keyframes congrats-toast-out {
+@keyframes congrats-done-fill {
   0% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.16);
+  }
+  35% {
+    opacity: 0.18;
+    transform: translate(-50%, -50%) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translateY(6px) scale(0.98);
+    transform: translate(-50%, -50%) scale(1.12);
   }
 }
 
-.animate-congrats-toast {
-  animation:
-    congrats-toast-in 360ms cubic-bezier(0.2, 0.9, 0.2, 1) both,
-    congrats-toast-out 420ms ease-in 3s both;
-}
-
-/* Subtle halo rings behind congrats toast (no confetti) */
-@keyframes congrats-halo {
+@keyframes congrats-done-ring {
   0% {
     opacity: 0;
-    transform: scale(0.9);
+    transform: translate(-50%, -50%) scale(0.55);
   }
-  15% {
+  20% {
     opacity: 0.55;
   }
   100% {
     opacity: 0;
-    transform: scale(1.7);
+    transform: translate(-50%, -50%) scale(2.1);
   }
-}
-
-.congrats-halo {
-  width: 220px;
-  height: 220px;
-  border-radius: 9999px;
-  border: 2px solid rgba(250, 204, 21, 0.28);
-  background: rgba(250, 204, 21, 0.06);
-  filter: blur(0.2px);
-  animation: congrats-halo 900ms ease-out both;
-}
-
-.congrats-halo-2 {
-  animation-delay: 140ms;
-  opacity: 0.35;
 }
 
 @keyframes congrats-check {
@@ -292,20 +293,96 @@ p {
   }
 }
 
-.congrats-check {
-  width: 26px;
-  height: 26px;
-  color: rgb(250, 204, 21);
+.congrats-done {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  animation: congrats-done-fade 1600ms ease-out both;
+}
+
+.congrats-done-fill {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120px;
+  height: 120px;
+  border-radius: 9999px;
+  background: rgba(250, 204, 21, 0.14);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  transform: translate(-50%, -50%);
+  animation: congrats-done-fill 820ms ease-out both;
+}
+
+.congrats-done-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120px;
+  height: 120px;
+  border-radius: 9999px;
+  border: 2px solid rgba(250, 204, 21, 0.22);
+  background: rgba(250, 204, 21, 0.04);
+  transform: translate(-50%, -50%);
+  animation: congrats-done-ring 880ms ease-out both;
+}
+
+.congrats-done-ring-1 {
+  animation-delay: 140ms;
+}
+
+.congrats-done-ring-2 {
+  animation-delay: 260ms;
+  opacity: 0.85;
+}
+
+.congrats-done-ring-3 {
+  animation-delay: 380ms;
+  opacity: 0.7;
+}
+
+.congrats-done-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 84px;
+  height: 84px;
+  border-radius: 9999px;
+  background: rgb(250, 204, 21);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 0 0 10px rgba(250, 204, 21, 0.1),
+    0 26px 60px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: congrats-done-core 620ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+.congrats-done-check {
+  width: 34px;
+  height: 34px;
+  color: rgb(17, 24, 39);
+  opacity: 0;
   animation: congrats-check 320ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  animation-delay: 320ms;
+}
+
+.congrats-done-title {
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: rgba(250, 204, 21, 0.92);
+  text-shadow: 0 18px 34px rgba(0, 0, 0, 0.65);
+  animation: congrats-done-fade 1600ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-congrats-toast {
-    animation: none !important;
-  }
-
-  .congrats-halo,
-  .congrats-check {
+  .congrats-done,
+  .congrats-done-fill,
+  .congrats-done-ring,
+  .congrats-done-core,
+  .congrats-done-check,
+  .congrats-done-title {
     animation: none !important;
   }
 }
