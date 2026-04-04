@@ -734,7 +734,17 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
         {/* Congrats Toast and Confetti - when all episodes are marked as watched */}
         {showCongrats && (
-          <CongratsToast onClose={() => setShowCongrats(false)} />
+          <CongratsToast
+            onClose={() => setShowCongrats(false)}
+            title={show?.name || show?.title}
+            posterPath={show?.poster_path}
+            totalEpisodes={
+              typeof show?.number_of_episodes === "number" &&
+              show.number_of_episodes > 0
+                ? show.number_of_episodes
+                : stats.total
+            }
+          />
         )}
       </div>
     </div>
