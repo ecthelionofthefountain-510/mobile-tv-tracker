@@ -2,7 +2,7 @@
 import React, { useRef, useState } from "react";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 
-export default function BackupControls({ onRestore }) {
+export default function BackupControls({ onRestore, compact = false }) {
   const fileInputRef = useRef(null);
   const [status, setStatus] = useState("");
 
@@ -69,7 +69,12 @@ export default function BackupControls({ onRestore }) {
   };
 
   return (
-    <div className="app-panel p-4 mt-8 space-y-2 text-sm text-gray-300">
+    <div
+      className={
+        "app-panel p-4 space-y-2 text-sm text-gray-300" +
+        (compact ? "" : " mt-8")
+      }
+    >
       <div className="font-semibold text-yellow-400">Backup & restore</div>
       <p className="text-xs text-gray-400">
         Exporterar / importerar hela din "watched"-lista som en JSON-fil.

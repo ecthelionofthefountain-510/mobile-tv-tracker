@@ -82,6 +82,20 @@ const ShowsList = () => {
           .toLowerCase()
           .localeCompare((b.title || b.name || "").toLowerCase()),
       );
+    } else if (sortBy === "incomplete") {
+      return [...shows].sort((a, b) => {
+        const aDone = Number(!!a?.completed);
+        const bDone = Number(!!b?.completed);
+        if (aDone !== bDone) return aDone - bDone; // incomplete first
+
+        const dateCmp =
+          new Date(b?.dateAdded || 0) - new Date(a?.dateAdded || 0);
+        if (dateCmp) return dateCmp;
+
+        return (a.title || a.name || "")
+          .toLowerCase()
+          .localeCompare((b.title || b.name || "").toLowerCase());
+      });
     } else if (sortBy === "dateAdded") {
       return [...shows].sort(
         (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0),
@@ -320,6 +334,7 @@ const ShowsList = () => {
           >
             <option value="title">A-Ö</option>
             <option value="dateAdded">Most recent</option>
+            <option value="incomplete">Not finished</option>
           </select>
         </div>
 

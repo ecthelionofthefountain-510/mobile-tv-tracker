@@ -2,11 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import {
+  FaArchive,
   FaCamera,
+  FaChartPie,
   FaChevronRight,
-  FaEllipsisH,
   FaPlus,
+  FaRegCalendarAlt,
   FaTimes,
+  FaTrashAlt,
 } from "react-icons/fa";
 import { API_KEY, IMAGE_BASE_URL, TMDB_BASE_URL } from "../config";
 import {
@@ -22,12 +25,18 @@ import { cachedFetchJson } from "../utils/tmdbCache";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 import FavoritesTitlesModal from "./FavoritesTitlesModal";
+import BackupControls from "./BackupControls";
+
+const DEFAULT_PROFILE_KEY = "__default__";
+const TMDB_CACHE_PREFIX = "tmdb:cache:v1:";
 
 const profileAvatarKeyForUser = (user) =>
   user ? `profileAvatar_${user}` : "profileAvatar";
 
 const profileCoverKeyForUser = (user) =>
   user ? `profileCover_${user}` : "profileCover";
+
+const DEFAULT_COVER_URL = `${import.meta.env.BASE_URL}img/background.avif`;
 
 const imageFileToDataUrl = async (file, { maxSizePx, quality = 0.86 } = {}) => {
   if (!file) return "";
@@ -101,7 +110,7 @@ const ProfilePage = () => {
     country: "",
   });
   const [editStatus, setEditStatus] = useState("");
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [toolsStatus, setToolsStatus] = useState("");
 
   const [favorites, setFavorites] = useState([]);
   const [watched, setWatched] = useState([]);
@@ -116,11 +125,16 @@ const ProfilePage = () => {
 
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
+  const quickCoverInputRef = useRef(null);
+  const quickAvatarInputRef = useRef(null);
+  const backupAnchorRef = useRef(null);
 
   const activeUser = useMemo(() => {
     const u = currentUser || getCurrentUser();
     return typeof u === "string" && u.trim() ? u : null;
   }, [currentUser]);
+
+  const storageKeyForUser = (user) => (user ? user : DEFAULT_PROFILE_KEY);
 
   // Migrate legacy localStorage maps (profileImages/profileCovers) into IndexedDB.
   useEffect(() => {
@@ -168,26 +182,17 @@ const ProfilePage = () => {
     })();
   }, []);
 
-  useEffect(() => {
-    if (!isMenuOpen) return;
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") setIsMenuOpen(false);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isMenuOpen]);
-
   // Load active user's avatar from IndexedDB.
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      if (!activeUser) return;
       try {
         const avatar = await idbGet(profileAvatarKeyForUser(activeUser));
         if (cancelled) return;
         if (typeof avatar === "string" && avatar) {
-          setProfileImages((prev) => ({ ...prev, [activeUser]: avatar }));
+          const key = storageKeyForUser(activeUser);
+          setProfileImages((prev) => ({ ...prev, [key]: avatar }));
         }
       } catch {
         // ignore
@@ -204,12 +209,12 @@ const ProfilePage = () => {
     let cancelled = false;
 
     (async () => {
-      if (!activeUser) return;
       try {
         const cover = await idbGet(profileCoverKeyForUser(activeUser));
         if (cancelled) return;
         if (typeof cover === "string" && cover) {
-          setProfileCovers((prev) => ({ ...prev, [activeUser]: cover }));
+          const key = storageKeyForUser(activeUser);
+          setProfileCovers((prev) => ({ ...prev, [key]: cover }));
         }
       } catch {
         // ignore
@@ -249,9 +254,48 @@ const ProfilePage = () => {
     };
   }, [activeUser]);
 
-  const handleCoverChange = (user, file) => {
+  const avatarUrlFor = (user) => {
+    const key = storageKeyForUser(user);
+    const stored = profileImages?.[key];
+    if (typeof stored === "string" && stored) return stored;
+    if (!user) return "https://ui-avatars.com/api/?name=User";
+    return "https://ui-avatars.com/api/?name=" + encodeURIComponent(user);
+  };
+
+  const coverUrlFor = (user) => {
+    const key = storageKeyForUser(user);
+    const stored = profileCovers?.[key];
+    if (typeof stored === "string" && stored) return stored;
+    return DEFAULT_COVER_URL;
+  };
+
+  const displayNameFor = (user) => {
+    const key = storageKeyForUser(user);
+    if (!user) return profileDisplayNames?.[key] || "Profile";
+    return profileDisplayNames?.[key] || user;
+  };
+
+  const openEditProfile = () => {
+    setEditStatus("");
+    const key = storageKeyForUser(activeUser);
+    const info = profileInfo?.[key] || {};
+    setEditDraft({
+      avatarDataUrl: "",
+      coverDataUrl: "",
+      displayName: String(
+        profileDisplayNames?.[key] || activeUser || "Profile",
+      ),
+      birthYear: info.birthYear ? String(info.birthYear) : "",
+      gender: info.gender ? String(info.gender) : "",
+      country: info.country ? String(info.country) : "",
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleQuickCoverPick = (file) => {
     (async () => {
-      if (!user || !file) return;
+      setEditStatus("");
+      if (!file) return;
       try {
         const dataUrl = await imageFileToDataUrl(file, {
           maxSizePx: 1600,
@@ -259,58 +303,65 @@ const ProfilePage = () => {
         });
         if (!dataUrl) return;
 
-        setProfileCovers((prev) => ({ ...prev, [user]: dataUrl }));
+        const key = storageKeyForUser(activeUser);
+
+        setProfileCovers((prev) => ({ ...prev, [key]: dataUrl }));
 
         try {
-          await idbSet(profileCoverKeyForUser(user), dataUrl);
-        } catch (e) {
-          console.warn("Could not save cover to IndexedDB", e);
+          await idbSet(profileCoverKeyForUser(activeUser), dataUrl);
+        } catch {
+          // ignore
         }
 
         try {
-          const next = { ...profileCovers, [user]: dataUrl };
+          const next = { ...profileCovers, [key]: dataUrl };
           localStorage.setItem("profileCovers", JSON.stringify(next));
         } catch {
           // ignore
         }
-        emitProfileMediaUpdated({ kind: "cover", user });
+
+        emitProfileMediaUpdated({ kind: "cover", user: activeUser });
       } catch (e) {
         console.error(e);
+        setEditStatus("Could not load image.");
       }
     })();
   };
 
-  const avatarUrlFor = (user) => {
-    if (!user) return "https://ui-avatars.com/api/?name=User";
-    return (
-      profileImages?.[user] ||
-      "https://ui-avatars.com/api/?name=" + encodeURIComponent(user)
-    );
-  };
+  const handleQuickAvatarPick = (file) => {
+    (async () => {
+      setEditStatus("");
+      if (!file) return;
+      try {
+        const dataUrl = await imageFileToDataUrl(file, {
+          maxSizePx: 512,
+          quality: 0.86,
+        });
+        if (!dataUrl) return;
 
-  const coverUrlFor = (user) => {
-    if (!user) return "/img/background.avif";
-    return profileCovers?.[user] || "/img/background.avif";
-  };
+        const key = storageKeyForUser(activeUser);
 
-  const displayNameFor = (user) => {
-    if (!user) return "Profile";
-    return profileDisplayNames?.[user] || user;
-  };
+        setProfileImages((prev) => ({ ...prev, [key]: dataUrl }));
 
-  const openEditProfile = () => {
-    setEditStatus("");
-    if (!activeUser) return;
-    const info = profileInfo?.[activeUser] || {};
-    setEditDraft({
-      avatarDataUrl: "",
-      coverDataUrl: "",
-      displayName: String(profileDisplayNames?.[activeUser] || activeUser),
-      birthYear: info.birthYear ? String(info.birthYear) : "",
-      gender: info.gender ? String(info.gender) : "",
-      country: info.country ? String(info.country) : "",
-    });
-    setIsEditOpen(true);
+        try {
+          await idbSet(profileAvatarKeyForUser(activeUser), dataUrl);
+        } catch {
+          // ignore
+        }
+
+        try {
+          const next = { ...profileImages, [key]: dataUrl };
+          localStorage.setItem("profileImages", JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+
+        emitProfileMediaUpdated({ kind: "avatar", user: activeUser });
+      } catch (e) {
+        console.error(e);
+        setEditStatus("Could not load image.");
+      }
+    })();
   };
 
   const closeEditProfile = () => {
@@ -327,11 +378,12 @@ const ProfilePage = () => {
   };
 
   const saveEditProfile = () => {
-    if (!activeUser) return;
+    const key = storageKeyForUser(activeUser);
+    const identity = activeUser || "Profile";
 
     const updatedDisplayNames = {
       ...profileDisplayNames,
-      [activeUser]: (editDraft.displayName || "").trim() || activeUser,
+      [key]: (editDraft.displayName || "").trim() || identity,
     };
     setProfileDisplayNames(updatedDisplayNames);
     try {
@@ -348,7 +400,7 @@ const ProfilePage = () => {
       gender: (editDraft.gender || "").trim(),
       country: (editDraft.country || "").trim(),
     };
-    const updatedInfo = { ...profileInfo, [activeUser]: nextInfoForUser };
+    const updatedInfo = { ...profileInfo, [key]: nextInfoForUser };
     setProfileInfo(updatedInfo);
     try {
       localStorage.setItem("profileInfo", JSON.stringify(updatedInfo));
@@ -359,7 +411,7 @@ const ProfilePage = () => {
     if (editDraft.avatarDataUrl) {
       const updatedImages = {
         ...profileImages,
-        [activeUser]: editDraft.avatarDataUrl,
+        [key]: editDraft.avatarDataUrl,
       };
       setProfileImages(updatedImages);
       try {
@@ -378,7 +430,7 @@ const ProfilePage = () => {
     if (editDraft.coverDataUrl) {
       const updatedCovers = {
         ...profileCovers,
-        [activeUser]: editDraft.coverDataUrl,
+        [key]: editDraft.coverDataUrl,
       };
       setProfileCovers(updatedCovers);
       try {
@@ -464,6 +516,30 @@ const ProfilePage = () => {
 
   const closeFavoritesTitlesModal = () => {
     setFavoritesTitlesModalType(null);
+  };
+
+  const refreshWatchedFromStorage = async () => {
+    try {
+      const next = await loadWatchedAll(activeUser);
+      setWatched(Array.isArray(next) ? next : []);
+    } catch {
+      // ignore
+    }
+  };
+
+  const clearTmdbCache = () => {
+    setToolsStatus("");
+    try {
+      const toRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(TMDB_CACHE_PREFIX)) toRemove.push(key);
+      }
+      toRemove.forEach((k) => localStorage.removeItem(k));
+      setToolsStatus("Cache cleared.");
+    } catch {
+      setToolsStatus("Could not clear cache.");
+    }
   };
 
   const toggleFavorite = (item) => {
@@ -641,59 +717,156 @@ const ProfilePage = () => {
           aria-hidden="true"
         />
 
-        {/* Top actions */}
-        <div className="absolute inset-x-0 top-0 flex items-center justify-end p-4">
+        {/* Quick cover action */}
+        <div className="absolute inset-x-0 bottom-3 flex items-center justify-end px-4">
           <button
             type="button"
-            onClick={() => setIsMenuOpen(true)}
-            className="flex items-center justify-center w-12 h-12 text-gray-100 border rounded-full border-white/10 bg-black/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-            aria-label="Open menu"
+            onClick={() => quickCoverInputRef.current?.click()}
+            className="flex items-center justify-center w-11 h-11 text-gray-100 border rounded-full border-white/10 bg-black/35 hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            aria-label="Change cover photo"
+            title="Change cover"
           >
-            <FaEllipsisH />
+            <FaCamera />
           </button>
+
+          <input
+            ref={quickCoverInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (e.target) e.target.value = "";
+              if (file) handleQuickCoverPick(file);
+            }}
+          />
         </div>
       </div>
 
       <div className="px-4">
-        {/* Avatar row */}
-        <div className="flex items-end justify-between gap-3 -mt-10">
-          <div className="flex items-end gap-3">
-            <div className="relative">
-              <img
-                src={avatarUrlFor(activeUser)}
-                alt={activeUser ? `${activeUser} profile` : "Profile"}
-                className="object-cover w-20 h-20 bg-gray-900 border-2 rounded-full border-gray-950"
-              />
-              <div
-                className="absolute inset-0 rounded-full ring-2 ring-white/15"
-                aria-hidden="true"
-              />
-            </div>
+        {/* Profile header */}
+        <div className="flex flex-col items-center -mt-12 text-center">
+          <div className="relative">
+            <img
+              src={avatarUrlFor(activeUser)}
+              alt={activeUser ? `${activeUser} profile` : "Profile"}
+              className="object-cover w-24 h-24 bg-gray-900 border-2 rounded-full border-gray-950"
+            />
+            <div
+              className="absolute inset-0 rounded-full ring-2 ring-white/15"
+              aria-hidden="true"
+            />
+            <button
+              type="button"
+              onClick={() => quickAvatarInputRef.current?.click()}
+              className="absolute flex items-center justify-center w-9 h-9 border rounded-full -bottom-1 -right-1 border-gray-950 bg-yellow-500 text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+              aria-label="Change profile photo"
+              title="Change photo"
+            >
+              <FaCamera />
+            </button>
+            <input
+              ref={quickAvatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (e.target) e.target.value = "";
+                if (file) handleQuickAvatarPick(file);
+              }}
+            />
+          </div>
+
+          <div className="mt-3 text-2xl font-bold text-gray-100">
+            {displayNameFor(activeUser)}
+          </div>
+          <div className="mt-1 text-xs text-gray-400">
+            {activeUser ? "On this device" : "Local profile"}
           </div>
 
           <button
             type="button"
             onClick={openEditProfile}
-            disabled={!activeUser}
-            className="px-5 py-2 text-sm font-semibold tracking-wide text-gray-100 uppercase transition border rounded-full border-white/15 bg-black/35 hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 disabled:opacity-50"
+            className="w-full max-w-xs px-6 py-3 mt-5 text-sm font-semibold tracking-wide text-gray-950 uppercase transition rounded-full bg-yellow-500 hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
-            Edit
+            Edit profile
           </button>
-        </div>
-
-        {/* Name */}
-        <div className="mt-3">
-          <div className="text-2xl font-bold text-gray-100">
-            {displayNameFor(activeUser)}
-          </div>
-          <div className="text-xs text-gray-400">
-            {activeUser ? "Active" : "Open settings to create a user"}
-          </div>
         </div>
 
         {profileLoadError && (
           <div className="mt-3 text-xs text-red-300">{profileLoadError}</div>
         )}
+
+        {editStatus && (
+          <div className="mt-3 text-xs text-red-300">{editStatus}</div>
+        )}
+
+        {/* Actions list */}
+        <div className="mt-7 app-panel overflow-hidden p-0 divide-y divide-white/10">
+          <button
+            type="button"
+            onClick={() => {
+              requestAnimationFrame(() => {
+                backupAnchorRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              });
+            }}
+            className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 text-yellow-300 border rounded-xl border-white/10 bg-black/25">
+                <FaArchive aria-hidden="true" />
+              </div>
+              <span>Backup & restore</span>
+            </div>
+            <FaChevronRight className="text-gray-300" aria-hidden="true" />
+          </button>
+
+          <button
+            type="button"
+            onClick={clearTmdbCache}
+            className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 text-yellow-300 border rounded-xl border-white/10 bg-black/25">
+                <FaTrashAlt aria-hidden="true" />
+              </div>
+              <span>Clear cache</span>
+            </div>
+            <FaChevronRight className="text-gray-300" aria-hidden="true" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate("/upcoming")}
+            className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 text-yellow-300 border rounded-xl border-white/10 bg-black/25">
+                <FaRegCalendarAlt aria-hidden="true" />
+              </div>
+              <span>Upcoming</span>
+            </div>
+            <FaChevronRight className="text-gray-300" aria-hidden="true" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate("/overview")}
+            className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 text-yellow-300 border rounded-xl border-white/10 bg-black/25">
+                <FaChartPie aria-hidden="true" />
+              </div>
+              <span>Overview</span>
+            </div>
+            <FaChevronRight className="text-gray-300" aria-hidden="true" />
+          </button>
+        </div>
 
         {/* Stats section */}
         {/* <div className="mt-8">
@@ -795,32 +968,12 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {isMenuOpen && (
-          <div
-            className="fixed inset-0 z-[60] flex items-end pb-20 bg-black/60"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu"
-            onClick={() => setIsMenuOpen(false)}
-          >
-            <div
-              className="w-full p-3 border-t border-white/10 bg-gray-950 rounded-t-3xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  navigate("/settings");
-                }}
-                className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-gray-100 border border-white/10 rounded-2xl bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-              >
-                <span>Settings</span>
-                <FaChevronRight className="text-gray-300" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-        )}
+        <div ref={backupAnchorRef} className="mt-8">
+          <BackupControls compact onRestore={refreshWatchedFromStorage} />
+          {toolsStatus && (
+            <div className="mt-3 text-xs text-gray-400">{toolsStatus}</div>
+          )}
+        </div>
 
         {favoritesTitlesModalType && (
           <FavoritesTitlesModal
@@ -892,7 +1045,7 @@ const ProfilePage = () => {
       </div>
 
       {/* Edit profile modal */}
-      {isEditOpen && activeUser && (
+      {isEditOpen && (
         <div
           className="fixed inset-0 z-[60] bg-black/80"
           role="dialog"
@@ -1027,7 +1180,7 @@ const ProfilePage = () => {
                         displayName: e.target.value,
                       }))
                     }
-                    placeholder={activeUser}
+                    placeholder={activeUser || "Profile"}
                     className="w-full px-0 py-3 mt-2 text-base text-gray-100 bg-transparent border-b border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-4 focus-visible:ring-offset-gray-950"
                   />
                 </div>
