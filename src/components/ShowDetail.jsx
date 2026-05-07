@@ -649,7 +649,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                                   !isWatched,
                                 );
                               }}
-                              className={`flex items-center justify-center w-8 h-8 border rounded-full border-white/10 ${
+                              className={`flex shrink-0 items-center justify-center w-8 h-8 border rounded-full border-white/10 ${
                                 isWatched
                                   ? "bg-green-600/80 hover:bg-green-600"
                                   : "bg-white/10 hover:bg-white/15"
