@@ -22,7 +22,7 @@ const FavoritesList = ({ embedded = false } = {}) => {
   const [itemDetails, setItemDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [watched, setWatched] = useState([]);
-  const [sortBy, setSortBy] = useState("title"); // "title" eller "dateAdded"
+  const [sortBy, setSortBy] = useState("dateAdded"); // "title" eller "dateAdded"
 
   const [errorMessage, setErrorMessage] = useState("");
 
