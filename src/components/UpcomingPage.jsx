@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
+import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL, APP_LOCALE } from "../config";
 import { loadWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
 import { loadFavorites } from "../utils/favoritesStorage";
@@ -103,7 +103,7 @@ const UpcomingPage = () => {
       if (!Number.isFinite(t)) return iso;
       const d = new Date(t);
       if (Number.isNaN(d.getTime())) return iso;
-      return d.toLocaleDateString(undefined, {
+      return d.toLocaleDateString(APP_LOCALE, {
         year: "numeric",
         month: "short",
         day: "numeric",

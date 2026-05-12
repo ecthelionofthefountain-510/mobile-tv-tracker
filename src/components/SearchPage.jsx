@@ -941,7 +941,7 @@ const SearchPage = () => {
                 New & hot
               </h2>
               {isNewMixLoading ? (
-                <div className="py-4 text-yellow-400">Laddar...</div>
+                <div className="py-4 text-yellow-400">Loading...</div>
               ) : newMix.length > 0 ? (
                 <div className="space-y-4">
                   {newMix.map((item) => renderContentItem(item))}
@@ -956,7 +956,7 @@ const SearchPage = () => {
               </h2>
               {movieRecSeedTitle ? (
                 isRecommendedMoviesLoading ? (
-                  <div className="py-4 text-yellow-400">Laddar...</div>
+                  <div className="py-4 text-yellow-400">Loading...</div>
                 ) : recommendedMovies.length > 0 ? (
                   <div className="space-y-4">
                     {recommendedMovies.map((item) =>
@@ -968,7 +968,7 @@ const SearchPage = () => {
                     )}
                   </div>
                 ) : isPopularMoviesLoading ? (
-                  <div className="py-4 text-yellow-400">Laddar...</div>
+                  <div className="py-4 text-yellow-400">Loading...</div>
                 ) : (
                   <div className="space-y-4">
                     {popularMovies.map((item) =>
@@ -981,7 +981,7 @@ const SearchPage = () => {
                   </div>
                 )
               ) : isPopularMoviesLoading ? (
-                <div className="py-4 text-yellow-400">Laddar...</div>
+                <div className="py-4 text-yellow-400">Loading...</div>
               ) : (
                 <div className="space-y-4">
                   {popularMovies.map((item) =>
@@ -1002,7 +1002,7 @@ const SearchPage = () => {
               </h2>
               {tvRecSeedTitle ? (
                 isRecommendedTVLoading ? (
-                  <div className="py-4 text-yellow-400">Laddar...</div>
+                  <div className="py-4 text-yellow-400">Loading...</div>
                 ) : recommendedTV.length > 0 ? (
                   <div className="space-y-4">
                     {recommendedTV.map((item) =>
@@ -1014,7 +1014,7 @@ const SearchPage = () => {
                     )}
                   </div>
                 ) : isPopularTVLoading ? (
-                  <div className="py-4 text-yellow-400">Laddar...</div>
+                  <div className="py-4 text-yellow-400">Loading...</div>
                 ) : (
                   <div className="space-y-4">
                     {popularTV.map((item) =>
@@ -1027,7 +1027,7 @@ const SearchPage = () => {
                   </div>
                 )
               ) : isPopularTVLoading ? (
-                <div className="py-4 text-yellow-400">Laddar...</div>
+                <div className="py-4 text-yellow-400">Loading...</div>
               ) : (
                 <div className="space-y-4">
                   {popularTV.map((item) =>

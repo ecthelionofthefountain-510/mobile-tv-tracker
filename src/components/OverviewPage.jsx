@@ -1,7 +1,7 @@
 // OverviewPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
+import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL, APP_LOCALE } from "../config";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { createWatchedMovie, createWatchedShow } from "../utils/watchedMapper";
 import { cachedFetchJson } from "../utils/tmdbCache";
@@ -286,7 +286,7 @@ const OverviewPage = () => {
       if (!Number.isFinite(t)) return iso;
       const d = new Date(t);
       if (Number.isNaN(d.getTime())) return iso;
-      return d.toLocaleDateString(undefined, {
+      return d.toLocaleDateString(APP_LOCALE, {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -720,7 +720,7 @@ const OverviewPage = () => {
         key={key}
         type="button"
         onClick={() => openDetails(item)}
-        className="app-card app-card-hover flex w-full text-left"
+        className="flex w-full text-left app-card app-card-hover"
       >
         <div className="flex-shrink-0 w-16 sm:w-20">
           {item.poster_path ? (
@@ -779,7 +779,7 @@ const OverviewPage = () => {
             <button
               type="button"
               onClick={() => setShowToast(false)}
-              className="app-panel-solid px-4 py-2 text-sm font-semibold text-gray-100"
+              className="px-4 py-2 text-sm font-semibold text-gray-100 app-panel-solid"
             >
               {toastMessage}
             </button>
@@ -794,13 +794,13 @@ const OverviewPage = () => {
 
         {/* Upcoming */}
         {(upcomingLoading || upcomingError || upcoming.length > 0) && (
-          <div className="app-panel p-4 mb-6">
+          <div className="p-4 mb-6 app-panel">
             <div className="flex items-center justify-between gap-3 mb-2">
               <h2 className="text-lg font-semibold text-gray-100">Upcoming</h2>
               <button
                 type="button"
                 onClick={() => navigate("/upcoming")}
-                className="app-button-ghost px-3 py-2 text-xs"
+                className="px-3 py-2 text-xs app-button-ghost"
               >
                 See all
               </button>
@@ -824,7 +824,7 @@ const OverviewPage = () => {
                       key={`upcoming:${u.id}`}
                       type="button"
                       onClick={() => openDetails(u)}
-                      className="app-card app-card-hover flex w-full text-left"
+                      className="flex w-full text-left app-card app-card-hover"
                     >
                       <div className="flex-shrink-0 w-16 sm:w-20">
                         {u.poster_path ? (
@@ -877,25 +877,25 @@ const OverviewPage = () => {
 
         {/* Snabba siffror */}
         {/* <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
-        <div className="app-panel p-3 text-center border-yellow-500/30">
+        <div className="p-3 text-center app-panel border-yellow-500/30">
           <div className="text-xs text-gray-400">Total watched</div>
           <div className="text-2xl font-bold text-yellow-400">
             {watched.length}
           </div>
         </div>
-        <div className="app-panel p-3 text-center border-yellow-500/30">
+        <div className="p-3 text-center app-panel border-yellow-500/30">
           <div className="text-xs text-gray-400">Movies</div>
           <div className="text-2xl font-bold text-yellow-400">
             {watchedMovies.length}
           </div>
         </div>
-        <div className="app-panel p-3 text-center border-yellow-500/30">
+        <div className="p-3 text-center app-panel border-yellow-500/30">
           <div className="text-xs text-gray-400">Shows</div>
           <div className="text-2xl font-bold text-yellow-400">
             {watchedShows.length}
           </div>
         </div>
-        <div className="app-panel p-3 text-center border-yellow-500/30">
+        <div className="p-3 text-center app-panel border-yellow-500/30">
           <div className="text-xs text-gray-400">Favorites</div>
           <div className="text-2xl font-bold text-yellow-400">
             {favorites.length}
@@ -904,7 +904,7 @@ const OverviewPage = () => {
       </div> */}
 
         {/* Avsnitts-statistik */}
-        {/* <div className="app-panel p-4 mb-6">
+        {/* <div className="p-4 mb-6 app-panel">
         <h2 className="mb-2 text-lg font-semibold text-yellow-400">
           Episode progress
         </h2>
@@ -965,7 +965,7 @@ const OverviewPage = () => {
                       name: p.title,
                     })
                   }
-                  className="app-card app-card-hover w-full p-3 text-left"
+                  className="w-full p-3 text-left app-card app-card-hover"
                 >
                   <div className="flex items-baseline justify-between gap-3">
                     <div className="text-sm font-bold text-gray-100">
@@ -986,7 +986,7 @@ const OverviewPage = () => {
 
         {/* Genre breakdown */}
         {topGenres.length > 0 && (
-          <div className="app-panel p-4 mb-6">
+          <div className="p-4 mb-6 app-panel">
             <h2 className="mb-2 text-lg font-semibold text-yellow-400">
               Top genres
             </h2>
@@ -995,7 +995,7 @@ const OverviewPage = () => {
             </p>
             <div className="flex flex-wrap gap-2">
               {topGenres.map(([name, count]) => (
-                <span key={name} className="app-badge uppercase tracking-wide">
+                <span key={name} className="tracking-wide uppercase app-badge">
                   {name} <span className="text-gray-300">· {count}</span>
                 </span>
               ))}

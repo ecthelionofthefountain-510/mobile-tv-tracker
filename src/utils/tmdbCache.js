@@ -1,3 +1,5 @@
+import { TMDB_BASE_URL, TMDB_LANGUAGE } from "../config";
+
 const DEFAULT_TTL_MS = 60 * 60 * 1000; // 1h
 const PREFIX = "tmdb:cache:v1:";
 
@@ -18,6 +20,23 @@ function writeLocalStorage(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // ignore (quota, private mode, etc.)
+  }
+}
+
+function forceTmdbLanguage(url) {
+  try {
+    const reqUrl = new URL(url);
+    const tmdbBase = new URL(TMDB_BASE_URL);
+    const isTmdbUrl =
+      reqUrl.origin === tmdbBase.origin &&
+      reqUrl.pathname.startsWith(tmdbBase.pathname);
+
+    if (!isTmdbUrl) return url;
+
+    reqUrl.searchParams.set("language", TMDB_LANGUAGE);
+    return reqUrl.toString();
+  } catch {
+    return url;
   }
 }
 
@@ -48,7 +67,8 @@ export async function cachedFetchJson(url, options = {}) {
     }
   }
 
-  const res = await fetch(url, fetchOptions);
+  const requestUrl = forceTmdbLanguage(url);
+  const res = await fetch(requestUrl, fetchOptions);
   if (!res.ok) {
     throw new Error(`TMDB request failed: ${res.status} ${res.statusText}`);
   }

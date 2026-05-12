@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
+import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL, APP_LOCALE } from "../config";
 import NotificationModal from "./NotificationModal";
 import CongratsToast from "./CongratsToast";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
@@ -696,7 +696,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
               <button
                 className="app-button-ghost absolute top-3 right-3 flex items-center gap-2 px-4 py-2 text-base"
                 onClick={() => setSelectedEpisode(null)}
-                aria-label="Stäng avsnittsinfo"
+                aria-label="Close episode details"
               >
                 <span className="text-lg">×</span>
               </button>
@@ -704,7 +704,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                 {selectedEpisode.name}
               </h3>
               <div className="mb-2 text-gray-400">
-                Säsong {selectedEpisode.season_number}, Avsnitt{" "}
+                Season {selectedEpisode.season_number}, Episode{" "}
                 {selectedEpisode.episode_number}
               </div>
               {selectedEpisode.still_path && (
@@ -715,7 +715,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                 />
               )}
               <div className="mb-2 text-gray-300">
-                {selectedEpisode.overview || "Ingen beskrivning tillgänglig."}
+                {selectedEpisode.overview || "No description available."}
               </div>
               {selectedEpisode.vote_average > 0 && (
                 <div className="mb-1 text-sm text-gray-300">
@@ -724,8 +724,10 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
               )}
               {selectedEpisode.air_date && (
                 <div className="text-xs text-gray-400">
-                  Sändes:{" "}
-                  {new Date(selectedEpisode.air_date).toLocaleDateString()}
+                  Aired:{" "}
+                  {new Date(selectedEpisode.air_date).toLocaleDateString(
+                    APP_LOCALE,
+                  )}
                 </div>
               )}
             </div>
