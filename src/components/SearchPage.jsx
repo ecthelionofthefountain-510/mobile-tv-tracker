@@ -736,7 +736,7 @@ const SearchPage = () => {
         }`}
       >
         <div className="flex p-3">
-          <div className="flex-shrink-0 w-24 h-36">
+          <div className="flex-shrink-0 w-20 h-32 sm:w-24 sm:h-36">
             {normalizedItem.poster_path ? (
               <img
                 src={`${IMAGE_BASE_URL}${normalizedItem.poster_path}`}
@@ -748,8 +748,8 @@ const SearchPage = () => {
             )}
           </div>
 
-          <div className="flex-1 min-w-0 ml-4">
-            <h3 className="mb-1 text-xl font-bold text-yellow-400 truncate">
+          <div className="flex-1 min-w-0 ml-3 sm:ml-4">
+            <h3 className="mb-1 text-lg sm:text-xl font-bold text-yellow-400 truncate">
               {normalizedItem.title || normalizedItem.name}
             </h3>
 
@@ -801,8 +801,8 @@ const SearchPage = () => {
             <div className="flex gap-2 mt-2">
               <button
                 type="button"
-                className={`px-3 py-2 text-xs font-semibold rounded-xl transition-colors
-                  ${isWatched ? "app-button-success text-xs" : "app-button-primary text-xs"}
+                className={`min-w-0 px-2.5 sm:px-3 py-2 text-[11px] sm:text-xs leading-none whitespace-nowrap font-semibold rounded-xl transition-colors
+                  ${isWatched ? "app-button-success" : "app-button-primary"}
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900
                 `}
                 onClick={(e) => {
@@ -819,8 +819,8 @@ const SearchPage = () => {
 
               <button
                 type="button"
-                className={`px-3 py-2 text-xs font-semibold rounded-xl transition-colors
-                  app-button-ghost text-xs
+                className={`min-w-0 px-2.5 sm:px-3 py-2 text-[11px] sm:text-xs leading-none whitespace-nowrap font-semibold rounded-xl transition-colors
+                  app-button-ghost
                   ${isFavorited ? "border-yellow-500/25 text-yellow-200" : "text-gray-100"}
                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900
                 `}
@@ -850,7 +850,7 @@ const SearchPage = () => {
             <button
               type="button"
               onClick={() => setShowToast(false)}
-              className="app-button-ghost px-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              className="app-toast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
               {toastMessage}
             </button>

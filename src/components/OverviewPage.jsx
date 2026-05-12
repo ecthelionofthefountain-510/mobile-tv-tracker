@@ -779,7 +779,7 @@ const OverviewPage = () => {
             <button
               type="button"
               onClick={() => setShowToast(false)}
-              className="px-4 py-2 text-sm font-semibold text-gray-100 app-panel-solid"
+              className="app-toast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
               {toastMessage}
             </button>

@@ -82,10 +82,22 @@
   .app-poster {
     @apply rounded-xl border border-white/10 shadow-md;
   }
+
+  .app-toast {
+    @apply inline-flex max-w-[90vw] items-center justify-center rounded-2xl border border-yellow-400/35 bg-gray-950/95 px-4 py-2 text-sm font-semibold text-yellow-100 shadow-xl backdrop-blur;
+    box-shadow:
+      0 14px 34px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
 }
 
 :root {
   color-scheme: light dark;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* 🌍 Anpassa sidan för mobil */
