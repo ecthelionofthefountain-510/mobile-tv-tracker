@@ -33,12 +33,11 @@ const MovieDetailModal = ({
 
   const handleTouchEnd = (e) => {
     if (touchStartY.current === null) return;
-    const touchEndY = e.changedTouches[0].clientY;
-    if (touchEndY - touchStartY.current > 80) {
-      // 80px swipe down
+    const diffY = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartY.current = null;
+    if (diffY > 80 && (dialogRef.current?.scrollTop ?? 1) === 0) {
       onClose();
     }
-    touchStartY.current = null;
   };
 
   const handleBackdropClick = (e) => {

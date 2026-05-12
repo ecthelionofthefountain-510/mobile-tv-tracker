@@ -24,20 +24,18 @@ const ShowDetailModal = ({
     onClose,
   });
 
-  // Simple touch handling for swipe down
+  // Swipe down to close — only when scrolled to top
+  const touchStartY = useRef(null);
+
   const handleTouchStart = (e) => {
-    const touch = e.touches[0];
-    e.currentTarget.startY = touch.clientY;
+    touchStartY.current = e.touches[0].clientY;
   };
 
-  const handleTouchMove = (e) => {
-    if (!e.currentTarget.startY) return;
-
-    const touch = e.touches[0];
-    const diffY = touch.clientY - e.currentTarget.startY;
-
-    if (diffY > 50) {
-      // Swipe down threshold
+  const handleTouchEnd = (e) => {
+    if (touchStartY.current === null) return;
+    const diffY = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartY.current = null;
+    if (diffY > 80 && (dialogRef.current?.scrollTop ?? 1) === 0) {
       onClose();
     }
   };
@@ -116,7 +114,7 @@ const ShowDetailModal = ({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 sm:items-center sm:p-4"
       onClick={handleBackdropClick}
       onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <div
         ref={dialogRef}
