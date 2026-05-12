@@ -20,13 +20,11 @@ import { applyThemePreference, getStoredThemePreference } from "./utils/theme";
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
-    // Scrolla .main-content till toppen
     const main = document.querySelector(".main-content");
     if (main) {
-      main.scrollTo({ top: 0, behavior: "auto" });
-    } else {
-      window.scrollTo(0, 0);
+      main.scrollTop = 0;
     }
+    window.scrollTo(0, 0);
   }, [pathname]);
   return null;
 }

@@ -79,3 +79,17 @@ export async function cachedFetchJson(url, options = {}) {
 
   return data;
 }
+
+export function clearCache() {
+  memoryCache.clear();
+  try {
+    const toRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(PREFIX)) toRemove.push(key);
+    }
+    toRemove.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
+}

@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import {
@@ -21,14 +27,13 @@ import {
 import { emitProfileMediaUpdated } from "../utils/profileMediaEvents";
 import { createWatchedMovie, createWatchedShow } from "../utils/watchedMapper";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
-import { cachedFetchJson } from "../utils/tmdbCache";
+import { cachedFetchJson, clearCache } from "../utils/tmdbCache";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 import FavoritesTitlesModal from "./FavoritesTitlesModal";
 import BackupControls from "./BackupControls";
 
 const DEFAULT_PROFILE_KEY = "__default__";
-const TMDB_CACHE_PREFIX = "tmdb:cache:v1:";
 
 const profileAvatarKeyForUser = (user) =>
   user ? `profileAvatar_${user}` : "profileAvatar";
@@ -111,6 +116,13 @@ const ProfilePage = () => {
   });
   const [editStatus, setEditStatus] = useState("");
   const [toolsStatus, setToolsStatus] = useState("");
+  const [toastMsg, setToastMsg] = useState("");
+  const toastTimer = useRef(null);
+  const showToast = useCallback((msg) => {
+    setToastMsg(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastMsg(""), 3000);
+  }, []);
 
   const [favorites, setFavorites] = useState([]);
   const [watched, setWatched] = useState([]);
@@ -528,17 +540,11 @@ const ProfilePage = () => {
   };
 
   const clearTmdbCache = () => {
-    setToolsStatus("");
     try {
-      const toRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(TMDB_CACHE_PREFIX)) toRemove.push(key);
-      }
-      toRemove.forEach((k) => localStorage.removeItem(k));
-      setToolsStatus("Cache cleared.");
+      clearCache();
+      showToast("Cache cleared — fresh data will be fetched.");
     } catch {
-      setToolsStatus("Could not clear cache.");
+      showToast("Could not clear cache.");
     }
   };
 
@@ -630,17 +636,26 @@ const ProfilePage = () => {
 
   const favoritesShows = useMemo(
     () =>
-      favorites.filter(
-        (f) => (f?.mediaType || (f?.first_air_date ? "tv" : "movie")) === "tv",
-      ),
+      favorites
+        .filter(
+          (f) =>
+            (f?.mediaType || (f?.first_air_date ? "tv" : "movie")) === "tv",
+        )
+        .sort(
+          (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0),
+        ),
     [favorites],
   );
   const favoritesMovies = useMemo(
     () =>
-      favorites.filter(
-        (f) =>
-          (f?.mediaType || (f?.first_air_date ? "tv" : "movie")) === "movie",
-      ),
+      favorites
+        .filter(
+          (f) =>
+            (f?.mediaType || (f?.first_air_date ? "tv" : "movie")) === "movie",
+        )
+        .sort(
+          (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0),
+        ),
     [favorites],
   );
   const watchedShows = useMemo(
@@ -705,7 +720,7 @@ const ProfilePage = () => {
   return (
     <div className="min-h-screen pb-20 bg-gray-950">
       {/* Hero */}
-      <div className="relative h-56 sm:h-64">
+      <div className="relative h-40 sm:h-48">
         <div
           className="absolute inset-0 bg-center bg-cover"
           style={{ backgroundImage: `url(${coverUrlFor(activeUser)})` }}
@@ -778,17 +793,17 @@ const ProfilePage = () => {
             />
           </div>
 
-          <div className="mt-3 text-2xl font-bold text-gray-100">
+          <div className="mt-2 text-xl font-bold text-gray-100">
             {displayNameFor(activeUser)}
           </div>
-          <div className="mt-1 text-xs text-gray-400">
+          <div className="mt-0.5 text-xs text-gray-400">
             {activeUser ? "On this device" : "Local profile"}
           </div>
 
           <button
             type="button"
             onClick={openEditProfile}
-            className="w-full max-w-xs px-6 py-3 mt-5 text-sm font-semibold tracking-wide text-gray-950 uppercase transition rounded-full bg-yellow-500 hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            className="w-full max-w-xs px-6 py-2 mt-3 text-xs font-semibold tracking-wide text-gray-950 uppercase transition rounded-full bg-yellow-500 hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
             Edit profile
           </button>
@@ -803,7 +818,7 @@ const ProfilePage = () => {
         )}
 
         {/* Actions list */}
-        <div className="mt-7 app-panel overflow-hidden p-0 divide-y divide-white/10">
+        <div className="mt-4 app-panel overflow-hidden p-0 divide-y divide-white/10">
           <button
             type="button"
             onClick={() => {
@@ -814,57 +829,69 @@ const ProfilePage = () => {
                 });
               });
             }}
-            className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            className="flex items-center justify-between w-full px-3 py-3 text-sm font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 text-yellow-300 border rounded-xl border-white/10 bg-black/25">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-8 h-8 text-yellow-300 border rounded-lg border-white/10 bg-black/25">
                 <FaArchive aria-hidden="true" />
               </div>
               <span>Backup & restore</span>
             </div>
-            <FaChevronRight className="text-gray-300" aria-hidden="true" />
+            <FaChevronRight
+              className="text-gray-300 text-xs"
+              aria-hidden="true"
+            />
           </button>
 
           <button
             type="button"
             onClick={clearTmdbCache}
-            className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            className="flex items-center justify-between w-full px-3 py-3 text-sm font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 text-yellow-300 border rounded-xl border-white/10 bg-black/25">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-8 h-8 text-yellow-300 border rounded-lg border-white/10 bg-black/25">
                 <FaTrashAlt aria-hidden="true" />
               </div>
               <span>Clear cache</span>
             </div>
-            <FaChevronRight className="text-gray-300" aria-hidden="true" />
+            <FaChevronRight
+              className="text-gray-300 text-xs"
+              aria-hidden="true"
+            />
           </button>
 
           <button
             type="button"
             onClick={() => navigate("/upcoming")}
-            className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            className="flex items-center justify-between w-full px-3 py-3 text-sm font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 text-yellow-300 border rounded-xl border-white/10 bg-black/25">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-8 h-8 text-yellow-300 border rounded-lg border-white/10 bg-black/25">
                 <FaRegCalendarAlt aria-hidden="true" />
               </div>
               <span>Upcoming</span>
             </div>
-            <FaChevronRight className="text-gray-300" aria-hidden="true" />
+            <FaChevronRight
+              className="text-gray-300 text-xs"
+              aria-hidden="true"
+            />
           </button>
 
           <button
             type="button"
             onClick={() => navigate("/overview")}
-            className="flex items-center justify-between w-full px-4 py-4 text-base font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            className="flex items-center justify-between w-full px-3 py-3 text-sm font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 text-yellow-300 border rounded-xl border-white/10 bg-black/25">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-8 h-8 text-yellow-300 border rounded-lg border-white/10 bg-black/25">
                 <FaChartPie aria-hidden="true" />
               </div>
               <span>Overview</span>
             </div>
-            <FaChevronRight className="text-gray-300" aria-hidden="true" />
+            <FaChevronRight
+              className="text-gray-300 text-xs"
+              aria-hidden="true"
+            />
           </button>
         </div>
 
@@ -974,6 +1001,13 @@ const ProfilePage = () => {
             <div className="mt-3 text-xs text-gray-400">{toolsStatus}</div>
           )}
         </div>
+
+        {/* Cache-cleared toast */}
+        {toastMsg && (
+          <div className="fixed bottom-24 left-0 right-0 z-50 flex justify-center pointer-events-none">
+            <div className="app-toast">{toastMsg}</div>
+          </div>
+        )}
 
         {favoritesTitlesModalType && (
           <FavoritesTitlesModal

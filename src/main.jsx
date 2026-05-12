@@ -5,6 +5,10 @@ import "./index.css"; // Se till att den här finns!
 import ErrorBoundary from "./components/ErrorBoundary";
 
 document.documentElement.lang = "en";
+// Prevent the browser from restoring scroll position on navigation
+if ("scrollRestoration" in history) {
+  history.scrollRestoration = "manual";
+}
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
