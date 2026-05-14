@@ -31,8 +31,6 @@ import ShowDetailModal from "./ShowDetailModal";
 import FavoritesTitlesModal from "./FavoritesTitlesModal";
 import BackupControls from "./BackupControls";
 import {
-  APP_DEFAULT_SORTS,
-  APP_TOAST_DURATIONS,
   loadAppPreference,
   saveAppPreference,
   setOnboardingSeen,
@@ -92,7 +90,7 @@ const imageFileToDataUrl = async (file, { maxSizePx, quality = 0.86 } = {}) => {
   }
 };
 
-const ProfilePage = () => {
+const ProfilePage = ({ onLogout, onFullLogout }) => {
   const navigate = useNavigate();
   const [currentUser] = useState(() =>
     JSON.parse(localStorage.getItem("currentUser")),
@@ -584,12 +582,14 @@ const ProfilePage = () => {
   };
 
   const switchUser = () => {
-    try {
-      localStorage.removeItem("currentUser");
-    } catch {
-      // ignore
-    }
     emitProfileMediaUpdated({ kind: "user", user: null });
+    if (onLogout) onLogout();
+    navigate("/login");
+  };
+
+  const handleFullLogout = () => {
+    emitProfileMediaUpdated({ kind: "user", user: null });
+    if (onFullLogout) onFullLogout();
     navigate("/login");
   };
 
@@ -778,11 +778,11 @@ const ProfilePage = () => {
         />
 
         {/* Quick cover action */}
-        <div className="absolute inset-x-0 bottom-3 flex items-center justify-end px-4">
+        <div className="absolute inset-x-0 flex items-center justify-end px-4 bottom-3">
           <button
             type="button"
             onClick={() => quickCoverInputRef.current?.click()}
-            className="flex items-center justify-center w-11 h-11 text-gray-100 border rounded-full border-white/10 bg-black/35 hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            className="flex items-center justify-center text-gray-100 border rounded-full w-11 h-11 border-white/10 bg-black/35 hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
             aria-label="Change cover photo"
             title="Change cover"
           >
@@ -819,7 +819,7 @@ const ProfilePage = () => {
             <button
               type="button"
               onClick={() => quickAvatarInputRef.current?.click()}
-              className="absolute flex items-center justify-center w-9 h-9 border rounded-full -bottom-1 -right-1 border-gray-950 bg-yellow-500 text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+              className="absolute flex items-center justify-center bg-yellow-500 border rounded-full w-9 h-9 -bottom-1 -right-1 border-gray-950 text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
               aria-label="Change profile photo"
               title="Change photo"
             >
@@ -848,7 +848,7 @@ const ProfilePage = () => {
           <button
             type="button"
             onClick={openEditProfile}
-            className="w-full max-w-xs px-6 py-2 mt-3 text-xs font-semibold tracking-wide text-gray-950 uppercase transition rounded-full bg-yellow-500 hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            className="w-full max-w-xs px-6 py-2 mt-3 text-xs font-semibold tracking-wide uppercase transition bg-yellow-500 rounded-full text-gray-950 hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
             Edit profile
           </button>
@@ -863,7 +863,7 @@ const ProfilePage = () => {
         )}
 
         {/* Actions list */}
-        <div className="mt-4 app-panel overflow-hidden p-0 divide-y divide-white/10">
+        <div className="p-0 mt-4 overflow-hidden divide-y app-panel divide-white/10">
           <button
             type="button"
             onClick={() => navigate("/upcoming")}
@@ -876,7 +876,7 @@ const ProfilePage = () => {
               <span>Upcoming</span>
             </div>
             <FaChevronRight
-              className="text-gray-300 text-xs"
+              className="text-xs text-gray-300"
               aria-hidden="true"
             />
           </button>
@@ -893,7 +893,7 @@ const ProfilePage = () => {
               <span>Overview</span>
             </div>
             <FaChevronRight
-              className="text-gray-300 text-xs"
+              className="text-xs text-gray-300"
               aria-hidden="true"
             />
           </button>
@@ -940,7 +940,7 @@ const ProfilePage = () => {
           <button
             type="button"
             onClick={() => openFavoritesTitlesModal("tv")}
-            className="flex w-full items-center justify-between text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            className="flex items-center justify-between w-full text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
             aria-label="Open favorite shows"
           >
             <span>Favorite Shows</span>
@@ -972,7 +972,7 @@ const ProfilePage = () => {
           <button
             type="button"
             onClick={() => openFavoritesTitlesModal("movie")}
-            className="flex w-full items-center justify-between text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+            className="flex items-center justify-between w-full text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
             aria-label="Open favorite movies"
           >
             <span>Favorite Movies</span>
@@ -999,79 +999,52 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        <div className="mt-8 app-panel p-4">
-          <h2 className="text-lg font-semibold text-gray-100">App settings</h2>
+        <div className="p-4 mt-8 app-panel">
+          <h2 className="text-lg font-semibold tracking-wide text-gray-100 uppercase">
+            App settings
+          </h2>
+          <p className="mt-1 text-xs text-gray-400">
+            Account and app controls for this device.
+          </p>
 
-          <div className="mt-4">
-            <div className="text-sm font-semibold text-gray-200">
-              Default sort order
-            </div>
-            <select
-              value={prefDefaultSort}
-              onChange={(e) => setPrefDefaultSort(e.target.value)}
-              className="app-select mt-2 w-full"
+          <div className="pt-4 mt-4 space-y-3 border-t border-white/10">
+            <button
+              type="button"
+              onClick={rerunOnboarding}
+              className="w-full px-4 py-3 app-button-ghost"
             >
-              {APP_DEFAULT_SORTS.map((sort) => (
-                <option key={sort.value} value={sort.value}>
-                  {sort.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mt-4">
-            <div className="text-sm font-semibold text-gray-200">
-              Toast duration
-            </div>
-            <select
-              value={String(prefToastDurationMs)}
-              onChange={(e) => setPrefToastDurationMs(Number(e.target.value))}
-              className="app-select mt-2 w-full"
-            >
-              {APP_TOAST_DURATIONS.map((dur) => (
-                <option key={dur.value} value={String(dur.value)}>
-                  {dur.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <div className="text-sm font-semibold text-gray-200">
-              Data tools
-            </div>
+              Show onboarding again
+            </button>
             <button
               type="button"
               onClick={clearTmdbCache}
-              className="app-button-ghost mt-3 w-full px-4 py-3"
+              className="w-full px-4 py-3 app-button-ghost"
             >
               Clear cache
             </button>
-            <div className="mt-3">
+            <button
+              type="button"
+              onClick={switchUser}
+              className="w-full px-4 py-3 app-button-ghost"
+            >
+              Switch user
+            </button>
+            <button
+              type="button"
+              onClick={handleFullLogout}
+              className="w-full px-4 py-3 text-red-500 app-button-ghost hover:text-red-600"
+            >
+              Log out
+            </button>
+            <div className="pt-1">
               <BackupControls compact onRestore={refreshWatchedFromStorage} />
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={rerunOnboarding}
-            className="app-button-ghost mt-4 w-full px-4 py-3"
-          >
-            Show onboarding again
-          </button>
-
-          <button
-            type="button"
-            onClick={switchUser}
-            className="app-button-ghost mt-3 w-full px-4 py-3"
-          >
-            Switch user
-          </button>
         </div>
 
         {/* Cache-cleared toast */}
         {toastMsg && (
-          <div className="fixed bottom-24 left-0 right-0 z-50 flex justify-center pointer-events-none">
+          <div className="fixed left-0 right-0 z-50 flex justify-center pointer-events-none bottom-24">
             <div className="app-toast">{toastMsg}</div>
           </div>
         )}
@@ -1126,7 +1099,7 @@ const ProfilePage = () => {
 
         {selectedItem && isLoading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-            <div className="app-panel-solid w-full max-w-sm p-6">
+            <div className="w-full max-w-sm p-6 app-panel-solid">
               <div className="text-lg font-semibold text-yellow-400">
                 Loading…
               </div>
@@ -1136,7 +1109,7 @@ const ProfilePage = () => {
               <button
                 type="button"
                 onClick={closeModal}
-                className="app-button-ghost mt-4 px-4 py-2"
+                className="px-4 py-2 mt-4 app-button-ghost"
               >
                 Cancel
               </button>

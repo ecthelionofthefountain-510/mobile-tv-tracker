@@ -4,7 +4,6 @@ import { API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
 import SwipeableShowCard from "./SwipeableShowCard";
 import ShowDetailModal from "./ShowDetailModal";
-import BackupControls from "./BackupControls";
 import { useWatchedList } from "../hooks/useWatchedList";
 import { cachedFetchJson } from "../utils/tmdbCache";
 import SearchIcon from "../icons/SearchIcon";
@@ -394,8 +393,6 @@ const ShowsList = () => {
             onWatchedChanged={refreshWatchedFromStorage}
           />
         )}
-
-        <BackupControls onRestore={refreshWatchedFromStorage} />
       </div>
     </div>
   );

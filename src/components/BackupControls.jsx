@@ -71,26 +71,46 @@ export default function BackupControls({ onRestore, compact = false }) {
   return (
     <div
       className={
-        "app-panel p-4 space-y-2 text-sm text-gray-300" +
+        (compact
+          ? "app-panel space-y-3 px-4 py-4 text-sm text-gray-300"
+          : "app-panel p-4 space-y-2 text-sm text-gray-300") +
         (compact ? "" : " mt-8")
       }
     >
-      <div className="font-semibold text-yellow-400">Backup & restore</div>
-      <p className="text-xs text-gray-400">
+      <div
+        className={
+          compact
+            ? "font-semibold text-yellow-400"
+            : "font-semibold text-yellow-400"
+        }
+      >
+        Backup & restore
+      </div>
+      <p
+        className={compact ? "text-xs text-gray-400" : "text-xs text-gray-400"}
+      >
         Exporterar / importerar hela din "watched"-lista som en JSON-fil.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={handleExport}
-          className="app-button-primary px-3 py-1 text-xs"
+          className={
+            compact
+              ? "app-button-primary rounded-xl px-3 py-2 text-xs"
+              : "app-button-primary px-3 py-1 text-xs"
+          }
         >
           Export backup
         </button>
         <button
           type="button"
           onClick={handleImportClick}
-          className="app-button-ghost px-3 py-1 text-xs"
+          className={
+            compact
+              ? "app-button-ghost rounded-xl px-3 py-2 text-xs"
+              : "app-button-ghost px-3 py-1 text-xs"
+          }
         >
           Import backup
         </button>
@@ -102,7 +122,15 @@ export default function BackupControls({ onRestore, compact = false }) {
           onChange={handleImportFile}
         />
       </div>
-      {status && <div className="text-xs text-gray-400">{status}</div>}
+      {status && (
+        <div
+          className={
+            compact ? "text-xs text-gray-400" : "text-xs text-gray-400"
+          }
+        >
+          {status}
+        </div>
+      )}
     </div>
   );
 }

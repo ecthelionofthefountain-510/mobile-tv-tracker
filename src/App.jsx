@@ -19,6 +19,10 @@ import AppIntroSplash from "./components/AppIntroSplash";
 import "./index.css";
 import { applyThemePreference, getStoredThemePreference } from "./utils/theme";
 import { getOnboardingSeen, setOnboardingSeen } from "./utils/appPreferences";
+import {
+  addRememberedSession,
+  removeRememberedSession,
+} from "./utils/authStorage";
 
 function getCurrentUserFromStorage() {
   try {
@@ -87,8 +91,31 @@ function AppShell() {
     } catch {
       // ignore
     }
+    addRememberedSession(user);
     setCurrentUser(user);
     applyThemePreference(getStoredThemePreference(user));
+  };
+
+  // Switch user — keeps user in the remembered list for quick re-login
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("currentUser");
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+  };
+
+  // Full logout — removes from remembered list, requires password next time
+  const handleFullLogout = () => {
+    const user = getCurrentUserFromStorage();
+    try {
+      localStorage.removeItem("currentUser");
+    } catch {
+      // ignore
+    }
+    if (user) removeRememberedSession(user);
+    setCurrentUser(null);
   };
 
   const finishOnboarding = () => {
@@ -154,7 +181,14 @@ function AppShell() {
           <Route
             path="/profile"
             element={
-              currentUser ? <ProfilePage /> : <Navigate to="/login" replace />
+              currentUser ? (
+                <ProfilePage
+                  onLogout={handleLogout}
+                  onFullLogout={handleFullLogout}
+                />
+              ) : (
+                <Navigate to="/login" replace />
+              )
             }
           />
           {/* Fallback route */}
