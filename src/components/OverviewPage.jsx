@@ -1,10 +1,15 @@
 // OverviewPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL, APP_LOCALE } from "../config";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { createWatchedMovie, createWatchedShow } from "../utils/watchedMapper";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import {
+  AI_GENRES,
+  loadAiPreferences,
+  saveAiPreferences,
+} from "../utils/aiPreferences";
 import {
   loadFavorites,
   saveFavorites,
@@ -12,36 +17,9 @@ import {
 } from "../utils/favoritesStorage";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
-
-const GENRE_MAP = {
-  28: "Action",
-  12: "Adventure",
-  16: "Animation",
-  35: "Comedy",
-  80: "Crime",
-  99: "Documentary",
-  18: "Drama",
-  10751: "Family",
-  14: "Fantasy",
-  36: "History",
-  27: "Horror",
-  10402: "Music",
-  9648: "Mystery",
-  10749: "Romance",
-  878: "Science Fiction",
-  10770: "TV Movie",
-  53: "Thriller",
-  10752: "War",
-  37: "Western",
-  10759: "Action & Adventure",
-  10762: "Kids",
-  10763: "News",
-  10764: "Reality",
-  10765: "Sci-Fi & Fantasy",
-  10766: "Soap",
-  10767: "Talk",
-  10768: "War & Politics",
-};
+import ContinueWatchingSection from "./overview/ContinueWatchingSection";
+import UpcomingSection from "./overview/UpcomingSection";
+import { loadAppPreference } from "../utils/appPreferences";
 
 const OverviewPage = () => {
   const navigate = useNavigate();
@@ -57,31 +35,105 @@ const OverviewPage = () => {
   const [aiPicks, setAiPicks] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [aiPrefs, setAiPrefs] = useState(() => loadAiPreferences());
+  const [actorQuery, setActorQuery] = useState("");
+  const [actorResults, setActorResults] = useState([]);
+  const [showPrefs, setShowPrefs] = useState(false);
+  const actorDebounce = useRef(null);
+
+  const toggleGenre = (genre) => {
+    setAiPrefs((prev) => {
+      const exists = prev.genres.some((g) => g.name === genre.name);
+      const next = {
+        ...prev,
+        genres: exists
+          ? prev.genres.filter((g) => g.name !== genre.name)
+          : [...prev.genres, genre],
+      };
+      saveAiPreferences(next);
+      return next;
+    });
+  };
+
+  const removeActor = (actorId) => {
+    setAiPrefs((prev) => {
+      const next = {
+        ...prev,
+        actors: prev.actors.filter((a) => a.id !== actorId),
+      };
+      saveAiPreferences(next);
+      return next;
+    });
+  };
+
+  const addActor = (actor) => {
+    setAiPrefs((prev) => {
+      if (prev.actors.some((a) => a.id === actor.id)) return prev;
+      const next = {
+        ...prev,
+        actors: [...prev.actors, { id: actor.id, name: actor.name }],
+      };
+      saveAiPreferences(next);
+      return next;
+    });
+    setActorQuery("");
+    setActorResults([]);
+  };
+
+  const searchActors = (q) => {
+    setActorQuery(q);
+    clearTimeout(actorDebounce.current);
+    if (!q.trim() || q.trim().length < 2) {
+      setActorResults([]);
+      return;
+    }
+    actorDebounce.current = setTimeout(async () => {
+      try {
+        const res = await cachedFetchJson(
+          `${TMDB_BASE_URL}/search/person?api_key=${API_KEY}&query=${encodeURIComponent(q)}&page=1`,
+          { ttlMs: 5 * 60 * 1000 },
+        );
+        setActorResults((res?.results || []).slice(0, 5));
+      } catch {
+        setActorResults([]);
+      }
+    }, 350);
+  };
 
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
+  const toastDurationMs =
+    Number(loadAppPreference("toastDurationMs", 2200)) || 2200;
 
   useEffect(() => {
     if (!showToast) return;
-    const t = setTimeout(() => setShowToast(false), 2200);
+    const t = setTimeout(() => setShowToast(false), toastDurationMs);
     return () => clearTimeout(t);
-  }, [showToast]);
+  }, [showToast, toastDurationMs]);
 
   const notify = (message) => {
     setToastMessage(message);
     setShowToast(true);
   };
 
-  // Recommendations
-  const [recommendations, setRecommendations] = useState([]);
-  const [recContext, setRecContext] = useState(null);
-  const [isRecLoading, setIsRecLoading] = useState(false);
-  const [recError, setRecError] = useState("");
+  const clearAiPreferences = () => {
+    const empty = { genres: [], actors: [] };
+    saveAiPreferences(empty);
+    setAiPrefs(empty);
+    setActorQuery("");
+    setActorResults([]);
+  };
 
   // Upcoming episodes / premieres
   const [upcoming, setUpcoming] = useState([]);
   const [upcomingLoading, setUpcomingLoading] = useState(false);
   const [upcomingError, setUpcomingError] = useState("");
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(actorDebounce.current);
+    };
+  }, []);
 
   const computeWatchedEpisodeCount = (show) => {
     const seasons = show?.seasons;
@@ -98,16 +150,124 @@ const OverviewPage = () => {
     return typeof n === "number" && n > 0 ? n : null;
   };
 
-  const pickClientSide = () => {
+  const pickClientSide = async () => {
     setAiError("");
     setAiLoading(true);
 
-    // tiny delay so the button feels responsive
-    setTimeout(() => {
-      try {
-        const favs = Array.isArray(favorites) ? favorites : [];
-        const wat = Array.isArray(watched) ? watched : [];
+    try {
+      const favs = Array.isArray(favorites) ? favorites : [];
+      const wat = Array.isArray(watched) ? watched : [];
+      const prefs = loadAiPreferences();
+      const hasPrefs = prefs.genres.length > 0 || prefs.actors.length > 0;
 
+      const picks = [];
+      const used = new Set();
+
+      // Track already-watched/favorited IDs to avoid re-suggesting them
+      const seenIds = new Set([
+        ...wat.map((w) => `${w.mediaType || "tv"}:${w.id}`),
+        ...favs.map((f) => `${f.mediaType || "movie"}:${f.id}`),
+      ]);
+
+      const pushPick = (item, reason) => {
+        if (!item || item.id == null) return;
+        const mediaType =
+          item.mediaType || (item.first_air_date ? "tv" : "movie");
+        const key = `${mediaType}:${String(item.id)}`;
+        if (used.has(key)) return;
+        used.add(key);
+        picks.push({
+          id: item.id,
+          mediaType,
+          title: item.title || item.name || "",
+          reason,
+        });
+      };
+
+      if (hasPrefs) {
+        // Build TMDb Discover queries from preferences
+        const movieGenreIds = prefs.genres
+          .map((g) => g.movieId)
+          .filter(Boolean)
+          .join(",");
+        const tvGenreIds = prefs.genres
+          .map((g) => g.tvId)
+          .filter(Boolean)
+          .join(",");
+        const actorIds = prefs.actors.map((a) => a.id).join(",");
+
+        const reasonParts = [];
+        if (prefs.genres.length > 0)
+          reasonParts.push(prefs.genres.map((g) => g.name).join(", "));
+        if (prefs.actors.length > 0)
+          reasonParts.push(prefs.actors.map((a) => a.name).join(", "));
+        const reason = `Matches your preferences: ${reasonParts.join(" · ")}`;
+
+        const fetchDiscover = async (type, genreIds) => {
+          const params = new URLSearchParams({
+            api_key: API_KEY,
+            language: "en-US",
+            sort_by: "popularity.desc",
+            "vote_count.gte": "50",
+            page: "1",
+          });
+          if (genreIds) params.set("with_genres", genreIds);
+          if (actorIds) {
+            if (type === "movie") params.set("with_cast", actorIds);
+            else params.set("with_people", actorIds);
+          }
+          try {
+            const res = await cachedFetchJson(
+              `${TMDB_BASE_URL}/discover/${type}?${params}`,
+              { ttlMs: 30 * 60 * 1000 },
+            );
+            return (res?.results || []).map((r) => ({
+              ...r,
+              mediaType: type === "tv" ? "tv" : "movie",
+            }));
+          } catch {
+            return [];
+          }
+        };
+
+        const [movieResults, tvResults] = await Promise.all([
+          movieGenreIds || actorIds
+            ? fetchDiscover("movie", movieGenreIds)
+            : [],
+          tvGenreIds || actorIds ? fetchDiscover("tv", tvGenreIds) : [],
+        ]);
+
+        // Interleave movie and TV results, skip already seen
+        const combined = [];
+        const maxLen = Math.max(movieResults.length, tvResults.length);
+        for (let i = 0; i < maxLen && combined.length < 8; i++) {
+          if (i < tvResults.length) combined.push(tvResults[i]);
+          if (i < movieResults.length) combined.push(movieResults[i]);
+        }
+
+        for (const item of combined) {
+          const key = `${item.mediaType}:${item.id}`;
+          if (!seenIds.has(key)) pushPick(item, reason);
+          if (picks.length >= 3) break;
+        }
+
+        // If discover didn't fill 3 slots, pad with in-progress shows
+        if (picks.length < 3) {
+          const inProgress = wat
+            .filter(
+              (i) =>
+                (i?.mediaType || (i?.first_air_date ? "tv" : "movie")) === "tv",
+            )
+            .filter(
+              (s) => !s.completed && (s.watchedEpisodes?.length || 0) > 0,
+            );
+          for (const s of inProgress) {
+            pushPick(s, "Continue where you left off.");
+            if (picks.length >= 3) break;
+          }
+        }
+      } else {
+        // Original logic — no preferences set
         const inProgressShows = wat
           .filter(
             (i) =>
@@ -133,86 +293,62 @@ const OverviewPage = () => {
           })
           .filter((x) => !x.completed && x.watchedEpisodes > 0)
           .sort((a, b) => {
-            // Prefer close-to-finish when we have totals; otherwise prefer most watched episodes
             if (a.ratio != null && b.ratio != null) return b.ratio - a.ratio;
             if (a.ratio != null) return -1;
             if (b.ratio != null) return 1;
             return (b.watchedEpisodes || 0) - (a.watchedEpisodes || 0);
           });
 
-        const picks = [];
-        const used = new Set();
-
-        const pushPick = (item, reason) => {
-          if (!item || item.id == null) return;
-          const mediaType =
-            item.mediaType || (item.first_air_date ? "tv" : "movie");
-          const key = `${mediaType}:${String(item.id)}`;
-          if (used.has(key)) return;
-          used.add(key);
-          picks.push({
-            id: item.id,
-            mediaType,
-            title: item.title || item.name || "",
-            reason,
-          });
-        };
-
-        // 1) Always try: one in-progress show
         if (inProgressShows.length > 0) {
           const best = inProgressShows[0];
           const r =
             best.totalEpisodes != null
-              ? `Fortsätt där du slutade (${best.watchedEpisodes}/${best.totalEpisodes} avsnitt).`
-              : `Fortsätt där du slutade (${best.watchedEpisodes} avsnitt markerade).`;
+              ? `Continue where you left off (${best.watchedEpisodes}/${best.totalEpisodes} episodes).`
+              : `Continue where you left off (${best.watchedEpisodes} episodes watched).`;
           pushPick(best.raw, r);
         }
 
-        // 2) Add one favorite (random)
         if (favs.length > 0) {
           const shuffled = [...favs].sort(() => Math.random() - 0.5);
           const candidate = shuffled.find((x) => x && x.id != null);
-          if (candidate) {
-            pushPick(candidate, "En favorit som brukar leverera.");
-          }
+          if (candidate)
+            pushPick(candidate, "A favourite that usually delivers.");
         }
 
-        // 3) Optional second in-progress or second favorite
         if (picks.length < 3) {
           const secondShow = inProgressShows.find((x) => {
-            const mediaType =
+            const mt =
               x.raw.mediaType || (x.raw.first_air_date ? "tv" : "movie");
-            return !used.has(`${mediaType}:${String(x.raw.id)}`);
+            return !used.has(`${mt}:${String(x.raw.id)}`);
           });
-          if (secondShow) {
-            pushPick(secondShow.raw, "Bra att beta av lite till.");
-          }
+          if (secondShow) pushPick(secondShow.raw, "Good to chip away at.");
         }
 
         if (picks.length < 3 && favs.length > 1) {
           const shuffled = [...favs].sort(() => Math.random() - 0.5);
           for (const f of shuffled) {
-            const mediaType =
-              f.mediaType || (f.first_air_date ? "tv" : "movie");
-            if (used.has(`${mediaType}:${String(f.id)}`)) continue;
-            pushPick(f, "Om du vill ha något lätt och tryggt.");
+            const mt = f.mediaType || (f.first_air_date ? "tv" : "movie");
+            if (used.has(`${mt}:${String(f.id)}`)) continue;
+            pushPick(f, "Something easy and familiar.");
             break;
           }
         }
-
-        setAiPicks(picks);
-        if (picks.length === 0) {
-          setAiError(
-            "Inga förslag just nu (lägg till en favorit eller börja titta på en serie).",
-          );
-        }
-      } catch (e) {
-        console.error(e);
-        setAiError("Kunde inte ta fram ett förslag just nu.");
-      } finally {
-        setAiLoading(false);
       }
-    }, 200);
+
+      setAiPicks(picks);
+      if (picks.length === 0) {
+        setAiError(
+          hasPrefs
+            ? "No new titles found for your preferences — try adjusting genres or actors."
+            : "No suggestions yet — add a favourite or start watching something.",
+        );
+      }
+    } catch (e) {
+      console.error(e);
+      setAiError("Could not fetch suggestions right now.");
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   // Ladda watched + favorites
@@ -242,11 +378,34 @@ const OverviewPage = () => {
   const isShow = (item) =>
     item.mediaType === "tv" || !!item.seasons || item.type === "show";
 
-  const isMovie = (item) =>
-    item.mediaType === "movie" || (!item.seasons && item.type !== "show");
-
   const watchedShows = watched.filter(isShow);
-  const watchedMovies = watched.filter(isMovie);
+
+  const continueWatching = useMemo(() => {
+    return watchedShows
+      .map((show) => {
+        const watchedEpisodes = computeWatchedEpisodeCount(show);
+        const totalEpisodes = computeTotalEpisodes(show);
+        const completed =
+          typeof totalEpisodes === "number"
+            ? watchedEpisodes >= totalEpisodes
+            : !!show?.completed;
+
+        if (completed || watchedEpisodes <= 0) return null;
+
+        return {
+          ...show,
+          watchedEpisodes,
+          totalEpisodes,
+          progressLabel:
+            typeof totalEpisodes === "number"
+              ? `${watchedEpisodes}/${totalEpisodes} episodes`
+              : `${watchedEpisodes} episodes watched`,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0))
+      .slice(0, 3);
+  }, [watchedShows]);
 
   const premiereCandidateIds = useMemo(() => {
     const ids = new Set();
@@ -389,41 +548,6 @@ const OverviewPage = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [premiereCandidateIds.join("|")]);
-
-  const totalEpisodesWatched = watchedShows.reduce((sum, show) => {
-    const seasons = show.seasons || {};
-    const seasonEpisodeCount = Object.values(seasons).reduce(
-      (s, season) => s + (season.watchedEpisodes?.length || 0),
-      0,
-    );
-    return sum + seasonEpisodeCount;
-  }, 0);
-
-  // Genre-statistik
-  const genreCounts = {};
-  watched.forEach((item) => {
-    let genreNames = [];
-
-    if (Array.isArray(item.genres) && item.genres.length > 0) {
-      genreNames = item.genres.map((g) => g.name).filter(Boolean);
-    } else if (Array.isArray(item.genre_ids) && item.genre_ids.length > 0) {
-      genreNames = item.genre_ids.map((id) => GENRE_MAP[id]).filter(Boolean);
-    }
-
-    // undvik dubbletter i samma titel
-    genreNames = Array.from(new Set(genreNames));
-
-    genreNames.forEach((name) => {
-      genreCounts[name] = (genreCounts[name] || 0) + 1;
-    });
-  });
-
-  const topGenres = Object.entries(genreCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-
-  const recentWatched = [...watched].slice(-5).reverse();
-  const recentFavorites = [...favorites].slice(-5).reverse();
 
   const toggleFavorite = async (item) => {
     const normalizedItem = {
@@ -598,179 +722,6 @@ const OverviewPage = () => {
     setErrorMessage("");
   };
 
-  const getYear = (item) => {
-    if (item.release_date) return new Date(item.release_date).getFullYear();
-    if (item.first_air_date) return new Date(item.first_air_date).getFullYear();
-    return null;
-  };
-
-  const getSeasonsCount = (item) =>
-    item.mediaType === "tv"
-      ? item.number_of_seasons ||
-        (item.seasons ? Object.keys(item.seasons).length : null)
-      : null;
-
-  // Highlight-hjälpare
-  const topRatedMovie =
-    watchedMovies.length > 0
-      ? watchedMovies.reduce((best, curr) =>
-          (curr.vote_average || 0) > (best.vote_average || 0) ? curr : best,
-        )
-      : null;
-
-  const topRatedShow =
-    watchedShows.length > 0
-      ? watchedShows.reduce((best, curr) =>
-          (curr.vote_average || 0) > (best.vote_average || 0) ? curr : best,
-        )
-      : null;
-
-  const longestShow =
-    watchedShows.length > 0
-      ? watchedShows.reduce((best, curr) => {
-          const bestSeasons = getSeasonsCount(best) || 0;
-          const currSeasons = getSeasonsCount(curr) || 0;
-          return currSeasons > bestSeasons ? curr : best;
-        })
-      : null;
-
-  // Because you watched...
-  const fetchRecommendations = async () => {
-    if (!watched || watched.length === 0) return;
-
-    const candidates = watched.filter(
-      (i) => Array.isArray(i.genre_ids) && i.genre_ids.length > 0,
-    );
-
-    if (candidates.length === 0) {
-      setRecommendations([]);
-      setRecContext(null);
-      return;
-    }
-
-    const seed = candidates[Math.floor(Math.random() * candidates.length)];
-    const genreIds = seed.genre_ids;
-    const chosenGenreId = genreIds[Math.floor(Math.random() * genreIds.length)];
-
-    const mediaType = isShow(seed) ? "tv" : "movie";
-    const endpoint = mediaType === "tv" ? "tv" : "movie";
-
-    setIsRecLoading(true);
-    setRecError("");
-    setRecContext({
-      title: seed.title || seed.name || "",
-      mediaType,
-    });
-
-    try {
-      const data = await cachedFetchJson(
-        `${TMDB_BASE_URL}/discover/${endpoint}?api_key=${API_KEY}&with_genres=${chosenGenreId}&sort_by=popularity.desc`,
-        {
-          ttlMs: 6 * 60 * 60 * 1000,
-          cacheKey: `discover:${endpoint}:genre:${chosenGenreId}`,
-        },
-      );
-      const all = data.results || [];
-
-      const watchedIds = new Set(
-        watched
-          .filter((w) => mediaTypeOf(w) === mediaType)
-          .map((w) => String(w.id)),
-      );
-
-      const cleaned = all
-        .filter((item) => !watchedIds.has(String(item?.id)))
-        .slice(0, 8)
-        .map((item) => ({
-          ...item,
-          mediaType,
-          title: item.title || item.name,
-        }));
-
-      setRecommendations(cleaned);
-    } catch (err) {
-      console.error("Failed to fetch recommendations", err);
-      setRecommendations([]);
-      setRecError("Could not load recommendations.");
-    } finally {
-      setIsRecLoading(false);
-    }
-  };
-
-  // Trigga recommendations när watched uppdateras
-  useEffect(() => {
-    if (watched.length > 0) {
-      fetchRecommendations();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watched]);
-
-  const renderSmallCard = (label, item, key) => {
-    if (!item) return null;
-
-    const year = getYear(item);
-    const seasonsCount = getSeasonsCount(item);
-    const rating =
-      typeof item.vote_average === "number"
-        ? item.vote_average.toFixed(1)
-        : null;
-
-    return (
-      <button
-        key={key}
-        type="button"
-        onClick={() => openDetails(item)}
-        className="flex w-full text-left app-card app-card-hover"
-      >
-        <div className="flex-shrink-0 w-16 sm:w-20">
-          {item.poster_path ? (
-            <img
-              src={`${IMAGE_BASE_URL}${item.poster_path}`}
-              alt={item.title || item.name}
-              className="object-cover w-full h-full"
-            />
-          ) : (
-            <div className="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-800">
-              No image
-            </div>
-          )}
-        </div>
-        <div className="flex-1 px-3 py-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-            {label}
-          </div>
-          <div className="text-sm font-bold text-gray-100 sm:text-base">
-            {(item.title || item.name || "").toUpperCase()}
-          </div>
-          <div className="mt-0.5 text-xs text-gray-300">
-            {/* Rad 1: typ + år */}
-            <div>
-              {item.mediaType === "tv" ? "TV SHOW" : "MOVIE"}
-              {year && <> • {year}</>}
-            </div>
-
-            {/* Rad 2: säsonger + betyg */}
-            <div>
-              {seasonsCount && (
-                <>
-                  {seasonsCount} SEASON{seasonsCount > 1 ? "S" : ""}{" "}
-                </>
-              )}
-              {rating && <> Rating {rating}</>}
-            </div>
-
-            {/* Rad 3: genres */}
-            {item.genres && item.genres.length > 0 && (
-              <div className="mt-0.5 text-[10px] text-gray-400">
-                {item.genres.map((g) => g.name).join(" • ")}
-              </div>
-            )}
-          </div>
-        </div>
-      </button>
-    );
-  };
-
   return (
     <div className="app-page">
       <div className="app-container">
@@ -792,137 +743,24 @@ const OverviewPage = () => {
           <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
         )}
 
-        {/* Upcoming */}
-        {(upcomingLoading || upcomingError || upcoming.length > 0) && (
-          <div className="p-4 mb-6 app-panel">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <h2 className="text-lg font-semibold text-gray-100">Upcoming</h2>
-              <button
-                type="button"
-                onClick={() => navigate("/upcoming")}
-                className="px-3 py-2 text-xs app-button-ghost"
-              >
-                See all
-              </button>
-            </div>
+        <ContinueWatchingSection
+          items={continueWatching}
+          onOpen={openDetails}
+        />
 
-            {upcomingLoading && (
-              <div className="py-1 text-sm text-gray-400">Loading…</div>
-            )}
-
-            {!upcomingLoading && upcomingError && (
-              <div className="py-1 text-sm text-red-300">{upcomingError}</div>
-            )}
-
-            {!upcomingLoading && !upcomingError && upcoming.length > 0 && (
-              <div className="space-y-2">
-                {upcoming.map((u) => {
-                  const rel = relativeLabel(u.air_date);
-                  const isSeasonPremiere = u.episode_number === 1;
-                  return (
-                    <button
-                      key={`upcoming:${u.id}`}
-                      type="button"
-                      onClick={() => openDetails(u)}
-                      className="flex w-full text-left app-card app-card-hover"
-                    >
-                      <div className="flex-shrink-0 w-16 sm:w-20">
-                        {u.poster_path ? (
-                          <img
-                            src={`${IMAGE_BASE_URL}${u.poster_path}`}
-                            alt={u.name}
-                            className="object-cover w-full h-full"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-800">
-                            No image
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex-1 px-3 py-2">
-                        <div className="flex items-baseline justify-between gap-3">
-                          <div className="text-sm font-bold text-yellow-400 sm:text-base">
-                            {(u.name || "").toUpperCase()}
-                          </div>
-                          {rel && (
-                            <div className="text-[10px] font-semibold tracking-wide text-gray-400">
-                              {rel.toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="mt-0.5 text-xs text-gray-300">
-                          {isSeasonPremiere
-                            ? "SEASON PREMIERE"
-                            : "NEXT EPISODE"}
-                          {typeof u.season_number === "number" &&
-                            typeof u.episode_number === "number" && (
-                              <>
-                                {" "}
-                                • S{u.season_number}E{u.episode_number}
-                              </>
-                            )}
-                          {u.air_date && <> • {fmtDate(u.air_date)}</>}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Snabba siffror */}
-        {/* <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
-        <div className="p-3 text-center app-panel border-yellow-500/30">
-          <div className="text-xs text-gray-400">Total watched</div>
-          <div className="text-2xl font-bold text-yellow-400">
-            {watched.length}
-          </div>
-        </div>
-        <div className="p-3 text-center app-panel border-yellow-500/30">
-          <div className="text-xs text-gray-400">Movies</div>
-          <div className="text-2xl font-bold text-yellow-400">
-            {watchedMovies.length}
-          </div>
-        </div>
-        <div className="p-3 text-center app-panel border-yellow-500/30">
-          <div className="text-xs text-gray-400">Shows</div>
-          <div className="text-2xl font-bold text-yellow-400">
-            {watchedShows.length}
-          </div>
-        </div>
-        <div className="p-3 text-center app-panel border-yellow-500/30">
-          <div className="text-xs text-gray-400">Favorites</div>
-          <div className="text-2xl font-bold text-yellow-400">
-            {favorites.length}
-          </div>
-        </div>
-      </div> */}
-
-        {/* Avsnitts-statistik */}
-        {/* <div className="p-4 mb-6 app-panel">
-        <h2 className="mb-2 text-lg font-semibold text-yellow-400">
-          Episode progress
-        </h2>
-        <p className="text-sm text-gray-300">
-          You have tracked{" "}
-          <span className="font-semibold text-yellow-400">
-            {totalEpisodesWatched}
-          </span>{" "}
-          watched episodes across{" "}
-          <span className="font-semibold text-yellow-400">
-            {watchedShows.length}
-          </span>{" "}
-          shows.
-        </p>
-      </div> */}
+        <UpcomingSection
+          upcoming={upcoming}
+          loading={upcomingLoading}
+          error={upcomingError}
+          onOpen={openDetails}
+          onSeeAll={() => navigate("/upcoming")}
+          relativeLabel={relativeLabel}
+          fmtDate={fmtDate}
+          imageBaseUrl={IMAGE_BASE_URL}
+        />
 
         {/* AI pick */}
-        <div className="relative p-4 mb-6 overflow-hidden border rounded-2xl border-white/10 bg-gradient-to-br from-gray-900/80 via-gray-900/90 to-gray-800/60 ring-1 ring-white/10">
+        <div className="relative p-4 mb-6 border rounded-2xl border-white/10 bg-gradient-to-br from-gray-900/80 via-gray-900/90 to-gray-800/60 ring-1 ring-white/10">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -935,15 +773,140 @@ const OverviewPage = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={pickClientSide}
-              disabled={aiLoading}
-              className="ai-pick-cta app-button-primary relative isolate overflow-hidden px-4 py-2.5 text-sm font-bold tracking-wide uppercase disabled:opacity-60"
-            >
-              {aiLoading ? "Thinking..." : "Pick something"}
-            </button>
+            <div className="flex items-center gap-2">
+              {(aiPrefs.genres.length > 0 || aiPrefs.actors.length > 0) && (
+                <button
+                  type="button"
+                  onClick={clearAiPreferences}
+                  className="px-3 py-2 text-xs font-semibold border rounded-xl border-white/15 text-gray-300 hover:border-white/30"
+                >
+                  Reset
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowPrefs((v) => !v)}
+                className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-colors ${
+                  showPrefs ||
+                  aiPrefs.genres.length > 0 ||
+                  aiPrefs.actors.length > 0
+                    ? "border-yellow-400/50 bg-yellow-400/10 text-yellow-300"
+                    : "border-white/15 text-gray-400 hover:border-white/30"
+                }`}
+                aria-label="Toggle preferences"
+              >
+                ⚙ Preferences
+                {aiPrefs.genres.length + aiPrefs.actors.length > 0
+                  ? ` (${aiPrefs.genres.length + aiPrefs.actors.length})`
+                  : ""}
+              </button>
+              <button
+                type="button"
+                onClick={pickClientSide}
+                disabled={aiLoading}
+                className="ai-pick-cta app-button-primary relative isolate overflow-hidden px-4 py-2.5 text-sm font-bold tracking-wide uppercase disabled:opacity-60"
+              >
+                {aiLoading ? "Thinking..." : "Pick"}
+              </button>
+            </div>
           </div>
+
+          {/* Preferences panel */}
+          {showPrefs && (
+            <div className="mt-3 pt-3 border-t border-white/10 space-y-3">
+              {/* Genre chips */}
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Genres
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {AI_GENRES.map((g) => {
+                    const active = aiPrefs.genres.some(
+                      (x) => x.name === g.name,
+                    );
+                    return (
+                      <button
+                        key={g.name}
+                        type="button"
+                        onClick={() => toggleGenre(g)}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                          active
+                            ? "bg-yellow-400 text-gray-950 border-yellow-400"
+                            : "bg-transparent text-gray-300 border-white/20 hover:border-yellow-400/50"
+                        }`}
+                      >
+                        {g.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Actor search */}
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Actors / Directors
+                </p>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={actorQuery}
+                    onChange={(e) => searchActors(e.target.value)}
+                    placeholder="Search by name…"
+                    className="w-full rounded-xl border border-white/15 bg-gray-950 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/60"
+                  />
+                  {actorResults.length > 0 && (
+                    <div className="absolute z-[60] mt-1 w-full rounded-xl border border-white/10 bg-gray-900 shadow-xl overflow-y-auto max-h-60">
+                      {actorResults.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => addActor(a)}
+                          className="flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-100 hover:bg-white/5"
+                        >
+                          {a.profile_path ? (
+                            <img
+                              src={`https://image.tmdb.org/t/p/w45${a.profile_path}`}
+                              alt={a.name}
+                              className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-7 h-7 rounded-full bg-gray-700 flex-shrink-0" />
+                          )}
+                          <span>{a.name}</span>
+                          {a.known_for_department && (
+                            <span className="ml-auto text-xs text-gray-500">
+                              {a.known_for_department}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {aiPrefs.actors.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {aiPrefs.actors.map((a) => (
+                      <span
+                        key={a.id}
+                        className="inline-flex items-center gap-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 px-2.5 py-0.5 text-xs font-semibold text-yellow-200"
+                      >
+                        {a.name}
+                        <button
+                          type="button"
+                          onClick={() => removeActor(a.id)}
+                          aria-label={`Remove ${a.name}`}
+                          className="ml-0.5 text-yellow-400 hover:text-yellow-200"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="mt-3 border-t border-white/10" />
 
@@ -983,56 +946,6 @@ const OverviewPage = () => {
             </div>
           )}
         </div>
-
-        {/* Genre breakdown */}
-        {topGenres.length > 0 && (
-          <div className="p-4 mb-6 app-panel">
-            <h2 className="mb-2 text-lg font-semibold text-yellow-400">
-              Top genres
-            </h2>
-            <p className="mb-3 text-sm text-gray-300">
-              Based on your watched movies and shows.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {topGenres.map(([name, count]) => (
-                <span key={name} className="tracking-wide uppercase app-badge">
-                  {name} <span className="text-gray-300">· {count}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Because you watched ... */}
-        {/* {(isRecLoading || recommendations.length > 0) && (
-        <section className="mt-8">
-          <h2 className="mb-2 text-xl font-bold tracking-wide text-yellow-400 uppercase">
-            Because you watched{" "}
-            {recContext?.title
-              ? recContext.title.toUpperCase()
-              : "one of your shows"}
-          </h2>
-
-          {isRecLoading && (
-            <div className="py-4 text-sm text-yellow-400">
-              Finding similar{" "}
-              {recContext?.mediaType === "tv" ? "shows" : "movies"}...
-            </div>
-          )}
-
-          {!isRecLoading && recError && (
-            <div className="py-2 text-sm text-red-300">{recError}</div>
-          )}
-
-          {!isRecLoading && recommendations.length > 0 && (
-            <div className="space-y-3">
-              {recommendations.map((item) =>
-                renderSmallCard("Recommended", item, item.id)
-              )}
-            </div>
-          )}
-        </section>
-      )} */}
 
         {/* Detalj-modal */}
         {selectedItem &&

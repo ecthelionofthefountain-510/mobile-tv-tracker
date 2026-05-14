@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import { cachedFetchJson } from "../utils/tmdbCache";
 import { useModalA11y } from "../hooks/useModalA11y";
@@ -50,7 +50,7 @@ const ShowDetailModal = ({
   const [providersLoading, setProvidersLoading] = useState(false);
   const [providersError, setProvidersError] = useState("");
 
-  const pickProviders = (results) => {
+  const pickProviders = useCallback((results) => {
     if (!results || typeof results !== "object") return null;
     return (
       results.SE ||
@@ -60,7 +60,7 @@ const ShowDetailModal = ({
       Object.values(results).find((v) => v && typeof v === "object") ||
       null
     );
-  };
+  }, []);
 
   const uniqProviders = (list) => {
     const arr = Array.isArray(list) ? list : [];
@@ -104,8 +104,7 @@ const ShowDetailModal = ({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayShow?.id]);
+  }, [displayShow?.id, pickProviders]);
 
   if (!show) return null;
 

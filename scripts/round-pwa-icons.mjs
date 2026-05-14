@@ -44,16 +44,12 @@ async function roundIcon(iconPath) {
 
 const results = [];
 for (const iconPath of icons) {
-  // eslint-disable-next-line no-console
   console.log(`Rounding corners: ${iconPath}`);
-  // eslint-disable-next-line no-await-in-loop
   const info = await roundIcon(iconPath);
   results.push({ iconPath, ...info });
 }
 
-// eslint-disable-next-line no-console
 console.log("Done.");
 for (const r of results) {
-  // eslint-disable-next-line no-console
   console.log(`- ${r.iconPath}: ${r.width}x${r.height}, radius=${r.radius}`);
 }

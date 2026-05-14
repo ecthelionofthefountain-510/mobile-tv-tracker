@@ -12,9 +12,11 @@ import {
   saveFavorites,
   favoriteIdentity,
 } from "../utils/favoritesStorage";
+import { loadAppPreference } from "../utils/appPreferences";
 // import SwipeInfoToast from "./SwipeInfoToast";
 
 const FavoritesList = ({ embedded = false } = {}) => {
+  const initialSort = loadAppPreference("defaultSort", "dateAdded");
   const [favorites, setFavorites] = useState([]);
   const [filteredFavorites, setFilteredFavorites] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,7 +24,9 @@ const FavoritesList = ({ embedded = false } = {}) => {
   const [itemDetails, setItemDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [watched, setWatched] = useState([]);
-  const [sortBy, setSortBy] = useState("dateAdded"); // "title" eller "dateAdded"
+  const [sortBy, setSortBy] = useState(
+    initialSort === "title" ? "title" : "dateAdded",
+  ); // "title" eller "dateAdded"
 
   const [errorMessage, setErrorMessage] = useState("");
 

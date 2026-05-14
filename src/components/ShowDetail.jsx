@@ -20,43 +20,17 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   });
   const [stats, setStats] = useState({ total: 0, watched: 0 });
   const [hasChanges, setHasChanges] = useState(false);
-  const [sortBy, setSortBy] = useState("title"); // "title" eller "dateAdded"
-  const [searchTerm, setSearchTerm] = useState("");
-  const [watchedMovies, setWatchedMovies] = useState([]);
-  const [filteredMovies, setFilteredMovies] = useState([]);
   const [selectedEpisode, setSelectedEpisode] = useState(null);
   const [showCongrats, setShowCongrats] = useState(false);
   const prevCompletionRef = useRef(false);
 
-  const sameEntry = (a, b) =>
-    String(a?.id) === String(b?.id) &&
-    (a?.mediaType || (a?.first_air_date ? "tv" : "movie")) ===
-      (b?.mediaType || (b?.first_air_date ? "tv" : "movie"));
-
-  // Calculate progress stats on load and when seasons change
-  useEffect(() => {
-    calculateStats();
-  }, [seasons, episodesData]);
-
-  // Save changes to localStorage whenever seasons data changes
-  useEffect(() => {
-    if (hasChanges) {
-      void saveChangesToStorage();
-    }
-  }, [seasons, hasChanges]);
-
-  // Load progress from localStorage on mount
-  useEffect(() => {
-    (async () => {
-      const allWatched = await loadWatchedAll();
-      const found = allWatched.find((item) =>
-        sameEntry(item, { id: show.id, mediaType: "tv" }),
-      );
-      if (found && found.seasons && !Array.isArray(found.seasons)) {
-        setSeasons(found.seasons);
-      }
-    })();
-  }, [show.id]);
+  const sameEntry = useCallback(
+    (a, b) =>
+      String(a?.id) === String(b?.id) &&
+      (a?.mediaType || (a?.first_air_date ? "tv" : "movie")) ===
+        (b?.mediaType || (b?.first_air_date ? "tv" : "movie")),
+    [],
+  );
 
   const computeCompletion = useCallback(
     (nextSeasons) => {
@@ -80,17 +54,6 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     },
     [episodesData, show?.number_of_episodes],
   );
-
-  // Fire celebration exactly when we transition to 100% watched (after user changes)
-  useEffect(() => {
-    const isCompletedNow = computeCompletion(seasons);
-
-    if (hasChanges && isCompletedNow && !prevCompletionRef.current) {
-      setShowCongrats(true);
-    }
-
-    prevCompletionRef.current = isCompletedNow;
-  }, [computeCompletion, hasChanges, seasons]);
 
   // Function to save changes to storage (robust: upsert + id-typ-säker)
   const saveChangesToStorage = useCallback(async () => {
@@ -144,18 +107,8 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     show.title,
   ]);
 
-  // Modified onBack handler to ensure changes are saved
-  const handleBack = async () => {
-    if (hasChanges) {
-      await saveChangesToStorage();
-    }
-
-    // Trigger the onBack callback to navigate back
-    onBack();
-  };
-
-  // Calculate watched vs total episodes
-  const calculateStats = () => {
+  // Calculate progress stats on load and when seasons change
+  useEffect(() => {
     let totalEpisodes = 0;
     let watchedCount = 0;
 
@@ -168,39 +121,94 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     });
 
     setStats({ total: totalEpisodes, watched: watchedCount });
+  }, [seasons, episodesData]);
+
+  // Save changes to localStorage whenever seasons data changes
+  useEffect(() => {
+    if (hasChanges) {
+      void saveChangesToStorage();
+    }
+  }, [hasChanges, saveChangesToStorage]);
+
+  // Load progress from localStorage on mount
+  useEffect(() => {
+    (async () => {
+      const allWatched = await loadWatchedAll();
+      const found = allWatched.find((item) =>
+        sameEntry(item, { id: show.id, mediaType: "tv" }),
+      );
+      if (found && found.seasons && !Array.isArray(found.seasons)) {
+        setSeasons(found.seasons);
+      }
+    })();
+  }, [sameEntry, show.id]);
+
+  // Fire celebration exactly when we transition to 100% watched (after user changes)
+  useEffect(() => {
+    const isCompletedNow = computeCompletion(seasons);
+
+    if (hasChanges && isCompletedNow && !prevCompletionRef.current) {
+      setShowCongrats(true);
+    }
+
+    prevCompletionRef.current = isCompletedNow;
+  }, [computeCompletion, hasChanges, seasons]);
+
+  // Modified onBack handler to ensure changes are saved
+  const handleBack = async () => {
+    if (hasChanges) {
+      await saveChangesToStorage();
+    }
+
+    // Trigger the onBack callback to navigate back
+    onBack();
   };
 
   // Fetch all seasons data on initial load
   useEffect(() => {
+    const seasonsCount = Number(show?.number_of_seasons) || 0;
+
     const fetchAllSeasons = async () => {
       try {
         setIsLoading(true);
         setLoadingText("Loading all seasons...");
 
-        const promises = [];
-        for (let i = 1; i <= show.number_of_seasons; i++) {
-          promises.push(fetchSeasonEpisodes(i));
-        }
+        const seasonNumbers = Array.from(
+          { length: seasonsCount },
+          (_, index) => index + 1,
+        );
 
-        await Promise.all(promises);
+        const seasonResults = await Promise.all(
+          seasonNumbers.map(async (seasonNumber) => {
+            const data = await cachedFetchJson(
+              `${TMDB_BASE_URL}/tv/${show.id}/season/${seasonNumber}?api_key=${API_KEY}`,
+              { ttlMs: 24 * 60 * 60 * 1000 },
+            );
+            return [seasonNumber, data?.episodes || []];
+          }),
+        );
+
+        const nextEpisodesData = {};
+        for (const [seasonNumber, episodes] of seasonResults) {
+          nextEpisodesData[seasonNumber] = episodes;
+        }
+        setEpisodesData(nextEpisodesData);
+
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching all seasons:", error);
         setIsLoading(false);
-        showNotification("Failed to load all seasons. Please try again.");
+        setNotification({
+          show: true,
+          message: "Failed to load all seasons. Please try again.",
+        });
       }
     };
 
-    fetchAllSeasons();
-  }, [show.id]);
-
-  // Show notification handler
-  const showNotification = (message) => {
-    setNotification({
-      show: true,
-      message,
-    });
-  };
+    if (seasonsCount > 0) {
+      fetchAllSeasons();
+    }
+  }, [show.id, show?.number_of_seasons]);
 
   // Close notification handler
   const closeNotification = () => {
@@ -232,7 +240,9 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
   // Toggle season expansion
   const toggleSeason = (seasonNumber) => {
-    setExpandedSeason(expandedSeason === seasonNumber ? null : seasonNumber);
+    setExpandedSeason((current) =>
+      current === seasonNumber ? null : seasonNumber,
+    );
   };
 
   // Get sorted episodes based on current sort option
@@ -287,14 +297,18 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
         targetEpisodes = episodes.map((ep) => ep.episode_number);
         break;
       case "first-half":
-        const midpoint = Math.ceil(episodes.length / 2);
-        targetEpisodes = episodes
-          .slice(0, midpoint)
-          .map((ep) => ep.episode_number);
+        {
+          const midpoint = Math.ceil(episodes.length / 2);
+          targetEpisodes = episodes
+            .slice(0, midpoint)
+            .map((ep) => ep.episode_number);
+        }
         break;
       case "second-half":
-        const mid = Math.ceil(episodes.length / 2);
-        targetEpisodes = episodes.slice(mid).map((ep) => ep.episode_number);
+        {
+          const mid = Math.ceil(episodes.length / 2);
+          targetEpisodes = episodes.slice(mid).map((ep) => ep.episode_number);
+        }
         break;
       case "unseen":
         targetEpisodes = episodes
@@ -376,43 +390,6 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
     setSeasons(updatedSeasons);
     setHasChanges(true); // <-- Viktigt!
-  };
-
-  // Sort movies function
-  const sortMovies = (movies, sortBy) => {
-    if (sortBy === "title") {
-      return [...movies].sort((a, b) =>
-        a.title.toLowerCase().localeCompare(b.title.toLowerCase()),
-      );
-    } else if (sortBy === "dateAdded") {
-      return [...movies].sort(
-        (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0),
-      );
-    }
-    return movies;
-  };
-
-  // When loading movies
-  useEffect(() => {
-    (async () => {
-      const allWatched = await loadWatchedAll();
-      const movies = allWatched.filter((item) => item.mediaType === "movie");
-      setWatchedMovies(sortMovies(movies, sortBy));
-      setFilteredMovies(sortMovies(movies, sortBy));
-    })();
-  }, [sortBy]);
-
-  const handleSearch = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-
-    let filtered = watchedMovies;
-    if (value.trim() !== "") {
-      filtered = watchedMovies.filter((movie) =>
-        movie.title.toLowerCase().includes(value.toLowerCase()),
-      );
-    }
-    setFilteredMovies(sortMovies(filtered, sortBy));
   };
 
   return (

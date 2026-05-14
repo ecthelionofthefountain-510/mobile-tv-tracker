@@ -32,7 +32,7 @@ export function resolveTheme(preference) {
   return "dark";
 }
 
-export function applyThemePreference(preference) {
+export function applyThemePreference() {
   if (typeof window === "undefined") return;
 
   // Dark-only for now.

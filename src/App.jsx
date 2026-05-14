@@ -10,12 +10,23 @@ import SearchPage from "./components/SearchPage";
 import ShowsList from "./components/ShowsList";
 import MoviesList from "./components/MoviesList";
 import Navbar from "./components/Navbar";
+import LoginPage from "./components/LoginPage";
 import ProfilePage from "./components/ProfilePage";
 import OverviewPage from "./components/OverviewPage";
-import SettingsPage from "./components/SettingsPage";
 import UpcomingPage from "./components/UpcomingPage";
+import OnboardingModal from "./components/OnboardingModal";
+import AppIntroSplash from "./components/AppIntroSplash";
 import "./index.css";
 import { applyThemePreference, getStoredThemePreference } from "./utils/theme";
+import { getOnboardingSeen, setOnboardingSeen } from "./utils/appPreferences";
+
+function getCurrentUserFromStorage() {
+  try {
+    return JSON.parse(localStorage.getItem("currentUser"));
+  } catch {
+    return null;
+  }
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -40,16 +51,16 @@ const App = () => {
 
 function AppShell() {
   const { pathname } = useLocation();
-  const hideNavbar = pathname === "/settings";
+  const [currentUser, setCurrentUser] = useState(() =>
+    getCurrentUserFromStorage(),
+  );
+  const [showIntroSplash, setShowIntroSplash] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     const applyFromStorage = () => {
-      let user = null;
-      try {
-        user = JSON.parse(localStorage.getItem("currentUser"));
-      } catch {
-        user = null;
-      }
+      const user = getCurrentUserFromStorage();
+      setCurrentUser(user);
 
       applyThemePreference(getStoredThemePreference(user));
     };
@@ -59,30 +70,107 @@ function AppShell() {
     return () => window.removeEventListener("storage", applyFromStorage);
   }, []);
 
+  useEffect(() => {
+    if (!currentUser) {
+      setShowOnboarding(false);
+      return;
+    }
+
+    const user = getCurrentUserFromStorage();
+    setShowOnboarding(!getOnboardingSeen(user));
+  }, [pathname, currentUser]);
+
+  const handleLogin = (user) => {
+    if (!user || typeof user !== "string") return;
+    try {
+      localStorage.setItem("currentUser", JSON.stringify(user));
+    } catch {
+      // ignore
+    }
+    setCurrentUser(user);
+    applyThemePreference(getStoredThemePreference(user));
+  };
+
+  const finishOnboarding = () => {
+    const user = getCurrentUserFromStorage();
+    setOnboardingSeen(true, user);
+    setShowOnboarding(false);
+  };
+
   return (
     <div className="flex flex-col h-screen">
-      <div
-        className={
-          "flex-grow overflow-auto main-content" + (hideNavbar ? "" : " pb-20")
-        }
-      >
+      <div className="flex-grow overflow-auto main-content pb-20">
         <Routes>
-          <Route path="/" element={<Navigate to="/search" replace />} />
-          <Route path="/shows" element={<ShowsList />} />
-          <Route path="/movies" element={<MoviesList />} />
-          <Route path="/search" element={<SearchPage />} />
+          <Route
+            path="/"
+            element={
+              <Navigate to={currentUser ? "/search" : "/login"} replace />
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              currentUser ? (
+                <Navigate to="/search" replace />
+              ) : (
+                <LoginPage onLogin={handleLogin} />
+              )
+            }
+          />
+          <Route
+            path="/shows"
+            element={
+              currentUser ? <ShowsList /> : <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/movies"
+            element={
+              currentUser ? <MoviesList /> : <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/search"
+            element={
+              currentUser ? <SearchPage /> : <Navigate to="/login" replace />
+            }
+          />
           <Route
             path="/favorites"
             element={<Navigate to="/profile" replace />}
           />
-          <Route path="/overview" element={<OverviewPage />} />
-          <Route path="/upcoming" element={<UpcomingPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route
+            path="/overview"
+            element={
+              currentUser ? <OverviewPage /> : <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/upcoming"
+            element={
+              currentUser ? <UpcomingPage /> : <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              currentUser ? <ProfilePage /> : <Navigate to="/login" replace />
+            }
+          />
           {/* Fallback route */}
+          <Route
+            path="*"
+            element={
+              <Navigate to={currentUser ? "/search" : "/login"} replace />
+            }
+          />
         </Routes>
       </div>
-      {!hideNavbar && <Navbar />}
+      {currentUser && <Navbar />}
+      {showIntroSplash && (
+        <AppIntroSplash onDone={() => setShowIntroSplash(false)} />
+      )}
+      {showOnboarding && <OnboardingModal onFinish={finishOnboarding} />}
     </div>
   );
 }

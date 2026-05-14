@@ -8,14 +8,12 @@ import React, {
 import { Link, useNavigate } from "react-router-dom";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import {
-  FaArchive,
   FaCamera,
   FaChartPie,
   FaChevronRight,
   FaPlus,
   FaRegCalendarAlt,
   FaTimes,
-  FaTrashAlt,
 } from "react-icons/fa";
 import { API_KEY, IMAGE_BASE_URL, TMDB_BASE_URL } from "../config";
 import {
@@ -32,6 +30,13 @@ import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
 import FavoritesTitlesModal from "./FavoritesTitlesModal";
 import BackupControls from "./BackupControls";
+import {
+  APP_DEFAULT_SORTS,
+  APP_TOAST_DURATIONS,
+  loadAppPreference,
+  saveAppPreference,
+  setOnboardingSeen,
+} from "../utils/appPreferences";
 
 const DEFAULT_PROFILE_KEY = "__default__";
 
@@ -115,14 +120,19 @@ const ProfilePage = () => {
     country: "",
   });
   const [editStatus, setEditStatus] = useState("");
-  const [toolsStatus, setToolsStatus] = useState("");
   const [toastMsg, setToastMsg] = useState("");
+  const [prefDefaultSort, setPrefDefaultSort] = useState("dateAdded");
+  const [prefToastDurationMs, setPrefToastDurationMs] = useState(3000);
+  const toastDurationMs = Number(prefToastDurationMs) || 3000;
   const toastTimer = useRef(null);
-  const showToast = useCallback((msg) => {
-    setToastMsg(msg);
-    clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToastMsg(""), 3000);
-  }, []);
+  const showToast = useCallback(
+    (msg) => {
+      setToastMsg(msg);
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setToastMsg(""), toastDurationMs);
+    },
+    [toastDurationMs],
+  );
 
   const [favorites, setFavorites] = useState([]);
   const [watched, setWatched] = useState([]);
@@ -139,12 +149,32 @@ const ProfilePage = () => {
   const coverInputRef = useRef(null);
   const quickCoverInputRef = useRef(null);
   const quickAvatarInputRef = useRef(null);
-  const backupAnchorRef = useRef(null);
 
   const activeUser = useMemo(() => {
     const u = currentUser || getCurrentUser();
     return typeof u === "string" && u.trim() ? u : null;
   }, [currentUser]);
+
+  useEffect(() => {
+    setPrefDefaultSort(
+      loadAppPreference("defaultSort", "dateAdded", activeUser),
+    );
+    setPrefToastDurationMs(
+      Number(loadAppPreference("toastDurationMs", 3000, activeUser)) || 3000,
+    );
+  }, [activeUser]);
+
+  useEffect(() => {
+    saveAppPreference("defaultSort", prefDefaultSort, activeUser);
+  }, [activeUser, prefDefaultSort]);
+
+  useEffect(() => {
+    saveAppPreference(
+      "toastDurationMs",
+      Number(prefToastDurationMs),
+      activeUser,
+    );
+  }, [activeUser, prefToastDurationMs]);
 
   const storageKeyForUser = (user) => (user ? user : DEFAULT_PROFILE_KEY);
 
@@ -548,6 +578,21 @@ const ProfilePage = () => {
     }
   };
 
+  const rerunOnboarding = () => {
+    setOnboardingSeen(false, activeUser);
+    showToast("Onboarding will show next time you open a page.");
+  };
+
+  const switchUser = () => {
+    try {
+      localStorage.removeItem("currentUser");
+    } catch {
+      // ignore
+    }
+    emitProfileMediaUpdated({ kind: "user", user: null });
+    navigate("/login");
+  };
+
   const toggleFavorite = (item) => {
     const normalizedItem = {
       ...item,
@@ -821,47 +866,6 @@ const ProfilePage = () => {
         <div className="mt-4 app-panel overflow-hidden p-0 divide-y divide-white/10">
           <button
             type="button"
-            onClick={() => {
-              requestAnimationFrame(() => {
-                backupAnchorRef.current?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                });
-              });
-            }}
-            className="flex items-center justify-between w-full px-3 py-3 text-sm font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-          >
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 text-yellow-300 border rounded-lg border-white/10 bg-black/25">
-                <FaArchive aria-hidden="true" />
-              </div>
-              <span>Backup & restore</span>
-            </div>
-            <FaChevronRight
-              className="text-gray-300 text-xs"
-              aria-hidden="true"
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={clearTmdbCache}
-            className="flex items-center justify-between w-full px-3 py-3 text-sm font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-          >
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 text-yellow-300 border rounded-lg border-white/10 bg-black/25">
-                <FaTrashAlt aria-hidden="true" />
-              </div>
-              <span>Clear cache</span>
-            </div>
-            <FaChevronRight
-              className="text-gray-300 text-xs"
-              aria-hidden="true"
-            />
-          </button>
-
-          <button
-            type="button"
             onClick={() => navigate("/upcoming")}
             className="flex items-center justify-between w-full px-3 py-3 text-sm font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
           >
@@ -995,11 +999,74 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        <div ref={backupAnchorRef} className="mt-8">
-          <BackupControls compact onRestore={refreshWatchedFromStorage} />
-          {toolsStatus && (
-            <div className="mt-3 text-xs text-gray-400">{toolsStatus}</div>
-          )}
+        <div className="mt-8 app-panel p-4">
+          <h2 className="text-lg font-semibold text-gray-100">App settings</h2>
+
+          <div className="mt-4">
+            <div className="text-sm font-semibold text-gray-200">
+              Default sort order
+            </div>
+            <select
+              value={prefDefaultSort}
+              onChange={(e) => setPrefDefaultSort(e.target.value)}
+              className="app-select mt-2 w-full"
+            >
+              {APP_DEFAULT_SORTS.map((sort) => (
+                <option key={sort.value} value={sort.value}>
+                  {sort.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mt-4">
+            <div className="text-sm font-semibold text-gray-200">
+              Toast duration
+            </div>
+            <select
+              value={String(prefToastDurationMs)}
+              onChange={(e) => setPrefToastDurationMs(Number(e.target.value))}
+              className="app-select mt-2 w-full"
+            >
+              {APP_TOAST_DURATIONS.map((dur) => (
+                <option key={dur.value} value={String(dur.value)}>
+                  {dur.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <div className="text-sm font-semibold text-gray-200">
+              Data tools
+            </div>
+            <button
+              type="button"
+              onClick={clearTmdbCache}
+              className="app-button-ghost mt-3 w-full px-4 py-3"
+            >
+              Clear cache
+            </button>
+            <div className="mt-3">
+              <BackupControls compact onRestore={refreshWatchedFromStorage} />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={rerunOnboarding}
+            className="app-button-ghost mt-4 w-full px-4 py-3"
+          >
+            Show onboarding again
+          </button>
+
+          <button
+            type="button"
+            onClick={switchUser}
+            className="app-button-ghost mt-3 w-full px-4 py-3"
+          >
+            Switch user
+          </button>
         </div>
 
         {/* Cache-cleared toast */}

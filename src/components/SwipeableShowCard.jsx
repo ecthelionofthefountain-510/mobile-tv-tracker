@@ -14,18 +14,6 @@ const iconTrash = (
   </svg>
 );
 
-const iconCheck = (
-  <svg width="28" height="28" fill="none" viewBox="0 0 24 24">
-    <rect width="24" height="24" rx="12" fill="#fff" fillOpacity="0.1" />
-    <path
-      d="M6 13l4 4 8-8"
-      stroke="#fff"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
 const iconStar = (
   <svg width="28" height="28" fill="none" viewBox="0 0 24 24">
     <rect width="24" height="24" rx="12" fill="#fff" fillOpacity="0.1" />

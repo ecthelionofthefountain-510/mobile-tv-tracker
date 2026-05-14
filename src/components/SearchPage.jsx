@@ -14,6 +14,7 @@ import {
   saveFavorites,
   favoriteIdentity,
 } from "../utils/favoritesStorage";
+import { loadAppPreference } from "../utils/appPreferences";
 
 const genreMap = {
   28: "Action",
@@ -93,6 +94,8 @@ const SearchPage = () => {
 
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
+  const toastDurationMs =
+    Number(loadAppPreference("toastDurationMs", 2200)) || 2200;
 
   const searchInputRef = useRef(null);
 
@@ -135,9 +138,9 @@ const SearchPage = () => {
 
   useEffect(() => {
     if (!showToast) return;
-    const t = setTimeout(() => setShowToast(false), 2200);
+    const t = setTimeout(() => setShowToast(false), toastDurationMs);
     return () => clearTimeout(t);
-  }, [showToast]);
+  }, [showToast, toastDurationMs]);
 
   const notify = (message) => {
     setToastMessage(message);

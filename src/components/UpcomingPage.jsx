@@ -134,9 +134,7 @@ const UpcomingPage = () => {
   };
 
   useEffect(() => {
-    const key = premiereCandidateIds.join("|");
-
-    if (!key) {
+    if (premiereCandidateIds.length === 0) {
       setUpcoming([]);
       setUpcomingError("");
       return;
@@ -205,7 +203,7 @@ const UpcomingPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [premiereCandidateIds.join("|"), upcomingRetryNonce]);
+  }, [premiereCandidateIds, upcomingRetryNonce]);
 
   const openDetails = async (item) => {
     setSelectedItem({ ...item, mediaType: "tv" });

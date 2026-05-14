@@ -13,19 +13,24 @@ import {
   saveFavorites,
   favoriteIdentity,
 } from "../utils/favoritesStorage";
+import { loadAppPreference } from "../utils/appPreferences";
 
 // ev. SwipeInfoToast om du har den
 // import SwipeInfoToast from "./SwipeInfoToast";
 
 const ShowsList = () => {
+  const initialSort = loadAppPreference("defaultSort", "dateAdded");
   const [filteredShows, setFilteredShows] = useState([]);
   const [selectedShow, setSelectedShow] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showForModal, setShowForModal] = useState(null);
   const [showDetails, setShowDetails] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [sortBy, setSortBy] = useState("dateAdded");
-  const [showSwipeInfo, setShowSwipeInfo] = useState(false);
+  const [sortBy, setSortBy] = useState(
+    initialSort === "title" || initialSort === "incomplete"
+      ? initialSort
+      : "dateAdded",
+  );
 
   const listScrollYRef = useRef(0);
 
@@ -123,13 +128,6 @@ const ShowsList = () => {
     const filtered = filterShows(sorted, searchTerm);
     setFilteredShows(filtered);
   }, [watchedShowsRaw, sortBy, searchTerm]);
-
-  // Swipe-info som innan
-  useEffect(() => {
-    if (!localStorage.getItem("swipeInfoSeen")) {
-      setShowSwipeInfo(true);
-    }
-  }, []);
 
   const handleSearch = useCallback((e) => {
     setSearchTerm(e.target.value);
@@ -241,11 +239,6 @@ const ShowsList = () => {
     [removeShow],
   );
 
-  const handleCloseSwipeInfo = useCallback(() => {
-    setShowSwipeInfo(false);
-    localStorage.setItem("swipeInfoSeen", "true");
-  }, []);
-
   const refreshWatchedFromStorage = useCallback(async () => {
     await refresh();
   }, [refresh]);
@@ -283,11 +276,6 @@ const ShowsList = () => {
                   placeholder="Search your shows..."
                   value={searchTerm}
                   onChange={handleSearch}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch({ target: { value: searchTerm } });
-                    }
-                  }}
                   className="pr-10 pl-9 app-input"
                 />
                 <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
@@ -304,13 +292,6 @@ const ShowsList = () => {
                   </button>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => handleSearch({ target: { value: searchTerm } })}
-                className="px-4 app-button-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-              >
-                GO!
-              </button>
             </div>
             {searchTerm && (
               <div className="mt-2 text-sm text-gray-400">

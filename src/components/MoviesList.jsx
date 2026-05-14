@@ -13,16 +13,19 @@ import {
   saveFavorites,
   favoriteIdentity,
 } from "../utils/favoritesStorage";
+import { loadAppPreference } from "../utils/appPreferences";
 // import SwipeInfoToast from "./SwipeInfoToast";
 
 const MoviesList = () => {
+  const initialSort = loadAppPreference("defaultSort", "dateAdded");
   const [filteredMovies, setFilteredMovies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [sortBy, setSortBy] = useState("dateAdded"); // "title" | "dateAdded"
-  const [showSwipeInfo, setShowSwipeInfo] = useState(false);
+  const [sortBy, setSortBy] = useState(
+    initialSort === "title" ? "title" : "dateAdded",
+  ); // "title" | "dateAdded"
 
   // Här behöver vi ingen normalize-funktion – filmer är alltid “klara”
   const {
@@ -73,13 +76,6 @@ const MoviesList = () => {
     const filtered = filterMovies(sorted, searchTerm);
     setFilteredMovies(filtered);
   }, [watchedMoviesRaw, sortBy, searchTerm]);
-
-  // Swipe-info (valfritt, samma som på shows)
-  useEffect(() => {
-    if (!localStorage.getItem("swipeInfoMoviesSeen")) {
-      setShowSwipeInfo(true);
-    }
-  }, []);
 
   const handleSearch = useCallback((e) => {
     setSearchTerm(e.target.value);
@@ -177,11 +173,6 @@ const MoviesList = () => {
                   placeholder="Search your movies..."
                   value={searchTerm}
                   onChange={handleSearch}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch({ target: { value: searchTerm } });
-                    }
-                  }}
                   className="app-input pl-9 pr-10"
                 />
                 <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
@@ -198,13 +189,6 @@ const MoviesList = () => {
                   </button>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => handleSearch({ target: { value: searchTerm } })}
-                className="app-button-primary px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-              >
-                GO!
-              </button>
             </div>
 
             {searchTerm && (

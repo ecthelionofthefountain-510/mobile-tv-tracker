@@ -45,8 +45,9 @@
 
 /* Active tab: show dot only (hide label) */
 .nav-link-active .nav-label {
-  opacity: 0;
-  transform: translateY(-2px);
+  opacity: 1;
+  transform: translateY(0);
+  @apply text-yellow-300;
 }
 
 .nav-icon {

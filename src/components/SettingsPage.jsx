@@ -5,6 +5,14 @@ import { FaCamera, FaChevronLeft } from "react-icons/fa";
 import { getCurrentUser } from "../utils/favoritesStorage";
 import { emitProfileMediaUpdated } from "../utils/profileMediaEvents";
 import { applyThemePreference } from "../utils/theme";
+import {
+  APP_DEFAULT_SORTS,
+  APP_LANGUAGES,
+  APP_TOAST_DURATIONS,
+  loadAppPreference,
+  saveAppPreference,
+  setOnboardingSeen,
+} from "../utils/appPreferences";
 
 const profileAvatarKeyForUser = (user) =>
   user ? `profileAvatar_${user}` : "profileAvatar";
@@ -109,11 +117,20 @@ const SettingsPage = () => {
       false,
     ),
   );
+  const [prefAppLanguage, setPrefAppLanguage] = useState(() =>
+    loadAppPreference("appLanguage", "en", activeUser),
+  );
   const [prefAutoPlayVideos, setPrefAutoPlayVideos] = useState(() =>
     safeJsonParse(
       localStorage.getItem(makeSettingKey(activeUser, "autoPlayVideos")),
       false,
     ),
+  );
+  const [prefDefaultSort, setPrefDefaultSort] = useState(() =>
+    loadAppPreference("defaultSort", "dateAdded", activeUser),
+  );
+  const [prefToastDurationMs, setPrefToastDurationMs] = useState(() =>
+    loadAppPreference("toastDurationMs", 2200, activeUser),
   );
   const [prefHideWatchedEpisodes, setPrefHideWatchedEpisodes] = useState(() =>
     safeJsonParse(
@@ -148,6 +165,13 @@ const SettingsPage = () => {
         false,
       ),
     );
+    setPrefAppLanguage(loadAppPreference("appLanguage", "en", activeUser));
+    setPrefDefaultSort(
+      loadAppPreference("defaultSort", "dateAdded", activeUser),
+    );
+    setPrefToastDurationMs(
+      loadAppPreference("toastDurationMs", 2200, activeUser),
+    );
     setPrefHideWatchedEpisodes(
       safeJsonParse(
         localStorage.getItem(makeSettingKey(activeUser, "hideWatchedEpisodes")),
@@ -180,6 +204,10 @@ const SettingsPage = () => {
   }, [activeUser, prefDisplayLanguage]);
 
   useEffect(() => {
+    saveAppPreference("appLanguage", prefAppLanguage, activeUser);
+  }, [activeUser, prefAppLanguage]);
+
+  useEffect(() => {
     try {
       localStorage.setItem(
         makeSettingKey(activeUser, "autoPlayVideos"),
@@ -189,6 +217,15 @@ const SettingsPage = () => {
       // ignore
     }
   }, [activeUser, prefAutoPlayVideos]);
+
+  useEffect(() => {
+    saveAppPreference("defaultSort", prefDefaultSort, activeUser);
+  }, [activeUser, prefDefaultSort]);
+
+  useEffect(() => {
+    const valid = Number(prefToastDurationMs) || 2200;
+    saveAppPreference("toastDurationMs", valid, activeUser);
+  }, [activeUser, prefToastDurationMs]);
 
   useEffect(() => {
     try {
@@ -357,6 +394,12 @@ const SettingsPage = () => {
     } catch {
       setStatus("Could not clear cache.");
     }
+  };
+
+  const rerunOnboarding = () => {
+    setStatus("");
+    setOnboardingSeen(false, activeUser);
+    setStatus("Onboarding will show next time you leave Settings.");
   };
 
   const logOut = () => {
@@ -722,30 +765,23 @@ const SettingsPage = () => {
             <div className="flex items-center justify-between gap-4 mt-5">
               <div>
                 <div className="text-lg font-semibold text-gray-100">
-                  Display in your language
+                  App language
                 </div>
                 <div className="mt-1 text-sm text-gray-400">
-                  By default, titles will display in English
+                  Select language for labels and copy in the app.
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setPrefDisplayLanguage((v) => !v)}
-                role="switch"
-                aria-checked={!!prefDisplayLanguage}
-                className={
-                  "relative inline-flex h-8 w-14 items-center rounded-full border border-white/10 transition " +
-                  (prefDisplayLanguage ? "bg-yellow-500" : "bg-white/10")
-                }
+              <select
+                value={prefAppLanguage}
+                onChange={(e) => setPrefAppLanguage(e.target.value)}
+                className="app-select min-w-36"
               >
-                <span
-                  className={
-                    "inline-block h-6 w-6 transform rounded-full bg-gray-950 transition " +
-                    (prefDisplayLanguage ? "translate-x-7" : "translate-x-1")
-                  }
-                  aria-hidden="true"
-                />
-              </button>
+                {APP_LANGUAGES.map((lang) => (
+                  <option key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="pt-8 mt-8 border-t border-white/10">
@@ -785,6 +821,66 @@ const SettingsPage = () => {
                   />
                 </button>
               </div>
+            </div>
+
+            <div className="pt-8 mt-8 border-t border-white/10">
+              <div className="text-2xl font-bold text-gray-100">Behavior</div>
+
+              <div className="mt-5">
+                <div className="text-lg font-semibold text-gray-100">
+                  Default sort order
+                </div>
+                <div className="mt-1 text-sm text-gray-400">
+                  Used in your watched and favorites lists.
+                </div>
+                <select
+                  value={prefDefaultSort}
+                  onChange={(e) => setPrefDefaultSort(e.target.value)}
+                  className="app-select mt-3 w-full"
+                >
+                  {APP_DEFAULT_SORTS.map((sort) => (
+                    <option key={sort.value} value={sort.value}>
+                      {sort.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mt-6">
+                <div className="text-lg font-semibold text-gray-100">
+                  Toast duration
+                </div>
+                <div className="mt-1 text-sm text-gray-400">
+                  How long short notifications should stay visible.
+                </div>
+                <select
+                  value={String(prefToastDurationMs)}
+                  onChange={(e) =>
+                    setPrefToastDurationMs(Number(e.target.value))
+                  }
+                  className="app-select mt-3 w-full"
+                >
+                  {APP_TOAST_DURATIONS.map((dur) => (
+                    <option key={dur.value} value={String(dur.value)}>
+                      {dur.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-8 mt-8 border-t border-white/10">
+              <div className="text-2xl font-bold text-gray-100">Onboarding</div>
+              <div className="mt-2 text-sm text-gray-400">
+                Run the quick intro again to re-learn the main flows.
+              </div>
+              <button
+                type="button"
+                onClick={rerunOnboarding}
+                className="app-button-ghost mt-4 w-full px-4 py-3"
+              >
+                Show onboarding again
+              </button>
             </div>
 
             <div className="pt-8 mt-8 border-t border-white/10">
