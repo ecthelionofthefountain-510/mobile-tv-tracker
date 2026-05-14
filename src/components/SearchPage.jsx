@@ -729,7 +729,7 @@ const SearchPage = () => {
     return (
       <div
         key={`${normalizedItem.mediaType}-${normalizedItem.id}`}
-        className="app-card app-card-hover mb-4 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+        className="app-card app-card-hover app-stagger-item mb-4 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
         onClick={() => viewDetails(normalizedItem)}
         role="button"
         tabIndex={0}
@@ -853,7 +853,7 @@ const SearchPage = () => {
             <button
               type="button"
               onClick={() => setShowToast(false)}
-              className="app-toast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              className="app-toast app-toast-pop focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
               {toastMessage}
             </button>
@@ -932,7 +932,9 @@ const SearchPage = () => {
                 Searching...
               </div>
             ) : results.length > 0 ? (
-              <div className="space-y-4">{results.map(renderContentItem)}</div>
+              <div className="app-stagger-list space-y-4">
+                {results.map(renderContentItem)}
+              </div>
             ) : null}
           </>
         )}
@@ -946,7 +948,7 @@ const SearchPage = () => {
               {isNewMixLoading ? (
                 <div className="py-4 text-yellow-400">Loading...</div>
               ) : newMix.length > 0 ? (
-                <div className="space-y-4">
+                <div className="app-stagger-list space-y-4">
                   {newMix.map((item) => renderContentItem(item))}
                 </div>
               ) : null}
@@ -961,7 +963,7 @@ const SearchPage = () => {
                 isRecommendedMoviesLoading ? (
                   <div className="py-4 text-yellow-400">Loading...</div>
                 ) : recommendedMovies.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="app-stagger-list space-y-4">
                     {recommendedMovies.map((item) =>
                       renderContentItem({
                         ...item,
@@ -973,7 +975,7 @@ const SearchPage = () => {
                 ) : isPopularMoviesLoading ? (
                   <div className="py-4 text-yellow-400">Loading...</div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="app-stagger-list space-y-4">
                     {popularMovies.map((item) =>
                       renderContentItem({
                         ...item,
@@ -986,7 +988,7 @@ const SearchPage = () => {
               ) : isPopularMoviesLoading ? (
                 <div className="py-4 text-yellow-400">Loading...</div>
               ) : (
-                <div className="space-y-4">
+                <div className="app-stagger-list space-y-4">
                   {popularMovies.map((item) =>
                     renderContentItem({
                       ...item,
@@ -1007,7 +1009,7 @@ const SearchPage = () => {
                 isRecommendedTVLoading ? (
                   <div className="py-4 text-yellow-400">Loading...</div>
                 ) : recommendedTV.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="app-stagger-list space-y-4">
                     {recommendedTV.map((item) =>
                       renderContentItem({
                         ...item,
@@ -1019,7 +1021,7 @@ const SearchPage = () => {
                 ) : isPopularTVLoading ? (
                   <div className="py-4 text-yellow-400">Loading...</div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="app-stagger-list space-y-4">
                     {popularTV.map((item) =>
                       renderContentItem({
                         ...item,
@@ -1032,7 +1034,7 @@ const SearchPage = () => {
               ) : isPopularTVLoading ? (
                 <div className="py-4 text-yellow-400">Loading...</div>
               ) : (
-                <div className="space-y-4">
+                <div className="app-stagger-list space-y-4">
                   {popularTV.map((item) =>
                     renderContentItem({
                       ...item,
@@ -1102,12 +1104,32 @@ const SearchPage = () => {
           ))}
 
         {!isSearching && results.length === 0 && query && (
-          <div className="flex flex-col items-center py-10 text-center text-gray-400">
-            <span className="mb-2 text-5xl">🤔</span>
-            <span>
-              No results found for{" "}
-              <span className="text-yellow-400">{query}</span>
-            </span>
+          <div className="py-10">
+            <div className="app-panel mx-auto flex max-w-lg flex-col items-center gap-3 p-6 text-center">
+              <p className="text-base font-semibold text-gray-100">
+                No results found for
+              </p>
+              <p className="text-sm text-yellow-400">{query}</p>
+              <p className="text-sm text-gray-400">
+                Try a shorter query or broaden your media filter.
+              </p>
+              <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="app-button-ghost px-4 py-2"
+                >
+                  Clear search
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSearchType("all")}
+                  className="app-button-primary px-4 py-2"
+                >
+                  Search all
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -730,7 +730,7 @@ const OverviewPage = () => {
             <button
               type="button"
               onClick={() => setShowToast(false)}
-              className="app-toast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+              className="app-toast app-toast-pop focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
             >
               {toastMessage}
             </button>
@@ -760,25 +760,28 @@ const OverviewPage = () => {
         />
 
         {/* AI pick */}
-        <div className="relative p-4 mb-6 border rounded-2xl border-white/10 bg-gradient-to-br from-gray-900/80 via-gray-900/90 to-gray-800/60 ring-1 ring-white/10">
-          <div className="flex items-start justify-between gap-3">
+        <div className="app-panel relative mb-6 overflow-hidden p-4">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-yellow-300/5 via-transparent to-yellow-500/5" />
+
+          <div className="relative flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-100">
-                  <span aria-hidden className="text-yellow-300">
-                    ✦
-                  </span>
-                  AI pick
-                </h2>
-              </div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-100">
+                <span aria-hidden className="text-yellow-300">
+                  ✦
+                </span>
+                AI pick
+              </h2>
+              <p className="mt-1 text-xs text-gray-400">
+                Personalized suggestions based on your watch history.
+              </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
               {(aiPrefs.genres.length > 0 || aiPrefs.actors.length > 0) && (
                 <button
                   type="button"
                   onClick={clearAiPreferences}
-                  className="px-3 py-2 text-xs font-semibold border rounded-xl border-white/15 text-gray-300 hover:border-white/30"
+                  className="app-button-ghost px-3 py-2 text-xs"
                 >
                   Reset
                 </button>
@@ -786,16 +789,17 @@ const OverviewPage = () => {
               <button
                 type="button"
                 onClick={() => setShowPrefs((v) => !v)}
-                className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-colors ${
-                  showPrefs ||
+                className={
+                  "app-chip px-3 py-2 text-xs " +
+                  (showPrefs ||
                   aiPrefs.genres.length > 0 ||
                   aiPrefs.actors.length > 0
-                    ? "border-yellow-400/50 bg-yellow-400/10 text-yellow-300"
-                    : "border-white/15 text-gray-400 hover:border-white/30"
-                }`}
+                    ? "app-chip-active"
+                    : "")
+                }
                 aria-label="Toggle preferences"
               >
-                ⚙ Preferences
+                Preferences
                 {aiPrefs.genres.length + aiPrefs.actors.length > 0
                   ? ` (${aiPrefs.genres.length + aiPrefs.actors.length})`
                   : ""}
@@ -813,13 +817,13 @@ const OverviewPage = () => {
 
           {/* Preferences panel */}
           {showPrefs && (
-            <div className="mt-3 pt-3 border-t border-white/10 space-y-3">
+            <div className="relative mt-4 space-y-4 border-t border-white/10 pt-4">
               {/* Genre chips */}
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
                   Genres
                 </p>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {AI_GENRES.map((g) => {
                     const active = aiPrefs.genres.some(
                       (x) => x.name === g.name,
@@ -829,11 +833,9 @@ const OverviewPage = () => {
                         key={g.name}
                         type="button"
                         onClick={() => toggleGenre(g)}
-                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-                          active
-                            ? "bg-yellow-400 text-gray-950 border-yellow-400"
-                            : "bg-transparent text-gray-300 border-white/20 hover:border-yellow-400/50"
-                        }`}
+                        className={
+                          "app-chip " + (active ? "app-chip-active" : "")
+                        }
                       >
                         {g.name}
                       </button>
@@ -852,26 +854,26 @@ const OverviewPage = () => {
                     type="text"
                     value={actorQuery}
                     onChange={(e) => searchActors(e.target.value)}
-                    placeholder="Search by name…"
-                    className="w-full rounded-xl border border-white/15 bg-gray-950 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/60"
+                    placeholder="Search by name..."
+                    className="app-input w-full"
                   />
                   {actorResults.length > 0 && (
-                    <div className="absolute z-[60] mt-1 w-full rounded-xl border border-white/10 bg-gray-900 shadow-xl overflow-y-auto max-h-60">
+                    <div className="app-stagger-list absolute z-[60] mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-white/10 bg-gray-900 shadow-xl">
                       {actorResults.map((a) => (
                         <button
                           key={a.id}
                           type="button"
                           onClick={() => addActor(a)}
-                          className="flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-100 hover:bg-white/5"
+                          className="app-stagger-item flex w-full items-center gap-3 px-3 py-2 text-sm text-gray-100 transition-colors hover:bg-white/5"
                         >
                           {a.profile_path ? (
                             <img
                               src={`https://image.tmdb.org/t/p/w45${a.profile_path}`}
                               alt={a.name}
-                              className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                              className="h-7 w-7 flex-shrink-0 rounded-full object-cover"
                             />
                           ) : (
-                            <div className="w-7 h-7 rounded-full bg-gray-700 flex-shrink-0" />
+                            <div className="h-7 w-7 flex-shrink-0 rounded-full bg-gray-700" />
                           )}
                           <span>{a.name}</span>
                           {a.known_for_department && (
@@ -885,18 +887,18 @@ const OverviewPage = () => {
                   )}
                 </div>
                 {aiPrefs.actors.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {aiPrefs.actors.map((a) => (
                       <span
                         key={a.id}
-                        className="inline-flex items-center gap-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 px-2.5 py-0.5 text-xs font-semibold text-yellow-200"
+                        className="inline-flex items-center gap-1 rounded-full border border-yellow-400/30 bg-yellow-400/15 px-2.5 py-1 text-xs font-semibold text-yellow-200"
                       >
                         {a.name}
                         <button
                           type="button"
                           onClick={() => removeActor(a.id)}
                           aria-label={`Remove ${a.name}`}
-                          className="ml-0.5 text-yellow-400 hover:text-yellow-200"
+                          className="ml-0.5 text-yellow-400 transition-colors hover:text-yellow-200"
                         >
                           ×
                         </button>
@@ -908,14 +910,16 @@ const OverviewPage = () => {
             </div>
           )}
 
-          <div className="mt-3 border-t border-white/10" />
+          <div className="mt-4 border-t border-white/10" />
 
           {aiError && (
-            <div className="mt-3 text-sm text-red-300">{aiError}</div>
+            <div className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {aiError}
+            </div>
           )}
 
           {aiPicks.length > 0 && (
-            <div className="mt-3 space-y-2">
+            <div className="app-stagger-list mt-3 space-y-2">
               {aiPicks.map((p, idx) => (
                 <button
                   key={`${p.mediaType}:${p.id}`}
@@ -928,15 +932,13 @@ const OverviewPage = () => {
                       name: p.title,
                     })
                   }
-                  className="w-full p-3 text-left app-card app-card-hover"
+                  className="app-card app-card-hover app-stagger-item w-full p-3 text-left"
                 >
-                  <div className="flex items-baseline justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3">
                     <div className="text-sm font-bold text-gray-100">
                       {(p.title || "").toUpperCase()}
                     </div>
-                    <div className="text-[10px] font-semibold tracking-wide text-gray-400">
-                      #{idx + 1}
-                    </div>
+                    <div className="app-pill text-[10px]">#{idx + 1}</div>
                   </div>
                   {p.reason && (
                     <div className="mt-1 text-xs text-gray-300">{p.reason}</div>

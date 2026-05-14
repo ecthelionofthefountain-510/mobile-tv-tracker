@@ -1,5 +1,6 @@
 // MoviesList.jsx
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { API_KEY, TMDB_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import { SwipeableList } from "react-swipeable-list";
@@ -7,6 +8,7 @@ import "react-swipeable-list/dist/styles.css";
 import SwipeableMovieCard from "./SwipeableMovieCard";
 import { useWatchedList } from "../hooks/useWatchedList";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import SearchIcon from "../icons/SearchIcon";
 import {
   loadFavorites,
@@ -23,9 +25,12 @@ const MoviesList = () => {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [pendingUndo, setPendingUndo] = useState(null);
   const [sortBy, setSortBy] = useState(
     initialSort === "title" ? "title" : "dateAdded",
   ); // "title" | "dateAdded"
+  const undoTimerRef = useRef(null);
+  const sameId = (a, b) => String(a) === String(b);
 
   // Här behöver vi ingen normalize-funktion – filmer är alltid “klara”
   const {
@@ -77,6 +82,15 @@ const MoviesList = () => {
     setFilteredMovies(filtered);
   }, [watchedMoviesRaw, sortBy, searchTerm]);
 
+  useEffect(
+    () => () => {
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current);
+      }
+    },
+    [],
+  );
+
   const handleSearch = useCallback((e) => {
     setSearchTerm(e.target.value);
   }, []);
@@ -120,15 +134,63 @@ const MoviesList = () => {
     setErrorMessage("");
   }, []);
 
+  const queueUndo = useCallback((item, label) => {
+    if (!item) return;
+
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+    }
+
+    setPendingUndo({ item, label });
+    undoTimerRef.current = setTimeout(() => {
+      setPendingUndo(null);
+      undoTimerRef.current = null;
+    }, 5000);
+  }, []);
+
+  const handleUndoRemove = useCallback(async () => {
+    if (!pendingUndo?.item) return;
+
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+
+    try {
+      const all = (await loadWatchedAll()) || [];
+      const exists = all.some(
+        (entry) =>
+          sameId(entry?.id, pendingUndo.item?.id) &&
+          entry?.mediaType === pendingUndo.item?.mediaType,
+      );
+
+      if (!exists) {
+        await saveWatchedAll([...all, pendingUndo.item]);
+        await refresh();
+      }
+      setPendingUndo(null);
+    } catch (err) {
+      console.error("Could not restore removed movie", err);
+      setErrorMessage("Could not restore removed movie.");
+    }
+  }, [pendingUndo, refresh]);
+
   const removeMovie = useCallback(
-    async (id) => {
+    async (id, options = {}) => {
+      const { allowUndo = true } = options;
+      const removedItem = watchedMoviesRaw.find((item) => sameId(item?.id, id));
       await remove(id);
 
       if (selectedMovie && selectedMovie.id === id) {
         closeMovieModal();
       }
+
+      if (allowUndo && removedItem) {
+        const removedTitle = removedItem.title || removedItem.name || "Movie";
+        queueUndo(removedItem, removedTitle);
+      }
     },
-    [closeMovieModal, remove, selectedMovie],
+    [closeMovieModal, queueUndo, remove, selectedMovie, watchedMoviesRaw],
   );
 
   const addToFavorites = useCallback(
@@ -153,10 +215,15 @@ const MoviesList = () => {
       const ok = await saveFavorites(updatedFavorites);
       if (!ok) return;
 
-      await removeMovie(movie.id);
+      await removeMovie(movie.id, { allowUndo: false });
     },
     [removeMovie],
   );
+
+  const sortOptions = [
+    { value: "dateAdded", label: "Most recent" },
+    { value: "title", label: "A-Ö" },
+  ];
 
   const moviesCount = watchedMoviesRaw.length;
 
@@ -201,18 +268,28 @@ const MoviesList = () => {
         </div>
 
         {/* Sorting + title */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="font-semibold text-gray-100">
             Watched ({moviesCount})
           </div>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="app-select focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+          <div
+            className="flex flex-wrap items-center justify-end gap-2"
+            aria-label="Sort watched movies"
           >
-            <option value="title">A-Ö</option>
-            <option value="dateAdded">Most recent</option>
-          </select>
+            {sortOptions.map((option) => {
+              const isActive = sortBy === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setSortBy(option.value)}
+                  className={"app-chip " + (isActive ? "app-chip-active" : "")}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {(watchedError || errorMessage) && (
@@ -271,15 +348,56 @@ const MoviesList = () => {
         )}
 
         {!loading && filteredMovies.length === 0 && (
-          <div className="py-10 text-center">
+          <div className="py-10">
             {watchedMoviesRaw.length === 0 ? (
-              <>
-                <p className="text-gray-400">No movies in your watched list</p>
-                <p className="mt-2 text-gray-300">Start adding some movies!</p>
-              </>
+              <div className="app-panel mx-auto max-w-md space-y-3 p-6 text-center">
+                <p className="text-base font-semibold text-gray-100">
+                  No movies in your watched list
+                </p>
+                <p className="text-sm text-gray-400">
+                  Add a few favorites and keep your watch history tidy.
+                </p>
+                <Link
+                  to="/search"
+                  className="app-button-primary mt-2 px-4 py-2"
+                >
+                  Find movies
+                </Link>
+              </div>
             ) : (
-              <p className="text-gray-400">No movies match your search</p>
+              <div className="app-panel mx-auto max-w-md space-y-3 p-6 text-center">
+                <p className="text-base font-semibold text-gray-100">
+                  No movies match your search
+                </p>
+                <p className="text-sm text-gray-400">
+                  Try another title or clear the filter to see all entries.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="app-button-ghost mt-2 px-4 py-2"
+                >
+                  Clear search
+                </button>
+              </div>
             )}
+          </div>
+        )}
+
+        {pendingUndo && (
+          <div className="pointer-events-none fixed bottom-24 left-0 right-0 z-50 flex justify-center px-4">
+            <div className="app-toast app-toast-pop pointer-events-auto flex w-full max-w-lg items-center justify-between gap-3">
+              <span className="min-w-0 truncate text-sm text-yellow-100">
+                Removed {pendingUndo.label}
+              </span>
+              <button
+                type="button"
+                onClick={handleUndoRemove}
+                className="rounded-lg border border-yellow-300/45 bg-yellow-300/15 px-3 py-1 text-xs font-semibold text-yellow-50 transition-colors hover:bg-yellow-300/25"
+              >
+                Undo
+              </button>
+            </div>
           </div>
         )}
       </div>

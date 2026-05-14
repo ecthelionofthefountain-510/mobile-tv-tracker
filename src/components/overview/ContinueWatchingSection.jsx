@@ -8,13 +8,13 @@ const ContinueWatchingSection = ({ items, onOpen }) => {
       <h2 className="mb-2 text-lg font-semibold text-gray-100">
         Continue watching
       </h2>
-      <div className="space-y-2">
+      <div className="app-stagger-list space-y-2">
         {items.map((item) => (
           <button
             key={`continue:${item.id}`}
             type="button"
             onClick={() => onOpen(item)}
-            className="w-full p-3 text-left app-card app-card-hover"
+            className="app-card app-card-hover app-stagger-item w-full p-3 text-left"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-semibold text-gray-100">

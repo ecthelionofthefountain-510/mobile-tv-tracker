@@ -32,7 +32,7 @@ const UpcomingSection = ({
       )}
 
       {!loading && !error && upcoming.length > 0 && (
-        <div className="space-y-2">
+        <div className="app-stagger-list space-y-2">
           {upcoming.map((item) => {
             const rel = relativeLabel(item.air_date);
             const isSeasonPremiere = item.episode_number === 1;
@@ -41,7 +41,7 @@ const UpcomingSection = ({
                 key={`upcoming:${item.id}`}
                 type="button"
                 onClick={() => onOpen(item)}
-                className="flex w-full text-left app-card app-card-hover"
+                className="app-card app-card-hover app-stagger-item flex w-full text-left"
               >
                 <div className="flex-shrink-0 w-16 sm:w-20">
                   {item.poster_path ? (

@@ -1,11 +1,13 @@
 // ShowsList.jsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import { API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
 import SwipeableShowCard from "./SwipeableShowCard";
 import ShowDetailModal from "./ShowDetailModal";
 import { useWatchedList } from "../hooks/useWatchedList";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import SearchIcon from "../icons/SearchIcon";
 import {
   loadFavorites,
@@ -25,6 +27,7 @@ const ShowsList = () => {
   const [showForModal, setShowForModal] = useState(null);
   const [showDetails, setShowDetails] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [pendingUndo, setPendingUndo] = useState(null);
   const [sortBy, setSortBy] = useState(
     initialSort === "title" || initialSort === "incomplete"
       ? initialSort
@@ -32,6 +35,8 @@ const ShowsList = () => {
   );
 
   const listScrollYRef = useRef(0);
+  const undoTimerRef = useRef(null);
+  const sameId = (a, b) => String(a) === String(b);
 
   // Normalisering används av hooken (memoized för att undvika refresh-loop)
   const normalizeShows = useCallback((items) => {
@@ -128,6 +133,15 @@ const ShowsList = () => {
     setFilteredShows(filtered);
   }, [watchedShowsRaw, sortBy, searchTerm]);
 
+  useEffect(
+    () => () => {
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current);
+      }
+    },
+    [],
+  );
+
   const handleSearch = useCallback((e) => {
     setSearchTerm(e.target.value);
   }, []);
@@ -197,8 +211,51 @@ const ShowsList = () => {
     setErrorMessage("");
   }, []);
 
+  const queueUndo = useCallback((item, label) => {
+    if (!item) return;
+
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+    }
+
+    setPendingUndo({ item, label });
+    undoTimerRef.current = setTimeout(() => {
+      setPendingUndo(null);
+      undoTimerRef.current = null;
+    }, 5000);
+  }, []);
+
+  const handleUndoRemove = useCallback(async () => {
+    if (!pendingUndo?.item) return;
+
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+
+    try {
+      const all = (await loadWatchedAll()) || [];
+      const exists = all.some(
+        (entry) =>
+          sameId(entry?.id, pendingUndo.item?.id) &&
+          entry?.mediaType === pendingUndo.item?.mediaType,
+      );
+
+      if (!exists) {
+        await saveWatchedAll([...all, pendingUndo.item]);
+        await refresh();
+      }
+      setPendingUndo(null);
+    } catch (err) {
+      console.error("Could not restore removed show", err);
+      setErrorMessage("Could not restore removed show.");
+    }
+  }, [pendingUndo, refresh]);
+
   const removeShow = useCallback(
-    async (id) => {
+    async (id, options = {}) => {
+      const { allowUndo = true } = options;
+      const removedItem = watchedShowsRaw.find((item) => sameId(item?.id, id));
       await remove(id);
 
       if (showForModal && showForModal.id === id) {
@@ -207,8 +264,20 @@ const ShowsList = () => {
       if (selectedShow && selectedShow.id === id) {
         setSelectedShow(null);
       }
+
+      if (allowUndo && removedItem) {
+        const removedTitle = removedItem.title || removedItem.name || "Show";
+        queueUndo(removedItem, removedTitle);
+      }
     },
-    [closeShowModal, remove, selectedShow, showForModal],
+    [
+      closeShowModal,
+      queueUndo,
+      remove,
+      selectedShow,
+      showForModal,
+      watchedShowsRaw,
+    ],
   );
 
   const addToFavorites = useCallback(
@@ -233,7 +302,7 @@ const ShowsList = () => {
       const ok = await saveFavorites(updatedFavorites);
       if (!ok) return;
 
-      await removeShow(show.id);
+      await removeShow(show.id, { allowUndo: false });
     },
     [removeShow],
   );
@@ -241,6 +310,12 @@ const ShowsList = () => {
   const refreshWatchedFromStorage = useCallback(async () => {
     await refresh();
   }, [refresh]);
+
+  const sortOptions = [
+    { value: "dateAdded", label: "Most recent" },
+    { value: "title", label: "A-Ö" },
+    { value: "incomplete", label: "Not finished" },
+  ];
 
   const watchedCount = watchedShowsRaw.length;
 
@@ -302,20 +377,28 @@ const ShowsList = () => {
         </div>
 
         {/* Sort + filterrad */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="font-semibold text-gray-100">
             Watched ({watchedCount})
           </div>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="app-select focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+          <div
+            className="flex flex-wrap items-center justify-end gap-2"
             aria-label="Sort watched shows"
           >
-            <option value="title">A-Ö</option>
-            <option value="dateAdded">Most recent</option>
-            <option value="incomplete">Not finished</option>
-          </select>
+            {sortOptions.map((option) => {
+              const isActive = sortBy === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setSortBy(option.value)}
+                  className={"app-chip " + (isActive ? "app-chip-active" : "")}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {(watchedError || errorMessage) && (
@@ -371,14 +454,38 @@ const ShowsList = () => {
         )}
 
         {!loading && filteredShows.length === 0 && (
-          <div className="py-10 text-center">
+          <div className="py-10">
             {watchedShowsRaw.length === 0 ? (
-              <>
-                <p className="text-gray-400">No shows in your watched list</p>
-                <p className="mt-2 text-yellow-500">Start adding some shows!</p>
-              </>
+              <div className="app-panel mx-auto max-w-md space-y-3 p-6 text-center">
+                <p className="text-base font-semibold text-gray-100">
+                  No shows in your watched list
+                </p>
+                <p className="text-sm text-gray-400">
+                  Start tracking and we will keep your progress in one place.
+                </p>
+                <Link
+                  to="/search"
+                  className="app-button-primary mt-2 px-4 py-2"
+                >
+                  Find shows
+                </Link>
+              </div>
             ) : (
-              <p className="text-gray-400">No shows match your search</p>
+              <div className="app-panel mx-auto max-w-md space-y-3 p-6 text-center">
+                <p className="text-base font-semibold text-gray-100">
+                  No shows match your search
+                </p>
+                <p className="text-sm text-gray-400">
+                  Try a shorter title or clear the current filter.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="app-button-ghost mt-2 px-4 py-2"
+                >
+                  Clear search
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -392,6 +499,23 @@ const ShowsList = () => {
             }}
             onWatchedChanged={refreshWatchedFromStorage}
           />
+        )}
+
+        {pendingUndo && (
+          <div className="pointer-events-none fixed bottom-24 left-0 right-0 z-50 flex justify-center px-4">
+            <div className="app-toast app-toast-pop pointer-events-auto flex w-full max-w-lg items-center justify-between gap-3">
+              <span className="min-w-0 truncate text-sm text-yellow-100">
+                Removed {pendingUndo.label}
+              </span>
+              <button
+                type="button"
+                onClick={handleUndoRemove}
+                className="rounded-lg border border-yellow-300/45 bg-yellow-300/15 px-3 py-1 text-xs font-semibold text-yellow-50 transition-colors hover:bg-yellow-300/25"
+              >
+                Undo
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
