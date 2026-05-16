@@ -196,6 +196,7 @@ function AppShell() {
             element={
               currentUser ? (
                 <ProfilePage
+                  onLogin={handleLogin}
                   onLogout={handleLogout}
                   onFullLogout={handleFullLogout}
                 />
