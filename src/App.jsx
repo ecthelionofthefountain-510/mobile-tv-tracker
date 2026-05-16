@@ -16,6 +16,7 @@ import OverviewPage from "./components/OverviewPage";
 import UpcomingPage from "./components/UpcomingPage";
 import OnboardingModal from "./components/OnboardingModal";
 import AppIntroSplash from "./components/AppIntroSplash";
+import SearchOnboardingCoach from "./components/SearchOnboardingCoach";
 import "./index.css";
 import { applyThemePreference, getStoredThemePreference } from "./utils/theme";
 import { getOnboardingSeen, setOnboardingSeen } from "./utils/appPreferences";
@@ -59,7 +60,7 @@ function AppShell() {
     getCurrentUserFromStorage(),
   );
   const [showIntroSplash, setShowIntroSplash] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStage, setOnboardingStage] = useState("none");
 
   useEffect(() => {
     const applyFromStorage = () => {
@@ -76,12 +77,12 @@ function AppShell() {
 
   useEffect(() => {
     if (!currentUser) {
-      setShowOnboarding(false);
+      setOnboardingStage("none");
       return;
     }
 
     const user = getCurrentUserFromStorage();
-    setShowOnboarding(!getOnboardingSeen(user));
+    setOnboardingStage(getOnboardingSeen(user) ? "none" : "intro");
   }, [pathname, currentUser]);
 
   const handleLogin = (user) => {
@@ -118,10 +119,14 @@ function AppShell() {
     setCurrentUser(null);
   };
 
-  const finishOnboarding = () => {
+  const completeOnboarding = () => {
     const user = getCurrentUserFromStorage();
     setOnboardingSeen(true, user);
-    setShowOnboarding(false);
+    setOnboardingStage("none");
+  };
+
+  const continueOnboarding = () => {
+    setOnboardingStage("coach");
   };
 
   return (
@@ -204,7 +209,25 @@ function AppShell() {
       {showIntroSplash && (
         <AppIntroSplash onDone={() => setShowIntroSplash(false)} />
       )}
-      {showOnboarding && <OnboardingModal onFinish={finishOnboarding} />}
+      {onboardingStage === "intro" && (
+        <OnboardingModal
+          onSkip={completeOnboarding}
+          onContinue={continueOnboarding}
+          totalSteps={6}
+          stepOffset={0}
+        />
+      )}
+      {currentUser &&
+        pathname === "/search" &&
+        onboardingStage === "coach" &&
+        !showIntroSplash && (
+          <SearchOnboardingCoach
+            open
+            onClose={completeOnboarding}
+            totalSteps={6}
+            stepOffset={3}
+          />
+        )}
     </div>
   );
 }

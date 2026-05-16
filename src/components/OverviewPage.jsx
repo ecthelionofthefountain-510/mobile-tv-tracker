@@ -818,32 +818,6 @@ const OverviewPage = () => {
           {/* Preferences panel */}
           {showPrefs && (
             <div className="relative mt-4 space-y-4 border-t border-white/10 pt-4">
-              {/* Genre chips */}
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Genres
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {AI_GENRES.map((g) => {
-                    const active = aiPrefs.genres.some(
-                      (x) => x.name === g.name,
-                    );
-                    return (
-                      <button
-                        key={g.name}
-                        type="button"
-                        onClick={() => toggleGenre(g)}
-                        className={
-                          "app-chip " + (active ? "app-chip-active" : "")
-                        }
-                      >
-                        {g.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* Actor search */}
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -906,6 +880,32 @@ const OverviewPage = () => {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Genre chips */}
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Genres
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {AI_GENRES.map((g) => {
+                    const active = aiPrefs.genres.some(
+                      (x) => x.name === g.name,
+                    );
+                    return (
+                      <button
+                        key={g.name}
+                        type="button"
+                        onClick={() => toggleGenre(g)}
+                        className={
+                          "app-chip " + (active ? "app-chip-active" : "")
+                        }
+                      >
+                        {g.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}

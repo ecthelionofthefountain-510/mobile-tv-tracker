@@ -10,10 +10,10 @@ const profileAvatarKeyForUser = (user) =>
 
 export default function Navbar() {
   const [currentUser, setCurrentUser] = useState(() =>
-    JSON.parse(localStorage.getItem("currentUser"))
+    JSON.parse(localStorage.getItem("currentUser")),
   );
   const [profileImages, setProfileImages] = useState(
-    () => JSON.parse(localStorage.getItem("profileImages")) || {}
+    () => JSON.parse(localStorage.getItem("profileImages")) || {},
   );
   const [currentAvatar, setCurrentAvatar] = useState("");
 
@@ -94,7 +94,7 @@ export default function Navbar() {
     { to: "/profile", icon: profileIcon, label: "Profile" },
   ];
   const foundIndex = navItems.findIndex(
-    (item) => item.to === location.pathname
+    (item) => item.to === location.pathname,
   );
   const activeIndex = foundIndex >= 0 ? foundIndex : 0;
 
@@ -105,6 +105,7 @@ export default function Navbar() {
           <Link
             key={item.label}
             to={item.to}
+            data-onboarding={item.to === "/movies" ? "nav-movies" : undefined}
             className={`nav-link ${
               index === activeIndex ? "nav-link-active" : ""
             } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900`}

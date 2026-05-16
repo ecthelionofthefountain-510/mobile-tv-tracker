@@ -729,6 +729,7 @@ const SearchPage = () => {
     return (
       <div
         key={`${normalizedItem.mediaType}-${normalizedItem.id}`}
+        data-onboarding="content-card"
         className="app-card app-card-hover app-stagger-item mb-4 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
         onClick={() => viewDetails(normalizedItem)}
         role="button"
@@ -863,7 +864,10 @@ const SearchPage = () => {
         <div className="sticky top-0 z-20 mb-4 app-panel">
           <div className="p-3 space-y-3">
             <div className="flex items-center space-x-2">
-              <div className="relative flex-grow">
+              <div
+                className="relative flex-grow"
+                data-onboarding="search-input"
+              >
                 <input
                   ref={searchInputRef}
                   type="text"
