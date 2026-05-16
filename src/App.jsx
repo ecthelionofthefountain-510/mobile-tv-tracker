@@ -61,6 +61,7 @@ function AppShell() {
   );
   const [showIntroSplash, setShowIntroSplash] = useState(true);
   const [onboardingStage, setOnboardingStage] = useState("none");
+  const [introStartStep, setIntroStartStep] = useState(0);
 
   useEffect(() => {
     const applyFromStorage = () => {
@@ -123,10 +124,17 @@ function AppShell() {
     const user = getCurrentUserFromStorage();
     setOnboardingSeen(true, user);
     setOnboardingStage("none");
+    setIntroStartStep(0);
   };
 
   const continueOnboarding = () => {
+    setIntroStartStep(0);
     setOnboardingStage("coach");
+  };
+
+  const backToIntroFromCoach = () => {
+    setIntroStartStep(2);
+    setOnboardingStage("intro");
   };
 
   return (
@@ -211,23 +219,23 @@ function AppShell() {
       )}
       {onboardingStage === "intro" && (
         <OnboardingModal
-          onSkip={completeOnboarding}
+          onSkip={() => completeOnboarding()}
           onContinue={continueOnboarding}
+          initialStep={introStartStep}
           totalSteps={6}
           stepOffset={0}
         />
       )}
-      {currentUser &&
-        pathname === "/search" &&
-        onboardingStage === "coach" &&
-        !showIntroSplash && (
-          <SearchOnboardingCoach
-            open
-            onClose={completeOnboarding}
-            totalSteps={6}
-            stepOffset={3}
-          />
-        )}
+      {currentUser && onboardingStage === "coach" && !showIntroSplash && (
+        <SearchOnboardingCoach
+          open
+          onComplete={completeOnboarding}
+          onSkip={() => completeOnboarding()}
+          onBackToIntro={backToIntroFromCoach}
+          totalSteps={6}
+          stepOffset={3}
+        />
+      )}
     </div>
   );
 }

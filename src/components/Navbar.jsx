@@ -105,7 +105,13 @@ export default function Navbar() {
           <Link
             key={item.label}
             to={item.to}
-            data-onboarding={item.to === "/movies" ? "nav-movies" : undefined}
+            data-onboarding={
+              item.to === "/shows"
+                ? "nav-shows"
+                : item.to === "/movies"
+                  ? "nav-movies"
+                  : undefined
+            }
             className={`nav-link ${
               index === activeIndex ? "nav-link-active" : ""
             } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900`}

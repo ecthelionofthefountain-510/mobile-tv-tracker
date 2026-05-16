@@ -28,6 +28,8 @@ const ShowsList = () => {
   const [showDetails, setShowDetails] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [pendingUndo, setPendingUndo] = useState(null);
+  const [ratingPromptQueue, setRatingPromptQueue] = useState([]);
+  const [activeRatingPrompt, setActiveRatingPrompt] = useState(null);
   const [sortBy, setSortBy] = useState(
     initialSort === "title" || initialSort === "incomplete"
       ? initialSort
@@ -36,6 +38,7 @@ const ShowsList = () => {
 
   const listScrollYRef = useRef(0);
   const undoTimerRef = useRef(null);
+  const prevCompletionMapRef = useRef(new Map());
   const sameId = (a, b) => String(a) === String(b);
 
   // Normalisering används av hooken (memoized för att undvika refresh-loop)
@@ -132,6 +135,61 @@ const ShowsList = () => {
     const filtered = filterShows(sorted, searchTerm);
     setFilteredShows(filtered);
   }, [watchedShowsRaw, sortBy, searchTerm]);
+
+  useEffect(() => {
+    const currentMap = new Map();
+    watchedShowsRaw.forEach((show) => {
+      currentMap.set(String(show.id), {
+        completed: !!show.completed,
+        userRating:
+          typeof show.userRating === "number" && show.userRating > 0
+            ? show.userRating
+            : 0,
+      });
+    });
+
+    if (prevCompletionMapRef.current.size === 0) {
+      prevCompletionMapRef.current = currentMap;
+      return;
+    }
+
+    const newlyCompletedWithoutRating = watchedShowsRaw.filter((show) => {
+      const previous = prevCompletionMapRef.current.get(String(show.id));
+      if (!previous) return false;
+      return (
+        !previous.completed &&
+        !!show.completed &&
+        !(typeof show.userRating === "number" && show.userRating > 0)
+      );
+    });
+
+    if (newlyCompletedWithoutRating.length > 0) {
+      const activeId = activeRatingPrompt
+        ? String(activeRatingPrompt.id)
+        : null;
+      setRatingPromptQueue((prev) => {
+        const existingIds = new Set(prev.map((entry) => String(entry.id)));
+        if (activeId) existingIds.add(activeId);
+
+        const additions = newlyCompletedWithoutRating.filter(
+          (entry) => !existingIds.has(String(entry.id)),
+        );
+
+        if (additions.length === 0) return prev;
+        return [...prev, ...additions];
+      });
+    }
+
+    prevCompletionMapRef.current = currentMap;
+  }, [activeRatingPrompt, watchedShowsRaw]);
+
+  useEffect(() => {
+    if (!activeRatingPrompt && ratingPromptQueue.length > 0) {
+      const [next, ...rest] = ratingPromptQueue;
+      setActiveRatingPrompt(next);
+      setRatingPromptQueue(rest);
+    }
+  }, [activeRatingPrompt, ratingPromptQueue]);
 
   useEffect(
     () => () => {
@@ -269,6 +327,13 @@ const ShowsList = () => {
         const removedTitle = removedItem.title || removedItem.name || "Show";
         queueUndo(removedItem, removedTitle);
       }
+
+      setRatingPromptQueue((prev) =>
+        prev.filter((entry) => !sameId(entry?.id, id)),
+      );
+      setActiveRatingPrompt((prev) =>
+        prev && sameId(prev?.id, id) ? null : prev,
+      );
     },
     [
       closeShowModal,
@@ -305,6 +370,62 @@ const ShowsList = () => {
       await removeShow(show.id, { allowUndo: false });
     },
     [removeShow],
+  );
+
+  const handleShowRate = useCallback(
+    async (show, rating) => {
+      if (!show?.id) return;
+
+      const normalizedRating = Math.max(
+        0,
+        Math.min(5, Math.round(Number(rating) || 0)),
+      );
+
+      try {
+        const all = (await loadWatchedAll()) || [];
+        const updated = all.map((entry) => {
+          if (!sameId(entry?.id, show.id) || entry?.mediaType !== "tv") {
+            return entry;
+          }
+          return {
+            ...entry,
+            userRating: normalizedRating > 0 ? normalizedRating : undefined,
+          };
+        });
+
+        await saveWatchedAll(updated);
+        await refresh();
+      } catch (err) {
+        console.error("Could not save show rating", err);
+        setErrorMessage("Could not save show rating.");
+      }
+    },
+    [refresh],
+  );
+
+  const dismissRatingPrompt = useCallback(() => {
+    setActiveRatingPrompt(null);
+  }, []);
+
+  const submitRatingFromPrompt = useCallback(
+    async (rating) => {
+      if (!activeRatingPrompt?.id) return;
+      await handleShowRate(activeRatingPrompt, rating);
+      setActiveRatingPrompt(null);
+    },
+    [activeRatingPrompt, handleShowRate],
+  );
+
+  const openRatingPromptForShow = useCallback(
+    (show) => {
+      if (!show?.id) return;
+
+      setRatingPromptQueue((prev) =>
+        prev.filter((entry) => !sameId(entry?.id, show.id)),
+      );
+      setActiveRatingPrompt(show);
+    },
+    [sameId],
   );
 
   const refreshWatchedFromStorage = useCallback(async () => {
@@ -448,6 +569,7 @@ const ShowsList = () => {
                 onShowInfo={handleShowModalSelect}
                 onRemove={removeShow}
                 onAddToFavorites={addToFavorites}
+                onRequestRating={openRatingPromptForShow}
               />
             ))}
           </div>
@@ -514,6 +636,40 @@ const ShowsList = () => {
               >
                 Undo
               </button>
+            </div>
+          </div>
+        )}
+
+        {activeRatingPrompt && (
+          <div className="pointer-events-none fixed bottom-40 left-0 right-0 z-50 flex justify-center px-4">
+            <div className="pointer-events-auto app-toast app-toast-pop w-full max-w-lg rounded-2xl border border-yellow-300/25 bg-gray-900/95 p-4 shadow-2xl">
+              <p className="text-sm font-semibold leading-snug tracking-normal text-yellow-100 normal-case">
+                Rate this show
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => {
+                        void submitRatingFromPrompt(star);
+                      }}
+                      className="text-[30px] leading-none text-yellow-300 transition-colors hover:text-yellow-200"
+                      aria-label={`Rate show ${star} of 5`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={dismissRatingPrompt}
+                  className="ml-auto rounded-lg border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold leading-none text-gray-200 transition-colors hover:bg-white/10"
+                >
+                  Later
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -50,6 +50,7 @@ const ALLOWED_BASE_KEYS = [
   "number_of_episodes",
   "seasons",
   "completed",
+  "userRating",
   "dateAdded",
 ];
 
@@ -77,8 +78,8 @@ function normalizeWatchedItems(items) {
         (it.seasons && !Array.isArray(it.seasons)
           ? "tv"
           : it.first_air_date
-          ? "tv"
-          : "movie");
+            ? "tv"
+            : "movie");
 
       const poster = it.poster_path ?? it.posterPath ?? null;
 

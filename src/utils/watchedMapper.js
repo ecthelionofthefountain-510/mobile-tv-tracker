@@ -24,6 +24,12 @@ export function createWatchedMovie(movie) {
 
     dateAdded: movie.dateAdded || new Date().toISOString(),
     completed: !!movie.completed,
+    userRating:
+      typeof movie.userRating === "number" &&
+      movie.userRating >= 1 &&
+      movie.userRating <= 5
+        ? Math.round(movie.userRating)
+        : undefined,
   };
 }
 
@@ -50,6 +56,12 @@ export function createWatchedShow(show) {
 
     dateAdded: show.dateAdded || new Date().toISOString(),
     completed: !!show.completed,
+    userRating:
+      typeof show.userRating === "number" &&
+      show.userRating >= 1 &&
+      show.userRating <= 5
+        ? Math.round(show.userRating)
+        : undefined,
 
     seasons: show.seasons || undefined,
     number_of_seasons: show.number_of_seasons,

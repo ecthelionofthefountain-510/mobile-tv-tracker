@@ -220,6 +220,37 @@ const MoviesList = () => {
     [removeMovie],
   );
 
+  const handleMovieRate = useCallback(
+    async (movie, rating) => {
+      if (!movie?.id) return;
+
+      const normalizedRating = Math.max(
+        0,
+        Math.min(5, Math.round(Number(rating) || 0)),
+      );
+
+      try {
+        const all = (await loadWatchedAll()) || [];
+        const updated = all.map((entry) => {
+          if (!sameId(entry?.id, movie.id) || entry?.mediaType !== "movie") {
+            return entry;
+          }
+          return {
+            ...entry,
+            userRating: normalizedRating > 0 ? normalizedRating : undefined,
+          };
+        });
+
+        await saveWatchedAll(updated);
+        await refresh();
+      } catch (err) {
+        console.error("Could not save movie rating", err);
+        setErrorMessage("Could not save movie rating.");
+      }
+    },
+    [refresh],
+  );
+
   const sortOptions = [
     { value: "dateAdded", label: "Most recent" },
     { value: "title", label: "A-Ö" },
@@ -337,6 +368,7 @@ const MoviesList = () => {
                 onSelect={handleMovieSelect}
                 onRemove={removeMovie}
                 onAddToFavorites={addToFavorites}
+                onRate={handleMovieRate}
               />
             ))}
           </SwipeableList>

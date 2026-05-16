@@ -672,16 +672,32 @@ p {
 @keyframes search-coach-pulse {
   0%,
   100% {
-    box-shadow:
-      0 0 0 9999px rgba(2, 6, 23, 0.72),
-      0 0 0 2px rgba(250, 204, 21, 0.82),
-      0 0 0 12px rgba(250, 204, 21, 0.1);
-  }
-  50% {
+    transform: scale(1);
     box-shadow:
       0 0 0 9999px rgba(2, 6, 23, 0.72),
       0 0 0 2px rgba(250, 204, 21, 0.95),
-      0 0 0 16px rgba(250, 204, 21, 0.16);
+      0 0 0 10px rgba(250, 204, 21, 0.15),
+      0 0 28px rgba(250, 204, 21, 0.24);
+  }
+  50% {
+    transform: scale(1.015);
+    box-shadow:
+      0 0 0 9999px rgba(2, 6, 23, 0.72),
+      0 0 0 2px rgba(253, 224, 71, 1),
+      0 0 0 16px rgba(250, 204, 21, 0.24),
+      0 0 44px rgba(250, 204, 21, 0.34);
+  }
+}
+
+@keyframes search-coach-ripple {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.04);
   }
 }
 
@@ -700,9 +716,21 @@ p {
 
 .search-coach-spotlight {
   position: absolute;
+  z-index: 1;
   border-radius: 14px;
+  transform-origin: center;
   pointer-events: none;
   animation: search-coach-pulse 1.6s ease-in-out infinite;
+}
+
+.search-coach-spotlight::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 1px solid rgba(250, 204, 21, 0.6);
+  opacity: 0.6;
+  animation: search-coach-ripple 1.6s ease-in-out infinite;
 }
 
 .search-coach-panel {
@@ -777,7 +805,8 @@ p {
   .onboarding-demo-row,
   .onboarding-demo-card,
   .onboarding-demo-pick,
-  .search-coach-spotlight {
+  .search-coach-spotlight,
+  .search-coach-spotlight::after {
     animation: none !important;
   }
 }

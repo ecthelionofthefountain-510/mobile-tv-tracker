@@ -37,6 +37,7 @@ const SwipeableMovieCard = ({
   onSelect,
   onRemove,
   onAddToFavorites,
+  onRate,
 }) => {
   const [deltaX, setDeltaX] = useState(0);
   const [animating, setAnimating] = useState(false);
@@ -144,6 +145,7 @@ const SwipeableMovieCard = ({
           item={movie}
           onSelect={handleSafeSelect}
           onRemove={onRemove}
+          onRate={onRate}
           showRemoveButton={false}
         />
       </div>

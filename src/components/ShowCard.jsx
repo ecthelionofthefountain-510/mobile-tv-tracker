@@ -28,6 +28,7 @@ const ShowCard = ({
   onSelect,
   onRemove,
   onShowInfo,
+  onRequestRating,
   showRemoveButton = true,
 }) => {
   const displayItem = item || {};
@@ -79,6 +80,12 @@ const ShowCard = ({
 
   const progressPercent =
     progressRatio === null ? null : Math.round(progressRatio * 100);
+  const ratingValue =
+    typeof displayItem.userRating === "number" && displayItem.userRating > 0
+      ? Math.max(1, Math.min(5, Math.round(displayItem.userRating)))
+      : 0;
+  const showRatingBadge = !!displayItem?.completed || ratingValue > 0;
+  const canRequestRating = typeof onRequestRating === "function";
 
   const isSelectable = typeof onSelect === "function";
 
@@ -92,7 +99,7 @@ const ShowCard = ({
 
   return (
     <div
-      className={`app-card app-card-hover mb-4 ring-1 ring-inset ring-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
+      className={`app-card app-card-hover relative mb-4 ring-1 ring-inset ring-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
         isSelectable ? "cursor-pointer" : ""
       }`}
       onClick={isSelectable ? () => onSelect(displayItem) : undefined}
@@ -101,6 +108,29 @@ const ShowCard = ({
       onKeyDown={handleCardKeyDown}
       aria-label={isSelectable ? `Open details for ${nameText}` : undefined}
     >
+      {showRatingBadge &&
+        (canRequestRating ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRequestRating(displayItem);
+            }}
+            className="absolute right-2 top-2 z-10 rounded-full border border-yellow-300/40 bg-gray-900/85 px-2 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-sm transition-colors hover:bg-gray-800/90"
+            aria-label={
+              ratingValue > 0
+                ? `Current rating ${ratingValue} of 5. Tap to update rating`
+                : "Rate this show"
+            }
+          >
+            {ratingValue > 0 ? `${ratingValue}/5` : "Rate"}
+          </button>
+        ) : (
+          <div className="pointer-events-none absolute right-2 top-2 z-10 rounded-full border border-yellow-300/40 bg-gray-900/85 px-2 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-sm">
+            {ratingValue > 0 ? `${ratingValue}/5` : "Rate"}
+          </div>
+        ))}
+
       <div className="flex flex-col">
         <div className="flex p-3">
           <button
@@ -122,7 +152,7 @@ const ShowCard = ({
               className="object-cover w-full h-full app-poster"
             />
           </button>
-          <div className="flex flex-col justify-between flex-1 min-w-0 ml-4">
+          <div className="ml-4 flex min-w-0 flex-1 flex-col justify-between pr-14">
             <div>
               <h3 className="text-xl font-bold text-gray-100 truncate">
                 {nameText}
