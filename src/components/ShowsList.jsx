@@ -249,6 +249,11 @@ const ShowsList = () => {
       const progressSeasons =
         show.seasons && !Array.isArray(show.seasons) ? show.seasons : undefined;
 
+      // Push a dummy history entry so the browser back button closes the detail instead of routing away.
+      if (typeof window !== "undefined") {
+        window.history.pushState({ showDetail: true }, "");
+      }
+
       setSelectedShow({
         ...show,
         ...details,
@@ -450,6 +455,27 @@ const ShowsList = () => {
     await refresh();
   }, [refresh]);
 
+  // Intercept browser/hardware back button while a show detail is open.
+  useEffect(() => {
+    const handlePopState = (e) => {
+      if (e.state?.showDetail) return; // not our entry, let router handle it
+      setSelectedShow((prev) => {
+        if (prev) {
+          // We consumed the back press — restore scroll and refresh.
+          refreshWatchedFromStorage();
+          setTimeout(() => {
+            if (typeof window === "undefined") return;
+            window.scrollTo({ top: listScrollYRef.current || 0, left: 0 });
+          }, 0);
+          return null;
+        }
+        return prev;
+      });
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [refreshWatchedFromStorage]);
+
   const sortOptions = [
     { value: "dateAdded", label: "Most recent" },
     { value: "title", label: "A-Ö" },
@@ -463,12 +489,20 @@ const ShowsList = () => {
       <ShowDetail
         show={selectedShow}
         onBack={() => {
-          refreshWatchedFromStorage();
-          setSelectedShow(null);
-          setTimeout(() => {
-            if (typeof window === "undefined") return;
-            window.scrollTo({ top: listScrollYRef.current || 0, left: 0 });
-          }, 0);
+          // If there's a dummy history entry, pop it so the back button stays in sync.
+          if (
+            typeof window !== "undefined" &&
+            window.history.state?.showDetail
+          ) {
+            window.history.back();
+          } else {
+            refreshWatchedFromStorage();
+            setSelectedShow(null);
+            setTimeout(() => {
+              if (typeof window === "undefined") return;
+              window.scrollTo({ top: listScrollYRef.current || 0, left: 0 });
+            }, 0);
+          }
         }}
         onRemove={removeShow}
         onWatchedChanged={refreshWatchedFromStorage}

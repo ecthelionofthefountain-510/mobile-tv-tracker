@@ -31,7 +31,21 @@ const MoviesList = () => {
   ); // "title" | "dateAdded"
   const undoTimerRef = useRef(null);
   const sameId = (a, b) => String(a) === String(b);
-
+  // Intercept browser/hardware back button while a movie modal is open.
+  useEffect(() => {
+    const handlePopState = () => {
+      setSelectedMovie((prev) => {
+        if (prev) {
+          setMovieDetails(null);
+          setErrorMessage("");
+          return null;
+        }
+        return prev;
+      });
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
   // Här behöver vi ingen normalize-funktion – filmer är alltid “klara”
   const {
     items: watchedMoviesRaw,
@@ -122,6 +136,10 @@ const MoviesList = () => {
   const handleMovieSelect = useCallback(
     (movie) => {
       setErrorMessage("");
+      // Push a dummy history entry so the browser back button closes the modal instead of routing away.
+      if (typeof window !== "undefined") {
+        window.history.pushState({ movieDetail: true }, "");
+      }
       setSelectedMovie(movie);
       fetchMovieDetails(movie.id);
     },
@@ -129,9 +147,14 @@ const MoviesList = () => {
   );
 
   const closeMovieModal = useCallback(() => {
-    setSelectedMovie(null);
-    setMovieDetails(null);
-    setErrorMessage("");
+    // Pop our dummy history entry if it's still there.
+    if (typeof window !== "undefined" && window.history.state?.movieDetail) {
+      window.history.back();
+    } else {
+      setSelectedMovie(null);
+      setMovieDetails(null);
+      setErrorMessage("");
+    }
   }, []);
 
   const queueUndo = useCallback((item, label) => {
