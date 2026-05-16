@@ -224,6 +224,14 @@ const MoviesList = () => {
     async (movie, rating) => {
       if (!movie?.id) return;
 
+      const mainContent =
+        typeof document !== "undefined"
+          ? document.querySelector(".main-content")
+          : null;
+      const savedMainScrollTop = mainContent ? mainContent.scrollTop : 0;
+      const savedWindowScrollY =
+        typeof window !== "undefined" ? window.scrollY : 0;
+
       const normalizedRating = Math.max(
         0,
         Math.min(5, Math.round(Number(rating) || 0)),
@@ -243,6 +251,16 @@ const MoviesList = () => {
 
         await saveWatchedAll(updated);
         await refresh();
+
+        // Keep the user's scroll position stable after the list refresh.
+        setTimeout(() => {
+          if (mainContent) {
+            mainContent.scrollTop = savedMainScrollTop;
+          }
+          if (typeof window !== "undefined") {
+            window.scrollTo({ top: savedWindowScrollY, left: 0 });
+          }
+        }, 0);
       } catch (err) {
         console.error("Could not save movie rating", err);
         setErrorMessage("Could not save movie rating.");

@@ -75,7 +75,7 @@ const MovieCard = ({
   };
 
   return (
-    <div className={`relative mb-4 ${ratingValue > 0 ? "pt-2" : ""}`}>
+    <div className="relative mb-4 sm:mr-2">
       {ratingValue > 0 && (
         <button
           type="button"
@@ -85,7 +85,7 @@ const MovieCard = ({
             setIsEditingRating((prev) => !prev);
           }}
           className={
-            "absolute right-3 top-0 z-20 -translate-y-1/2 rounded-full border border-yellow-300/40 bg-gray-900/95 px-2 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-sm " +
+            "absolute right-1 top-1 z-20 rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-[0_6px_18px_rgba(0,0,0,0.35)] sm:-right-2 sm:top-2 " +
             (canRate
               ? "cursor-pointer transition-colors hover:bg-gray-800/90"
               : "pointer-events-none")

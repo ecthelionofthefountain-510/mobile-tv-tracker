@@ -376,6 +376,14 @@ const ShowsList = () => {
     async (show, rating) => {
       if (!show?.id) return;
 
+      const mainContent =
+        typeof document !== "undefined"
+          ? document.querySelector(".main-content")
+          : null;
+      const savedMainScrollTop = mainContent ? mainContent.scrollTop : 0;
+      const savedWindowScrollY =
+        typeof window !== "undefined" ? window.scrollY : 0;
+
       const normalizedRating = Math.max(
         0,
         Math.min(5, Math.round(Number(rating) || 0)),
@@ -395,6 +403,16 @@ const ShowsList = () => {
 
         await saveWatchedAll(updated);
         await refresh();
+
+        // Keep the user's scroll position stable after the list refresh.
+        setTimeout(() => {
+          if (mainContent) {
+            mainContent.scrollTop = savedMainScrollTop;
+          }
+          if (typeof window !== "undefined") {
+            window.scrollTo({ top: savedWindowScrollY, left: 0 });
+          }
+        }, 0);
       } catch (err) {
         console.error("Could not save show rating", err);
         setErrorMessage("Could not save show rating.");
@@ -498,7 +516,7 @@ const ShowsList = () => {
         </div>
 
         {/* Sort + filterrad */}
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="font-semibold text-gray-100">
             Watched ({watchedCount})
           </div>
@@ -578,7 +596,7 @@ const ShowsList = () => {
         {!loading && filteredShows.length === 0 && (
           <div className="py-10">
             {watchedShowsRaw.length === 0 ? (
-              <div className="app-panel mx-auto max-w-md space-y-3 p-6 text-center">
+              <div className="max-w-md p-6 mx-auto space-y-3 text-center app-panel">
                 <p className="text-base font-semibold text-gray-100">
                   No shows in your watched list
                 </p>
@@ -587,13 +605,13 @@ const ShowsList = () => {
                 </p>
                 <Link
                   to="/search"
-                  className="app-button-primary mt-2 px-4 py-2"
+                  className="px-4 py-2 mt-2 app-button-primary"
                 >
                   Find shows
                 </Link>
               </div>
             ) : (
-              <div className="app-panel mx-auto max-w-md space-y-3 p-6 text-center">
+              <div className="max-w-md p-6 mx-auto space-y-3 text-center app-panel">
                 <p className="text-base font-semibold text-gray-100">
                   No shows match your search
                 </p>
@@ -603,7 +621,7 @@ const ShowsList = () => {
                 <button
                   type="button"
                   onClick={() => setSearchTerm("")}
-                  className="app-button-ghost mt-2 px-4 py-2"
+                  className="px-4 py-2 mt-2 app-button-ghost"
                 >
                   Clear search
                 </button>
@@ -624,15 +642,15 @@ const ShowsList = () => {
         )}
 
         {pendingUndo && (
-          <div className="pointer-events-none fixed bottom-24 left-0 right-0 z-50 flex justify-center px-4">
-            <div className="app-toast app-toast-pop pointer-events-auto flex w-full max-w-lg items-center justify-between gap-3">
-              <span className="min-w-0 truncate text-sm text-yellow-100">
+          <div className="fixed left-0 right-0 z-50 flex justify-center px-4 pointer-events-none bottom-24">
+            <div className="flex items-center justify-between w-full max-w-lg gap-3 pointer-events-auto app-toast app-toast-pop">
+              <span className="min-w-0 text-sm text-yellow-100 truncate">
                 Removed {pendingUndo.label}
               </span>
               <button
                 type="button"
                 onClick={handleUndoRemove}
-                className="rounded-lg border border-yellow-300/45 bg-yellow-300/15 px-3 py-1 text-xs font-semibold text-yellow-50 transition-colors hover:bg-yellow-300/25"
+                className="px-3 py-1 text-xs font-semibold transition-colors border rounded-lg border-yellow-300/45 bg-yellow-300/15 text-yellow-50 hover:bg-yellow-300/25"
               >
                 Undo
               </button>
@@ -641,31 +659,39 @@ const ShowsList = () => {
         )}
 
         {activeRatingPrompt && (
-          <div className="pointer-events-none fixed bottom-40 left-0 right-0 z-50 flex justify-center px-4">
-            <div className="pointer-events-auto app-toast app-toast-pop w-full max-w-lg rounded-2xl border border-yellow-300/25 bg-gray-900/95 p-4 shadow-2xl">
-              <p className="text-sm font-semibold leading-snug tracking-normal text-yellow-100 normal-case">
-                Rate this show
+          <div className="fixed left-0 right-0 z-50 flex justify-center px-4 pointer-events-none bottom-40">
+            <div
+              className="w-full max-w-lg p-4 border shadow-2xl pointer-events-auto app-toast-pop flex flex-col rounded-2xl border-yellow-300/25 bg-gray-900/95 backdrop-blur"
+              style={{
+                boxShadow:
+                  "0 14px 34px rgba(0,0,0,0.55),inset 0 0 0 1px rgba(255,255,255,0.05)",
+              }}
+            >
+              <p className="text-sm font-semibold leading-snug tracking-normal text-yellow-100 normal-case truncate text-center">
+                {activeRatingPrompt?.title ||
+                  activeRatingPrompt?.name ||
+                  "Rate this show"}
               </p>
-              <div className="mt-3 flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => {
-                        void submitRatingFromPrompt(star);
-                      }}
-                      className="text-[30px] leading-none text-yellow-300 transition-colors hover:text-yellow-200"
-                      aria-label={`Rate show ${star} of 5`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
+              <div className="flex items-center justify-center gap-1.5 mt-3">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => {
+                      void submitRatingFromPrompt(star);
+                    }}
+                    className="text-[30px] leading-none text-yellow-300 transition-colors hover:text-yellow-200"
+                    aria-label={`Rate show ${star} of 5`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-center mt-3">
                 <button
                   type="button"
                   onClick={dismissRatingPrompt}
-                  className="ml-auto rounded-lg border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold leading-none text-gray-200 transition-colors hover:bg-white/10"
+                  className="px-4 py-1.5 text-xs font-semibold leading-none text-gray-200 transition-colors border rounded-lg border-white/15 bg-white/5 hover:bg-white/10"
                 >
                   Later
                 </button>
