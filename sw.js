@@ -1,7 +1,6 @@
-const CACHE_NAME = "tv-tracker-cache-v2";
+const CACHE_NAME = "tv-tracker-cache-v3";
 
-// Lägg till de viktigaste filerna här
-const URLS_TO_CACHE = [
+const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
@@ -9,16 +8,17 @@ const URLS_TO_CACHE = [
   "./icons/tv_tracker_512.png",
 ];
 
-// Install: cacha app-skalet
+// Install: cacha app-skalet och ta över direkt utan att vänta på gamla SW
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(URLS_TO_CACHE);
-    }),
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)),
   );
+  // Aktivera ny SW omedelbart – utan skipWaiting väntar Brave tills alla
+  // flikar stängs, vilket kan trigga avinstallation av PWA:n.
+  self.skipWaiting();
 });
 
-// Activate: städa gamla cache-versioner
+// Activate: städa gamla cache-versioner och ta kontroll över alla klienter
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -29,19 +29,40 @@ self.addEventListener("activate", (event) => {
             .filter((key) => key !== CACHE_NAME)
             .map((key) => caches.delete(key)),
         ),
-      ),
+      )
+      .then(() => self.clients.claim()),
   );
 });
 
-// Fetch: försök nätet först, fall tillbaka till cache
+// Fetch: navigeringsförfrågningar servas från cache (SPA-fallback),
+// övriga resurser network-first med cache-fallback.
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+  const url = new URL(request.url);
 
-  // Låt TMDB-anrop gå direkt mot nätet (ingen cache-prio)
-  if (request.url.includes("api.themoviedb.org")) {
+  // TMDB API och bilder – alltid direkt mot nätet, aldrig via cache här
+  if (
+    url.hostname === "api.themoviedb.org" ||
+    url.hostname === "image.tmdb.org"
+  ) {
     return;
   }
 
+  // Navigeringsförfrågningar (sidladdning/reload) → app-skalet från cache.
+  // Utan detta kan Brave misslyckas att ladda appen och registrera det som
+  // trasigt, vilket leder till att PWA-installationen rensas.
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).catch(() =>
+        caches
+          .open(CACHE_NAME)
+          .then((cache) => cache.match("./index.html") || cache.match("./")),
+      ),
+    );
+    return;
+  }
+
+  // Alla andra förfrågningar: network-first, faller tillbaka till cache
   event.respondWith(fetch(request).catch(() => caches.match(request)));
 });
 
