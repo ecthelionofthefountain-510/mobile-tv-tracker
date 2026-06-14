@@ -1,7 +1,9 @@
 // src/utils/watchedStorage.js
 import { get, set } from "idb-keyval";
+import { supabase, isSupabaseConfigured } from "./supabaseClient";
 
 const WATCHED_KEY_BASE = "watched";
+const WATCHED_TABLE = "watched";
 
 function safeJsonParse(value, fallback) {
   if (value == null) return fallback;
@@ -156,8 +158,9 @@ export async function ensurePersistentStorage() {
   }
 }
 
-// Läs ALL watched-lista (filmer + serier)
-export async function loadWatchedAll(user = getCurrentUser()) {
+// Läs ALL watched-lista lokalt (IndexedDB + localStorage). Används som
+// offline-cache och som källa vid engångsmigreringen till molnet.
+async function loadWatchedLocal(user = getCurrentUser()) {
   const scopedKey = watchedKeyForUser(user);
   const legacyKey = WATCHED_KEY_BASE;
 
@@ -212,8 +215,8 @@ export async function loadWatchedAll(user = getCurrentUser()) {
   return [];
 }
 
-// Spara hela watched-listan
-export async function saveWatchedAll(items, user = getCurrentUser()) {
+// Spara hela watched-listan lokalt (offline-cache).
+async function saveWatchedLocal(items, user = getCurrentUser()) {
   const scopedKey = watchedKeyForUser(user);
   const normalized = normalizeWatchedItems(items);
 
@@ -234,6 +237,161 @@ export async function saveWatchedAll(items, user = getCurrentUser()) {
       localStorage.removeItem(scopedKey);
     } catch {
       // ignore
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cloud (Supabase) layer
+// ---------------------------------------------------------------------------
+
+async function getAuthUserId() {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+function itemKeyParts(item) {
+  const mediaType =
+    item.mediaType || (item.first_air_date ? "tv" : "movie");
+  return { mediaType, itemId: String(item.id) };
+}
+
+function toRow(uid, item) {
+  const { mediaType, itemId } = itemKeyParts(item);
+  return {
+    user_id: uid,
+    media_type: mediaType,
+    item_id: itemId,
+    data: item,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function loadWatchedFromCloud(uid) {
+  const { data, error } = await supabase
+    .from(WATCHED_TABLE)
+    .select("data")
+    .eq("user_id", uid);
+  if (error) throw error;
+  return normalizeWatchedItems((data || []).map((row) => row.data));
+}
+
+// Insert-or-update the given items. Never deletes — safe for merging.
+async function upsertWatchedToCloud(uid, items) {
+  const rows = items.map((item) => toRow(uid, item));
+  if (!rows.length) return;
+  const { error } = await supabase
+    .from(WATCHED_TABLE)
+    .upsert(rows, { onConflict: "user_id,media_type,item_id" });
+  if (error) throw error;
+}
+
+// Make the cloud match `items` exactly: upsert present items, delete the rest.
+async function saveWatchedToCloud(uid, items) {
+  await upsertWatchedToCloud(uid, items);
+
+  const { data: existing, error } = await supabase
+    .from(WATCHED_TABLE)
+    .select("media_type,item_id")
+    .eq("user_id", uid);
+  if (error) throw error;
+
+  const keep = new Set(
+    items.map((item) => {
+      const { mediaType, itemId } = itemKeyParts(item);
+      return `${mediaType}:${itemId}`;
+    }),
+  );
+  const toDelete = (existing || []).filter(
+    (row) => !keep.has(`${row.media_type}:${row.item_id}`),
+  );
+
+  await Promise.all(
+    toDelete.map((row) =>
+      supabase
+        .from(WATCHED_TABLE)
+        .delete()
+        .match({
+          user_id: uid,
+          media_type: row.media_type,
+          item_id: row.item_id,
+        }),
+    ),
+  );
+}
+
+// One-time-per-browser merge of any existing local data up into the cloud.
+// Runs the first time we load for a given account in this browser. Union only,
+// so nothing is ever lost from either side.
+async function migrateLocalWatchedIfNeeded(uid, user) {
+  const flagKey = `cloudWatchedMigrated_${uid}`;
+  try {
+    if (localStorage.getItem(flagKey)) return false;
+  } catch {
+    // ignore
+  }
+
+  const local = await loadWatchedLocal(user);
+  if (local.length) {
+    await upsertWatchedToCloud(uid, local);
+  }
+
+  try {
+    localStorage.setItem(flagKey, "1");
+  } catch {
+    // ignore
+  }
+  return local.length > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Public API — same signatures as before, now cloud-backed when signed in.
+// ---------------------------------------------------------------------------
+
+// Läs ALL watched-lista (filmer + serier)
+export async function loadWatchedAll(user = getCurrentUser()) {
+  const uid = await getAuthUserId();
+
+  if (uid) {
+    try {
+      // Runs once per browser: pushes any pre-existing local data up first,
+      // so the read below returns the union.
+      await migrateLocalWatchedIfNeeded(uid, user);
+      const items = await loadWatchedFromCloud(uid);
+
+      // Mirror to local cache for fast reloads / offline.
+      try {
+        await saveWatchedLocal(items, user);
+      } catch {
+        // ignore
+      }
+      return items;
+    } catch (e) {
+      console.warn("Cloud watched load failed, using local copy", e);
+    }
+  }
+
+  return loadWatchedLocal(user);
+}
+
+// Spara hela watched-listan
+export async function saveWatchedAll(items, user = getCurrentUser()) {
+  const normalized = normalizeWatchedItems(items);
+
+  // Always keep a local copy so the app works offline and survives reloads.
+  await saveWatchedLocal(normalized, user);
+
+  const uid = await getAuthUserId();
+  if (uid) {
+    try {
+      await saveWatchedToCloud(uid, normalized);
+    } catch (e) {
+      console.warn("Cloud watched save failed (kept local copy)", e);
     }
   }
 }

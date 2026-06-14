@@ -20,10 +20,8 @@ import SearchOnboardingCoach from "./components/SearchOnboardingCoach";
 import "./index.css";
 import { applyThemePreference, getStoredThemePreference } from "./utils/theme";
 import { getOnboardingSeen, setOnboardingSeen } from "./utils/appPreferences";
-import {
-  addRememberedSession,
-  removeRememberedSession,
-} from "./utils/authStorage";
+import { supabase } from "./utils/supabaseClient";
+import { deriveDisplayName, signOutUser } from "./utils/supabaseAuth";
 
 function getCurrentUserFromStorage() {
   try {
@@ -56,24 +54,84 @@ const App = () => {
 
 function AppShell() {
   const { pathname } = useLocation();
-  const [currentUser, setCurrentUser] = useState(() =>
-    getCurrentUserFromStorage(),
-  );
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [showIntroSplash, setShowIntroSplash] = useState(true);
   const [onboardingStage, setOnboardingStage] = useState("none");
   const [introStartStep, setIntroStartStep] = useState(0);
+  const [installPromptEvent, setInstallPromptEvent] = useState(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    const applyFromStorage = () => {
-      const user = getCurrentUserFromStorage();
-      setCurrentUser(user);
-
-      applyThemePreference(getStoredThemePreference(user));
+    const onBeforeInstallPrompt = (event) => {
+      event.preventDefault();
+      setInstallPromptEvent(event);
     };
 
-    applyFromStorage();
-    window.addEventListener("storage", applyFromStorage);
-    return () => window.removeEventListener("storage", applyFromStorage);
+    const onAppInstalled = () => {
+      setInstallPromptEvent(null);
+    };
+
+    const standaloneMatch = window.matchMedia?.(
+      "(display-mode: standalone)",
+    )?.matches;
+    setIsStandalone(Boolean(standaloneMatch || window.navigator.standalone));
+
+    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+    window.addEventListener("appinstalled", onAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", onAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!installPromptEvent) return;
+
+    installPromptEvent.prompt();
+    const choiceResult = await installPromptEvent.userChoice;
+
+    if (choiceResult?.outcome === "accepted") {
+      setInstallPromptEvent(null);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    // Bridge the Supabase session to the rest of the app, which still keys
+    // per-user data (theme, avatars, watched/favorites) off a display name in
+    // localStorage. When signed in we mirror the session's name there; when
+    // signed out we clear it.
+    const applySession = (session) => {
+      const displayName = deriveDisplayName(session?.user || null);
+
+      try {
+        if (displayName) {
+          localStorage.setItem("currentUser", JSON.stringify(displayName));
+        } else {
+          localStorage.removeItem("currentUser");
+        }
+      } catch {
+        // ignore
+      }
+
+      if (!active) return;
+      setCurrentUser(displayName);
+      applyThemePreference(getStoredThemePreference(displayName));
+      setAuthReady(true);
+    };
+
+    supabase.auth.getSession().then(({ data }) => applySession(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) =>
+      applySession(session),
+    );
+
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -86,38 +144,14 @@ function AppShell() {
     setOnboardingStage(getOnboardingSeen(user) ? "none" : "intro");
   }, [pathname, currentUser]);
 
-  const handleLogin = (user) => {
-    if (!user || typeof user !== "string") return;
-    try {
-      localStorage.setItem("currentUser", JSON.stringify(user));
-    } catch {
-      // ignore
-    }
-    addRememberedSession(user);
-    setCurrentUser(user);
-    applyThemePreference(getStoredThemePreference(user));
-  };
+  // Kept for the legacy in-app account switch (Profile/Settings). The primary
+  // login flow now goes through Supabase in LoginPage, and the session
+  // listener above is what actually drives `currentUser`.
 
-  // Switch user — keeps user in the remembered list for quick re-login
-  const handleLogout = () => {
-    try {
-      localStorage.removeItem("currentUser");
-    } catch {
-      // ignore
-    }
-    setCurrentUser(null);
-  };
-
-  // Full logout — removes from remembered list, requires password next time
+  // Sign out of Supabase; the session listener clears `currentUser` and the
+  // route guards redirect to /login.
   const handleFullLogout = () => {
-    const user = getCurrentUserFromStorage();
-    try {
-      localStorage.removeItem("currentUser");
-    } catch {
-      // ignore
-    }
-    if (user) removeRememberedSession(user);
-    setCurrentUser(null);
+    signOutUser();
   };
 
   const completeOnboarding = () => {
@@ -137,6 +171,10 @@ function AppShell() {
     setOnboardingStage("intro");
   };
 
+  if (!authReady) {
+    return <div className="h-screen bg-black" />;
+  }
+
   return (
     <div className="flex flex-col h-screen">
       <div className="flex-grow overflow-auto main-content pb-20">
@@ -153,7 +191,7 @@ function AppShell() {
               currentUser ? (
                 <Navigate to="/search" replace />
               ) : (
-                <LoginPage onLogin={handleLogin} />
+                <LoginPage />
               )
             }
           />
@@ -195,11 +233,7 @@ function AppShell() {
             path="/profile"
             element={
               currentUser ? (
-                <ProfilePage
-                  onLogin={handleLogin}
-                  onLogout={handleLogout}
-                  onFullLogout={handleFullLogout}
-                />
+                <ProfilePage onFullLogout={handleFullLogout} />
               ) : (
                 <Navigate to="/login" replace />
               )
@@ -214,6 +248,26 @@ function AppShell() {
           />
         </Routes>
       </div>
+      {installPromptEvent && !isStandalone && (
+        <div className="fixed inset-x-4 bottom-4 z-50 rounded-2xl border border-white/10 bg-black/90 px-4 py-3 text-sm text-white shadow-2xl backdrop-blur">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="font-semibold">Installera appen</div>
+              <div className="text-white/75">
+                Använd den riktiga installeringen för bättre stabilitet på
+                Android.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
+            >
+              Installera
+            </button>
+          </div>
+        </div>
+      )}
       {currentUser && <Navbar />}
       {showIntroSplash && (
         <AppIntroSplash onDone={() => setShowIntroSplash(false)} />

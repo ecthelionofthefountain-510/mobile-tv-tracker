@@ -1,8 +1,10 @@
 // src/utils/favoritesStorage.js
 
 import { del, get, set } from "idb-keyval";
+import { supabase, isSupabaseConfigured } from "./supabaseClient";
 
 const FAVORITES_BASE_KEY = "favorites";
+const FAVORITES_TABLE = "favorites";
 
 function safeJsonParse(value, fallback) {
   if (value == null) return fallback;
@@ -98,7 +100,7 @@ export async function ensurePersistentFavoritesStorage() {
   }
 }
 
-export async function loadFavorites(user = getCurrentUser()) {
+async function loadFavoritesLocal(user = getCurrentUser()) {
   const scopedKey = favoritesKeyForUser(user);
   const legacyKey = FAVORITES_BASE_KEY;
 
@@ -168,7 +170,7 @@ export async function loadFavorites(user = getCurrentUser()) {
   return [];
 }
 
-export async function saveFavorites(items, user = getCurrentUser()) {
+async function saveFavoritesLocal(items, user = getCurrentUser()) {
   const scopedKey = favoritesKeyForUser(user);
   const normalized = normalizeFavoritesItems(items);
   let ok = false;
@@ -195,7 +197,7 @@ export async function saveFavorites(items, user = getCurrentUser()) {
   return ok;
 }
 
-export async function clearFavorites(user = getCurrentUser()) {
+async function clearFavoritesLocal(user = getCurrentUser()) {
   const scopedKey = favoritesKeyForUser(user);
   try {
     await del(scopedKey);
@@ -206,6 +208,165 @@ export async function clearFavorites(user = getCurrentUser()) {
     localStorage.removeItem(scopedKey);
   } catch {
     // ignore
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cloud (Supabase) layer
+// ---------------------------------------------------------------------------
+
+async function getAuthUserId() {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+function itemKeyParts(item) {
+  const mediaType =
+    item.mediaType || (item.first_air_date ? "tv" : "movie");
+  return { mediaType, itemId: String(item.id) };
+}
+
+function toRow(uid, item) {
+  const { mediaType, itemId } = itemKeyParts(item);
+  return {
+    user_id: uid,
+    media_type: mediaType,
+    item_id: itemId,
+    data: item,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function loadFavoritesFromCloud(uid) {
+  const { data, error } = await supabase
+    .from(FAVORITES_TABLE)
+    .select("data")
+    .eq("user_id", uid);
+  if (error) throw error;
+  return normalizeFavoritesItems((data || []).map((row) => row.data));
+}
+
+async function upsertFavoritesToCloud(uid, items) {
+  const rows = items.map((item) => toRow(uid, item));
+  if (!rows.length) return;
+  const { error } = await supabase
+    .from(FAVORITES_TABLE)
+    .upsert(rows, { onConflict: "user_id,media_type,item_id" });
+  if (error) throw error;
+}
+
+async function saveFavoritesToCloud(uid, items) {
+  await upsertFavoritesToCloud(uid, items);
+
+  const { data: existing, error } = await supabase
+    .from(FAVORITES_TABLE)
+    .select("media_type,item_id")
+    .eq("user_id", uid);
+  if (error) throw error;
+
+  const keep = new Set(
+    items.map((item) => {
+      const { mediaType, itemId } = itemKeyParts(item);
+      return `${mediaType}:${itemId}`;
+    }),
+  );
+  const toDelete = (existing || []).filter(
+    (row) => !keep.has(`${row.media_type}:${row.item_id}`),
+  );
+
+  await Promise.all(
+    toDelete.map((row) =>
+      supabase
+        .from(FAVORITES_TABLE)
+        .delete()
+        .match({
+          user_id: uid,
+          media_type: row.media_type,
+          item_id: row.item_id,
+        }),
+    ),
+  );
+}
+
+async function migrateLocalFavoritesIfNeeded(uid, user) {
+  const flagKey = `cloudFavoritesMigrated_${uid}`;
+  try {
+    if (localStorage.getItem(flagKey)) return;
+  } catch {
+    // ignore
+  }
+
+  const local = await loadFavoritesLocal(user);
+  if (local.length) {
+    await upsertFavoritesToCloud(uid, local);
+  }
+
+  try {
+    localStorage.setItem(flagKey, "1");
+  } catch {
+    // ignore
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public API — same signatures as before, now cloud-backed when signed in.
+// ---------------------------------------------------------------------------
+
+export async function loadFavorites(user = getCurrentUser()) {
+  const uid = await getAuthUserId();
+
+  if (uid) {
+    try {
+      await migrateLocalFavoritesIfNeeded(uid, user);
+      const items = await loadFavoritesFromCloud(uid);
+      try {
+        await saveFavoritesLocal(items, user);
+      } catch {
+        // ignore
+      }
+      return items;
+    } catch (e) {
+      console.warn("Cloud favorites load failed, using local copy", e);
+    }
+  }
+
+  return loadFavoritesLocal(user);
+}
+
+export async function saveFavorites(items, user = getCurrentUser()) {
+  const ok = await saveFavoritesLocal(items, user);
+
+  const uid = await getAuthUserId();
+  if (uid) {
+    try {
+      await saveFavoritesToCloud(uid, normalizeFavoritesItems(items));
+    } catch (e) {
+      console.warn("Cloud favorites save failed (kept local copy)", e);
+    }
+  }
+
+  return ok;
+}
+
+export async function clearFavorites(user = getCurrentUser()) {
+  await clearFavoritesLocal(user);
+
+  const uid = await getAuthUserId();
+  if (uid) {
+    try {
+      const { error } = await supabase
+        .from(FAVORITES_TABLE)
+        .delete()
+        .eq("user_id", uid);
+      if (error) throw error;
+    } catch (e) {
+      console.warn("Cloud favorites clear failed", e);
+    }
   }
 }
 

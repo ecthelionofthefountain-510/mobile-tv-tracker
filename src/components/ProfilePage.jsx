@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { get as idbGet, set as idbSet } from "idb-keyval";
-import { listRememberedSessions } from "../utils/authStorage";
 import {
   FaCamera,
   FaChartPie,
@@ -91,7 +90,7 @@ const imageFileToDataUrl = async (file, { maxSizePx, quality = 0.86 } = {}) => {
   }
 };
 
-const ProfilePage = ({ onLogin, onLogout, onFullLogout }) => {
+const ProfilePage = ({ onFullLogout }) => {
   const navigate = useNavigate();
   const [currentUser] = useState(() =>
     JSON.parse(localStorage.getItem("currentUser")),
@@ -582,20 +581,6 @@ const ProfilePage = ({ onLogin, onLogout, onFullLogout }) => {
     showToast("Onboarding will show next time you open a page.");
   };
 
-  const handleQuickSwitch = useCallback(
-    (user) => {
-      emitProfileMediaUpdated({ kind: "user", user: null });
-      if (onLogin) onLogin(user);
-    },
-    [onLogin],
-  );
-
-  const switchUser = () => {
-    emitProfileMediaUpdated({ kind: "user", user: null });
-    if (onLogout) onLogout();
-    navigate("/login");
-  };
-
   const handleFullLogout = () => {
     emitProfileMediaUpdated({ kind: "user", user: null });
     if (onFullLogout) onFullLogout();
@@ -1008,34 +993,6 @@ const ProfilePage = ({ onLogin, onLogout, onFullLogout }) => {
           </div>
         </div>
 
-        {/* Quick Switch section */}
-        {useMemo(() => {
-          const allUsers = listRememberedSessions();
-          const otherUsers = allUsers.filter((u) => u !== activeUser);
-          return otherUsers.length > 0 ? (
-            <div className="p-4 mt-8 app-panel">
-              <h2 className="text-lg font-semibold tracking-wide text-gray-100 uppercase">
-                Quick switch
-              </h2>
-              <p className="mt-1 text-xs text-gray-400">
-                Switch to another saved user instantly.
-              </p>
-              <div className="flex flex-wrap gap-2 mt-4">
-                {otherUsers.map((user) => (
-                  <button
-                    key={user}
-                    type="button"
-                    onClick={() => handleQuickSwitch(user)}
-                    className="app-button-ghost text-sm px-4 py-2"
-                  >
-                    {user}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null;
-        }, [activeUser, handleQuickSwitch])}
-
         <div className="p-4 mt-8 app-panel">
           <h2 className="text-lg font-semibold tracking-wide text-gray-100 uppercase">
             App settings
@@ -1058,13 +1015,6 @@ const ProfilePage = ({ onLogin, onLogout, onFullLogout }) => {
               className="w-full px-4 py-3 app-button-ghost"
             >
               Clear cache
-            </button>
-            <button
-              type="button"
-              onClick={switchUser}
-              className="w-full px-4 py-3 app-button-ghost"
-            >
-              Switch user
             </button>
             <button
               type="button"

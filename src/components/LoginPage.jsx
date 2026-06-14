@@ -1,27 +1,15 @@
-import React, { useMemo, useState } from "react";
-import {
-  listRememberedSessions,
-  registerAccount,
-  verifyAccount,
-  renameLegacyUsersIfMissing,
-} from "../utils/authStorage";
+import React, { useState } from "react";
+import { signInWithEmail, signUpWithEmail } from "../utils/supabaseAuth";
 
-const LoginPage = ({ onLogin }) => {
+const LoginPage = () => {
   const [mode, setMode] = useState("login");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  const knownUsers = useMemo(() => listRememberedSessions(), []);
-
-  const quickLogin = (user) => {
-    renameLegacyUsersIfMissing(user);
-    onLogin(user);
-  };
 
   const resetSecretFields = () => {
     setPassword("");
@@ -35,27 +23,33 @@ const LoginPage = ({ onLogin }) => {
     resetSecretFields();
   };
 
+  const clearMessages = () => {
+    if (error) setError("");
+    if (success) setSuccess("");
+  };
+
   const handleSubmit = async () => {
     if (isSubmitting) return;
 
-    const normalizedUsername = username.trim();
-    const normalizedPassword = password;
+    const normalizedEmail = email.trim();
 
-    if (!normalizedUsername) {
-      setError("Enter a username.");
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
+      setError("Enter a valid email address.");
       return;
     }
 
     if (mode === "register") {
-      if (normalizedPassword.length < 6) {
+      if (password.length < 6) {
         setError("Use at least 6 characters for the password.");
         return;
       }
-
-      if (normalizedPassword !== confirmPassword) {
+      if (password !== confirmPassword) {
         setError("Passwords do not match.");
         return;
       }
+    } else if (!password) {
+      setError("Enter your password.");
+      return;
     }
 
     setIsSubmitting(true);
@@ -64,33 +58,34 @@ const LoginPage = ({ onLogin }) => {
 
     try {
       if (mode === "register") {
-        const result = await registerAccount(
-          normalizedUsername,
-          normalizedPassword,
-        );
+        const result = await signUpWithEmail(normalizedEmail, password);
         if (!result.ok) {
           setError(result.error || "Could not create account.");
           return;
         }
 
-        renameLegacyUsersIfMissing(normalizedUsername);
-        setSuccess("Account created. Welcome back.");
-        onLogin(normalizedUsername);
+        if (result.needsEmailConfirmation) {
+          setSuccess(
+            "Account created. Check your email to confirm, then sign in.",
+          );
+          setMode("login");
+          resetSecretFields();
+          return;
+        }
+
+        // Signed in immediately — the auth listener in App redirects.
+        setSuccess("Account created. Welcome!");
         return;
       }
 
-      const result = await verifyAccount(
-        normalizedUsername,
-        normalizedPassword,
-      );
+      const result = await signInWithEmail(normalizedEmail, password);
       if (!result.ok) {
         setError(result.error || "Could not sign in.");
         return;
       }
 
-      renameLegacyUsersIfMissing(normalizedUsername);
+      // The auth listener in App picks up the session and redirects.
       setSuccess("Signed in successfully.");
-      onLogin(normalizedUsername);
     } catch (err) {
       console.error(err);
       setError("Something went wrong. Try again.");
@@ -130,45 +125,23 @@ const LoginPage = ({ onLogin }) => {
             </p>
           </div>
 
-          {/* Quick switch */}
-          {knownUsers.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-                Quick switch
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {knownUsers.map((user) => (
-                  <button
-                    key={user}
-                    type="button"
-                    onClick={() => quickLogin(user)}
-                    className="app-button-ghost text-xs px-3 py-1.5"
-                  >
-                    {user}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Form */}
           <div className="space-y-4">
-            {/* Username */}
+            {/* Email */}
             <label className="block">
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2 block">
-                Username
+                Email
               </span>
               <input
-                type="text"
-                value={username}
+                type="email"
+                value={email}
                 onChange={(e) => {
-                  setUsername(e.target.value);
-                  if (error) setError("");
-                  if (success) setSuccess("");
+                  setEmail(e.target.value);
+                  clearMessages();
                 }}
                 onKeyDown={handleSubmitKeyDown}
-                placeholder="Your username"
-                autoComplete="username"
+                placeholder="you@example.com"
+                autoComplete="email"
                 className="app-input text-sm"
               />
             </label>
@@ -184,8 +157,7 @@ const LoginPage = ({ onLogin }) => {
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
-                    if (error) setError("");
-                    if (success) setSuccess("");
+                    clearMessages();
                   }}
                   onKeyDown={handleSubmitKeyDown}
                   placeholder="Your password"
@@ -215,8 +187,7 @@ const LoginPage = ({ onLogin }) => {
                   value={confirmPassword}
                   onChange={(e) => {
                     setConfirmPassword(e.target.value);
-                    if (error) setError("");
-                    if (success) setSuccess("");
+                    clearMessages();
                   }}
                   onKeyDown={handleSubmitKeyDown}
                   placeholder="Confirm password"
