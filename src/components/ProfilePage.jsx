@@ -20,6 +20,7 @@ import {
   favoriteIdentity,
   getCurrentUser,
   loadFavorites,
+  recoverFavoritesFromDevice,
   saveFavorites,
 } from "../utils/favoritesStorage";
 import { emitProfileMediaUpdated } from "../utils/profileMediaEvents";
@@ -581,6 +582,31 @@ const ProfilePage = ({ onFullLogout }) => {
     showToast("Onboarding will show next time you open a page.");
   };
 
+  const recoverFavorites = useCallback(async () => {
+    showToast("Searching this device for favorites…");
+    try {
+      const result = await recoverFavoritesFromDevice(activeUser);
+      if (!result.ok) {
+        showToast(result.error || "Could not recover favorites.");
+        return;
+      }
+      if (result.recovered > 0) {
+        const favs = await loadFavorites(activeUser);
+        setFavorites(Array.isArray(favs) ? favs : []);
+        showToast(
+          `Recovered ${result.recovered} favorite${
+            result.recovered === 1 ? "" : "s"
+          }.`,
+        );
+      } else {
+        showToast("No favorites found on this device.");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("Could not recover favorites.");
+    }
+  }, [activeUser, showToast]);
+
   const handleFullLogout = () => {
     emitProfileMediaUpdated({ kind: "user", user: null });
     if (onFullLogout) onFullLogout();
@@ -1015,6 +1041,13 @@ const ProfilePage = ({ onFullLogout }) => {
               className="w-full px-4 py-3 app-button-ghost"
             >
               Clear cache
+            </button>
+            <button
+              type="button"
+              onClick={recoverFavorites}
+              className="w-full px-4 py-3 app-button-ghost"
+            >
+              Recover favorites from this device
             </button>
             <button
               type="button"

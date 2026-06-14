@@ -364,6 +364,17 @@ export async function loadWatchedAll(user = getCurrentUser()) {
       await migrateLocalWatchedIfNeeded(uid, user);
       const items = await loadWatchedFromCloud(uid);
 
+      // Safeguard: never let an empty cloud result shadow non-empty local
+      // data. If the cloud is empty but this device still has items, push
+      // them up (union) and use them instead of overwriting the local cache.
+      if (items.length === 0) {
+        const local = await loadWatchedLocal(user);
+        if (local.length > 0) {
+          await upsertWatchedToCloud(uid, local);
+          return local;
+        }
+      }
+
       // Mirror to local cache for fast reloads / offline.
       try {
         await saveWatchedLocal(items, user);

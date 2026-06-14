@@ -1,6 +1,6 @@
 // src/utils/favoritesStorage.js
 
-import { del, get, set } from "idb-keyval";
+import { del, get, keys as idbKeys, set } from "idb-keyval";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 
 const FAVORITES_BASE_KEY = "favorites";
@@ -324,6 +324,18 @@ export async function loadFavorites(user = getCurrentUser()) {
     try {
       await migrateLocalFavoritesIfNeeded(uid, user);
       const items = await loadFavoritesFromCloud(uid);
+
+      // Safeguard: never let an empty cloud result shadow non-empty local
+      // data. If the cloud is empty but this device still has favorites, push
+      // them up (union) and use them instead of overwriting the local cache.
+      if (items.length === 0) {
+        const local = await loadFavoritesLocal(user);
+        if (local.length > 0) {
+          await upsertFavoritesToCloud(uid, local);
+          return local;
+        }
+      }
+
       try {
         await saveFavoritesLocal(items, user);
       } catch {
@@ -368,6 +380,64 @@ export async function clearFavorites(user = getCurrentUser()) {
       console.warn("Cloud favorites clear failed", e);
     }
   }
+}
+
+// Rescue tool: scan EVERY favorites key on this device (IndexedDB +
+// localStorage, including legacy/global and other-username scoped keys),
+// union everything found, and push it up to the cloud. Never deletes. Use to
+// recover favorites that an earlier migration missed.
+export async function recoverFavoritesFromDevice(user = getCurrentUser()) {
+  const uid = await getAuthUserId();
+  if (!uid) return { ok: false, error: "Not signed in." };
+
+  const collected = [];
+
+  // localStorage: any "favorites" / "favorites_<user>" key.
+  try {
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(FAVORITES_BASE_KEY)) continue;
+      const parsed = safeJsonParse(localStorage.getItem(key), null);
+      if (Array.isArray(parsed)) collected.push(...parsed);
+    }
+  } catch {
+    // ignore
+  }
+
+  // IndexedDB (idb-keyval): any "favorites*" key.
+  try {
+    const allKeys = await idbKeys();
+    for (const key of allKeys) {
+      if (typeof key !== "string" || !key.startsWith(FAVORITES_BASE_KEY)) {
+        continue;
+      }
+      const val = await get(key);
+      if (Array.isArray(val)) collected.push(...val);
+    }
+  } catch {
+    // ignore
+  }
+
+  // Normalize + dedupe by identity.
+  const seen = new Set();
+  const unique = [];
+  for (const item of normalizeFavoritesItems(collected)) {
+    const id = favoriteIdentity(item);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    unique.push(item);
+  }
+
+  if (unique.length === 0) return { ok: true, recovered: 0 };
+
+  try {
+    await upsertFavoritesToCloud(uid, unique); // union, never deletes
+    await saveFavoritesLocal(unique, user); // refresh local cache
+  } catch (e) {
+    return { ok: false, error: e?.message || "Could not save recovered favorites." };
+  }
+
+  return { ok: true, recovered: unique.length };
 }
 
 export function favoriteIdentity(item) {
