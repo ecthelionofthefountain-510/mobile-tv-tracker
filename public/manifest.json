@@ -1,7 +1,8 @@
 {
   "name": "Mobile TV Tracker",
   "short_name": "TV Tracker",
-  "start_url": "/mobile-tv-tracker/",
+  "id": "/mobile-tv-tracker/",
+  "start_url": "/mobile-tv-tracker/index.html",
   "scope": "/mobile-tv-tracker/",
   "display": "standalone",
   "orientation": "portrait",
