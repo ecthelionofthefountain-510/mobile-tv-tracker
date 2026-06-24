@@ -22,6 +22,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedEpisode, setSelectedEpisode] = useState(null);
   const [showCongrats, setShowCongrats] = useState(false);
+  const [needsMetadataBackfill, setNeedsMetadataBackfill] = useState(false);
   const prevCompletionRef = useRef(false);
 
   const sameEntry = useCallback(
@@ -59,6 +60,22 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const saveChangesToStorage = useCallback(async () => {
     const allWatched = await loadWatchedAll();
     const isCompleted = computeCompletion(seasons);
+    const totalFromEpisodesData = Object.keys(episodesData).reduce(
+      (sum, seasonNum) => sum + ((episodesData[seasonNum] || []).length || 0),
+      0,
+    );
+    const derivedNumberOfEpisodes =
+      typeof show.number_of_episodes === "number" && show.number_of_episodes > 0
+        ? show.number_of_episodes
+        : totalFromEpisodesData > 0
+          ? totalFromEpisodesData
+          : undefined;
+    const derivedNumberOfSeasons =
+      typeof show.number_of_seasons === "number" && show.number_of_seasons > 0
+        ? show.number_of_seasons
+        : Object.keys(seasons || {}).length > 0
+          ? Object.keys(seasons || {}).length
+          : undefined;
 
     const idx = allWatched.findIndex((item) =>
       sameEntry(item, { id: show.id, mediaType: "tv" }),
@@ -73,6 +90,10 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
               mediaType: "tv",
               seasons,
               completed: isCompleted,
+              number_of_seasons:
+                derivedNumberOfSeasons ?? item.number_of_seasons,
+              number_of_episodes:
+                derivedNumberOfEpisodes ?? item.number_of_episodes,
             }
           : item,
       );
@@ -84,8 +105,8 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
         name: show.name,
         poster_path: show.poster_path ?? null,
         posterPath: show.poster_path ?? null,
-        number_of_seasons: show.number_of_seasons,
-        number_of_episodes: show.number_of_episodes,
+        number_of_seasons: derivedNumberOfSeasons,
+        number_of_episodes: derivedNumberOfEpisodes,
         seasons,
         completed: isCompleted,
         dateAdded: new Date().toISOString(),
@@ -105,6 +126,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     show.number_of_seasons,
     show.poster_path,
     show.title,
+    episodesData,
   ]);
 
   // Calculate progress stats on load and when seasons change
@@ -140,8 +162,33 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       if (found && found.seasons && !Array.isArray(found.seasons)) {
         setSeasons(found.seasons);
       }
+
+      const missingEpisodeCount =
+        !found ||
+        typeof found.number_of_episodes !== "number" ||
+        found.number_of_episodes <= 0;
+      const missingSeasonCount =
+        !found ||
+        typeof found.number_of_seasons !== "number" ||
+        found.number_of_seasons <= 0;
+      setNeedsMetadataBackfill(missingEpisodeCount || missingSeasonCount);
     })();
   }, [sameEntry, show.id]);
+
+  // Auto-backfill totals for legacy entries that have progress but missing metadata.
+  useEffect(() => {
+    if (!needsMetadataBackfill || hasChanges) return;
+
+    const loadedEpisodeCount = Object.keys(episodesData).reduce(
+      (sum, seasonNum) => sum + ((episodesData[seasonNum] || []).length || 0),
+      0,
+    );
+
+    if (loadedEpisodeCount <= 0) return;
+
+    setHasChanges(true);
+    setNeedsMetadataBackfill(false);
+  }, [episodesData, hasChanges, needsMetadataBackfill]);
 
   // Fire celebration exactly when we transition to 100% watched (after user changes)
   useEffect(() => {
