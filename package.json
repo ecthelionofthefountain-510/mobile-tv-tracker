@@ -6,6 +6,7 @@
   "homepage": "https://ecthelionofthefountain-510.github.io/mobile-tv-tracker/",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.js",
     "build": "vite build",
     "lint": "eslint .",
     "test": "vitest --environment jsdom",
@@ -17,9 +18,13 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "express-rate-limit": "^7.5.1",
     "idb-keyval": "^6.2.2",
     "lucide-react": "^0.475.0",
+    "openai": "^6.44.0",
     "react": "^18.2.0",
     "react-confetti": "^6.4.0",
     "react-dom": "^18.2.0",
