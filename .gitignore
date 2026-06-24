@@ -27,3 +27,14 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Android widget client (build output + machine-specific config)
+native/android/.gradle/
+native/android/build/
+native/android/app/build/
+native/android/local.properties
+native/android/captures/
+native/android/**/*.iml
+
+# Server widget profile store (runtime data)
+.widget-profiles/
