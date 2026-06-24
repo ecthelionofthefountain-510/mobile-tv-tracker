@@ -1,6 +1,6 @@
 // ShowsList.jsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { API_KEY, TMDB_BASE_URL } from "../config";
 import ShowDetail from "./ShowDetail";
 import SwipeableShowCard from "./SwipeableShowCard";
@@ -21,6 +21,7 @@ import { loadAppPreference } from "../utils/appPreferences";
 
 const ShowsList = () => {
   const initialSort = loadAppPreference("defaultSort", "dateAdded");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filteredShows, setFilteredShows] = useState([]);
   const [selectedShow, setSelectedShow] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -273,6 +274,33 @@ const ShowsList = () => {
     setShowDetails(null);
     setErrorMessage("");
   }, []);
+
+  // Deep link from the Android widget: /#/shows?show=<tmdbId> opens that show.
+  // Prefer the tracked show (keeps watch progress); fall back to a bare TMDB id.
+  const deepLinkHandledRef = useRef(null);
+  useEffect(() => {
+    if (loading) return;
+    const showId = searchParams.get("show");
+    if (!showId) {
+      deepLinkHandledRef.current = null;
+      return;
+    }
+    if (deepLinkHandledRef.current === showId) return;
+    deepLinkHandledRef.current = showId;
+
+    const tracked = watchedShowsRaw.find((s) => sameId(s?.id, showId));
+    handleShowSelect(tracked || { id: Number(showId), mediaType: "tv" });
+
+    const next = new URLSearchParams(searchParams);
+    next.delete("show");
+    setSearchParams(next, { replace: true });
+  }, [
+    loading,
+    watchedShowsRaw,
+    searchParams,
+    setSearchParams,
+    handleShowSelect,
+  ]);
 
   const queueUndo = useCallback((item, label) => {
     if (!item) return;
