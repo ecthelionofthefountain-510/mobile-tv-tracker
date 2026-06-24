@@ -1,0 +1,4 @@
+{
+  "buildMarker": "2026-06-24T16:55Z-redeploy",
+  "note": "Bump this value to force a fresh GitHub Pages deployment when gh-pages would otherwise be a no-op."
+}
