@@ -21,6 +21,8 @@ import ContinueWatchingSection from "./overview/ContinueWatchingSection";
 import UpcomingSection from "./overview/UpcomingSection";
 import { loadAppPreference } from "../utils/appPreferences";
 
+const API_BASE = import.meta.env.VITE_AI_API_BASE || "/api";
+
 const OverviewPage = () => {
   const navigate = useNavigate();
   const [watched, setWatched] = useState([]);
@@ -489,46 +491,110 @@ const OverviewPage = () => {
       setUpcomingLoading(true);
       setUpcomingError("");
       try {
-        // Fetch a wider set, then sort by air date and trim.
-        // If we slice too early we might miss the soonest upcoming item.
-        const ids = premiereCandidateIds.slice(0, 30);
-        const details = await Promise.all(
-          ids.map((id) =>
-            cachedFetchJson(`${TMDB_BASE_URL}/tv/${id}?api_key=${API_KEY}`, {
-              ttlMs: 6 * 60 * 60 * 1000,
-              cacheKey: `tv:${id}:details`,
-            }),
-          ),
-        );
-        if (cancelled) return;
+        let items = null;
 
-        const items = (details || [])
-          .map((d) => {
-            const next = d?.next_episode_to_air;
-            const airDate = next?.air_date;
-            if (!airDate) return null;
-            const t = isoDateToTime(airDate);
-            if (!Number.isFinite(t)) return null;
-            return {
-              id: d.id,
-              mediaType: "tv",
-              name: d.name,
-              title: d.name,
-              poster_path: d.poster_path,
-              air_date: airDate,
-              season_number: next?.season_number,
-              episode_number: next?.episode_number,
-              _air_time: t,
-            };
-          })
-          .filter(Boolean)
-          .sort(
-            (a, b) =>
-              (a._air_time || 0) - (b._air_time || 0) ||
-              String(a.name || a.title || "").localeCompare(
-                String(b.name || b.title || ""),
-              ),
+        // Prefer server-side upcoming payload to keep parity with widget clients.
+        try {
+          const widgetRes = await fetch(`${API_BASE}/widget/upcoming?limit=8`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              favorites,
+              watched,
+              limit: 8,
+            }),
+          });
+
+          if (!widgetRes.ok) {
+            throw new Error(
+              `Widget upcoming request failed: ${widgetRes.status}`,
+            );
+          }
+
+          const payload = await widgetRes.json();
+          const serverItems = Array.isArray(payload?.items)
+            ? payload.items
+            : [];
+
+          items = serverItems
+            .map((entry) => {
+              const airDate = entry?.airDate;
+              if (!airDate) return null;
+              const t = isoDateToTime(airDate);
+              if (!Number.isFinite(t)) return null;
+              return {
+                id: entry.tmdbId,
+                mediaType: "tv",
+                name: entry.title,
+                title: entry.title,
+                poster_path: entry.posterUrl
+                  ? String(entry.posterUrl).replace(IMAGE_BASE_URL, "")
+                  : null,
+                air_date: airDate,
+                season_number: entry.season,
+                episode_number: entry.episode,
+                _air_time: t,
+              };
+            })
+            .filter(Boolean)
+            .sort(
+              (a, b) =>
+                (a._air_time || 0) - (b._air_time || 0) ||
+                String(a.name || a.title || "").localeCompare(
+                  String(b.name || b.title || ""),
+                ),
+            );
+        } catch (serverErr) {
+          console.warn(
+            "Widget endpoint unavailable, falling back to TMDb",
+            serverErr,
           );
+        }
+
+        if (!Array.isArray(items)) {
+          // Fetch a wider set, then sort by air date and trim.
+          // If we slice too early we might miss the soonest upcoming item.
+          const ids = premiereCandidateIds.slice(0, 30);
+          const details = await Promise.all(
+            ids.map((id) =>
+              cachedFetchJson(`${TMDB_BASE_URL}/tv/${id}?api_key=${API_KEY}`, {
+                ttlMs: 6 * 60 * 60 * 1000,
+                cacheKey: `tv:${id}:details`,
+              }),
+            ),
+          );
+
+          items = (details || [])
+            .map((d) => {
+              const next = d?.next_episode_to_air;
+              const airDate = next?.air_date;
+              if (!airDate) return null;
+              const t = isoDateToTime(airDate);
+              if (!Number.isFinite(t)) return null;
+              return {
+                id: d.id,
+                mediaType: "tv",
+                name: d.name,
+                title: d.name,
+                poster_path: d.poster_path,
+                air_date: airDate,
+                season_number: next?.season_number,
+                episode_number: next?.episode_number,
+                _air_time: t,
+              };
+            })
+            .filter(Boolean)
+            .sort(
+              (a, b) =>
+                (a._air_time || 0) - (b._air_time || 0) ||
+                String(a.name || a.title || "").localeCompare(
+                  String(b.name || b.title || ""),
+                ),
+            );
+        }
+        if (cancelled) return;
 
         // Keep it short and relevant
         setUpcoming(items.slice(0, 8));

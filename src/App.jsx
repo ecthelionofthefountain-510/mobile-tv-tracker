@@ -14,6 +14,7 @@ import LoginPage from "./components/LoginPage";
 import ProfilePage from "./components/ProfilePage";
 import OverviewPage from "./components/OverviewPage";
 import UpcomingPage from "./components/UpcomingPage";
+import WidgetPreviewPage from "./components/WidgetPreviewPage";
 import OnboardingModal from "./components/OnboardingModal";
 import AppIntroSplash from "./components/AppIntroSplash";
 import SearchOnboardingCoach from "./components/SearchOnboardingCoach";
@@ -188,11 +189,7 @@ function AppShell() {
           <Route
             path="/login"
             element={
-              currentUser ? (
-                <Navigate to="/search" replace />
-              ) : (
-                <LoginPage />
-              )
+              currentUser ? <Navigate to="/search" replace /> : <LoginPage />
             }
           />
           <Route
@@ -229,6 +226,7 @@ function AppShell() {
               currentUser ? <UpcomingPage /> : <Navigate to="/login" replace />
             }
           />
+          <Route path="/widget-preview" element={<WidgetPreviewPage />} />
           <Route
             path="/profile"
             element={

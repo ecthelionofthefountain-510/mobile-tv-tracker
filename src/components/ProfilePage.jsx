@@ -38,6 +38,7 @@ import {
 } from "../utils/appPreferences";
 
 const DEFAULT_PROFILE_KEY = "__default__";
+const API_BASE = import.meta.env.VITE_AI_API_BASE || "/api";
 
 const profileAvatarKeyForUser = (user) =>
   user ? `profileAvatar_${user}` : "profileAvatar";
@@ -122,6 +123,9 @@ const ProfilePage = ({ onFullLogout }) => {
   const [toastMsg, setToastMsg] = useState("");
   const [prefDefaultSort, setPrefDefaultSort] = useState("dateAdded");
   const [prefToastDurationMs, setPrefToastDurationMs] = useState(3000);
+  const [widgetSyncApiBase, setWidgetSyncApiBase] = useState(API_BASE);
+  const [widgetSyncToken, setWidgetSyncToken] = useState("");
+  const [widgetSyncLoading, setWidgetSyncLoading] = useState(false);
   const toastDurationMs = Number(prefToastDurationMs) || 3000;
   const toastTimer = useRef(null);
   const showToast = useCallback(
@@ -161,6 +165,10 @@ const ProfilePage = ({ onFullLogout }) => {
     setPrefToastDurationMs(
       Number(loadAppPreference("toastDurationMs", 3000, activeUser)) || 3000,
     );
+    setWidgetSyncApiBase(
+      loadAppPreference("widgetSyncApiBase", API_BASE, activeUser),
+    );
+    setWidgetSyncToken(loadAppPreference("widgetSyncToken", "", activeUser));
   }, [activeUser]);
 
   useEffect(() => {
@@ -174,6 +182,14 @@ const ProfilePage = ({ onFullLogout }) => {
       activeUser,
     );
   }, [activeUser, prefToastDurationMs]);
+
+  useEffect(() => {
+    saveAppPreference("widgetSyncApiBase", widgetSyncApiBase, activeUser);
+  }, [activeUser, widgetSyncApiBase]);
+
+  useEffect(() => {
+    saveAppPreference("widgetSyncToken", widgetSyncToken, activeUser);
+  }, [activeUser, widgetSyncToken]);
 
   const storageKeyForUser = (user) => (user ? user : DEFAULT_PROFILE_KEY);
 
@@ -606,6 +622,58 @@ const ProfilePage = ({ onFullLogout }) => {
       showToast("Could not recover favorites.");
     }
   }, [activeUser, showToast]);
+
+  const syncWidgetProfile = useCallback(async () => {
+    const apiBase = String(widgetSyncApiBase || "")
+      .trim()
+      .replace(/\/$/, "");
+    const token = String(widgetSyncToken || "").trim();
+
+    if (!apiBase) {
+      showToast("Add your widget API base first.");
+      return;
+    }
+
+    if (!token) {
+      showToast("Add the same widget token as in Android.");
+      return;
+    }
+
+    setWidgetSyncLoading(true);
+
+    try {
+      const [nextFavorites, nextWatched] = await Promise.all([
+        loadFavorites(activeUser),
+        loadWatchedAll(activeUser),
+      ]);
+
+      const res = await fetch(`${apiBase}/widget/profile-sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-widget-server-token": token,
+        },
+        body: JSON.stringify({
+          favorites: Array.isArray(nextFavorites) ? nextFavorites : [],
+          watched: Array.isArray(nextWatched) ? nextWatched : [],
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Sync failed: ${res.status}`);
+      }
+
+      const payload = await res.json();
+      showToast(
+        `Widget synced: ${payload.favoritesCount || 0} favorites, ${payload.watchedCount || 0} watched.`,
+      );
+    } catch (e) {
+      console.error(e);
+      showToast("Could not sync widget profile.");
+    } finally {
+      setWidgetSyncLoading(false);
+    }
+  }, [activeUser, showToast, widgetSyncApiBase, widgetSyncToken]);
 
   const handleFullLogout = () => {
     emitProfileMediaUpdated({ kind: "user", user: null });
@@ -1049,6 +1117,47 @@ const ProfilePage = ({ onFullLogout }) => {
             >
               Recover favorites from this device
             </button>
+            <div className="pt-4 mt-2 border-t border-white/10">
+              <div className="text-sm font-semibold tracking-wide text-gray-100 uppercase">
+                Widget Sync
+              </div>
+              <p className="mt-1 text-xs text-gray-400">
+                Use the same API base and token as your Android widget app.
+              </p>
+
+              <div className="mt-3 space-y-3">
+                <input
+                  type="text"
+                  value={widgetSyncApiBase}
+                  onChange={(e) => setWidgetSyncApiBase(e.target.value)}
+                  placeholder="http://192.168.x.x:5174/api"
+                  className="w-full app-input"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <input
+                  type="text"
+                  value={widgetSyncToken}
+                  onChange={(e) => setWidgetSyncToken(e.target.value)}
+                  placeholder="same token as Android widget"
+                  className="w-full app-input"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <button
+                  type="button"
+                  onClick={syncWidgetProfile}
+                  disabled={widgetSyncLoading}
+                  className="w-full px-4 py-3 app-button-ghost disabled:opacity-60"
+                >
+                  {widgetSyncLoading
+                    ? "Syncing widget..."
+                    : "Sync widget data now"}
+                </button>
+              </div>
+            </div>
             <button
               type="button"
               onClick={handleFullLogout}
