@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL, APP_LOCALE } from "../config";
 import NotificationModal from "./NotificationModal";
 import CongratsToast from "./CongratsToast";
+import RatingPrompt from "./RatingPrompt";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+import { markRatingPromptHandled } from "../utils/ratingPromptTracker";
 import { cachedFetchJson } from "../utils/tmdbCache";
 
 const ShowDetail = ({ show, onBack, onRemove }) => {
@@ -22,6 +24,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedEpisode, setSelectedEpisode] = useState(null);
   const [showCongrats, setShowCongrats] = useState(false);
+  const [ratingPromptShow, setRatingPromptShow] = useState(null);
   const [needsMetadataBackfill, setNeedsMetadataBackfill] = useState(false);
   const prevCompletionRef = useRef(false);
 
@@ -200,6 +203,39 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
     prevCompletionRef.current = isCompletedNow;
   }, [computeCompletion, hasChanges, seasons]);
+
+  // After the "Klar!" celebration fades, offer to rate the show right here on
+  // the detail page (unless it already has a rating).
+  const handleCongratsClose = useCallback(() => {
+    setShowCongrats(false);
+    const alreadyRated =
+      typeof show?.userRating === "number" && show.userRating > 0;
+    if (alreadyRated || show?.id == null) return;
+    markRatingPromptHandled(show.id);
+    setRatingPromptShow(show);
+  }, [show]);
+
+  const submitDetailRating = useCallback(
+    async (rating) => {
+      const id = ratingPromptShow?.id;
+      setRatingPromptShow(null);
+      if (id == null) return;
+
+      const normalized = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
+      try {
+        const all = (await loadWatchedAll()) || [];
+        const updated = all.map((entry) =>
+          String(entry?.id) === String(id) && entry?.mediaType === "tv"
+            ? { ...entry, userRating: normalized > 0 ? normalized : undefined }
+            : entry,
+        );
+        await saveWatchedAll(updated);
+      } catch (err) {
+        console.error("Could not save show rating", err);
+      }
+    },
+    [ratingPromptShow],
+  );
 
   // Modified onBack handler to ensure changes are saved
   const handleBack = async () => {
@@ -761,7 +797,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
         {/* Congrats Toast and Confetti - when all episodes are marked as watched */}
         {showCongrats && (
           <CongratsToast
-            onClose={() => setShowCongrats(false)}
+            onClose={handleCongratsClose}
             title={show?.name || show?.title}
             posterPath={show?.poster_path}
             totalEpisodes={
@@ -770,6 +806,16 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                 ? show.number_of_episodes
                 : stats.total
             }
+          />
+        )}
+
+        {ratingPromptShow && (
+          <RatingPrompt
+            title={ratingPromptShow?.name || ratingPromptShow?.title}
+            onRate={(star) => {
+              void submitDetailRating(star);
+            }}
+            onLater={() => setRatingPromptShow(null)}
           />
         )}
       </div>
