@@ -12,9 +12,14 @@ import android.widget.RemoteViews
 class UpcomingRemoteWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        // Re-render from cache first: this re-binds the list adapter and calls
+        // notifyAppWidgetViewDataChanged, which self-heals the "stuck on Syncar
+        // data…" state after the launcher/host process is recycled.
         appWidgetIds.forEach { appWidgetId ->
             updateSingleWidget(context, appWidgetManager, appWidgetId)
         }
+        // Then kick a fresh sync so periodic system updates also refresh data.
+        triggerRefresh(context)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
