@@ -9,6 +9,8 @@ import {
   AI_GENRES,
   loadAiPreferences,
   saveAiPreferences,
+  genresFromNames,
+  loadProfileFavoriteGenreNames,
 } from "../utils/aiPreferences";
 import {
   loadFavorites,
@@ -20,6 +22,8 @@ import ShowDetailModal from "./ShowDetailModal";
 import ContinueWatchingSection from "./overview/ContinueWatchingSection";
 import UpcomingSection from "./overview/UpcomingSection";
 import { loadAppPreference } from "../utils/appPreferences";
+import { genreNamesFromItem } from "../utils/genreMap";
+import { FaFilm } from "react-icons/fa";
 
 const API_BASE = import.meta.env.VITE_AI_API_BASE || "/api";
 
@@ -43,6 +47,11 @@ const OverviewPage = () => {
   const [showPrefs, setShowPrefs] = useState(false);
   const actorDebounce = useRef(null);
 
+  const profileFavoriteGenres = useMemo(
+    () => genresFromNames(loadProfileFavoriteGenreNames()),
+    [],
+  );
+
   const toggleGenre = (genre) => {
     setAiPrefs((prev) => {
       const exists = prev.genres.some((g) => g.name === genre.name);
@@ -52,6 +61,18 @@ const OverviewPage = () => {
           ? prev.genres.filter((g) => g.name !== genre.name)
           : [...prev.genres, genre],
       };
+      saveAiPreferences(next);
+      return next;
+    });
+  };
+
+  const addProfileGenres = () => {
+    setAiPrefs((prev) => {
+      const merged = [...prev.genres];
+      for (const g of profileFavoriteGenres) {
+        if (!merged.some((x) => x.name === g.name)) merged.push(g);
+      }
+      const next = { ...prev, genres: merged };
       saveAiPreferences(next);
       return next;
     });
@@ -160,7 +181,12 @@ const OverviewPage = () => {
       const favs = Array.isArray(favorites) ? favorites : [];
       const wat = Array.isArray(watched) ? watched : [];
       const prefs = loadAiPreferences();
-      const hasPrefs = prefs.genres.length > 0 || prefs.actors.length > 0;
+      // When no AI genres are explicitly picked, fall back to the genres the
+      // user marked as favorites on their profile.
+      const profileGenres = genresFromNames(loadProfileFavoriteGenreNames());
+      const effectiveGenres =
+        prefs.genres.length > 0 ? prefs.genres : profileGenres;
+      const hasPrefs = effectiveGenres.length > 0 || prefs.actors.length > 0;
 
       const picks = [];
       const used = new Set();
@@ -182,28 +208,23 @@ const OverviewPage = () => {
           id: item.id,
           mediaType,
           title: item.title || item.name || "",
+          posterPath: item.poster_path ?? item.posterPath ?? null,
+          genres: genreNamesFromItem(item, 2),
           reason,
         });
       };
 
       if (hasPrefs) {
         // Build TMDb Discover queries from preferences
-        const movieGenreIds = prefs.genres
+        const movieGenreIds = effectiveGenres
           .map((g) => g.movieId)
           .filter(Boolean)
           .join(",");
-        const tvGenreIds = prefs.genres
+        const tvGenreIds = effectiveGenres
           .map((g) => g.tvId)
           .filter(Boolean)
           .join(",");
         const actorIds = prefs.actors.map((a) => a.id).join(",");
-
-        const reasonParts = [];
-        if (prefs.genres.length > 0)
-          reasonParts.push(prefs.genres.map((g) => g.name).join(", "));
-        if (prefs.actors.length > 0)
-          reasonParts.push(prefs.actors.map((a) => a.name).join(", "));
-        const reason = `Matches your preferences: ${reasonParts.join(" · ")}`;
 
         const fetchDiscover = async (type, genreIds) => {
           const params = new URLSearchParams({
@@ -249,7 +270,7 @@ const OverviewPage = () => {
 
         for (const item of combined) {
           const key = `${item.mediaType}:${item.id}`;
-          if (!seenIds.has(key)) pushPick(item, reason);
+          if (!seenIds.has(key)) pushPick(item, "");
           if (picks.length >= 3) break;
         }
 
@@ -840,6 +861,13 @@ const OverviewPage = () => {
               <p className="mt-1 text-xs text-gray-400">
                 Personalized suggestions based on your watch history.
               </p>
+              {aiPrefs.genres.length === 0 &&
+                profileFavoriteGenres.length > 0 && (
+                  <p className="mt-1 text-xs text-yellow-300/80">
+                    Using your favorite genres:{" "}
+                    {profileFavoriteGenres.map((g) => g.name).join(", ")}
+                  </p>
+                )}
             </div>
 
             <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
@@ -950,9 +978,23 @@ const OverviewPage = () => {
 
               {/* Genre chips */}
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Genres
-                </p>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    Genres
+                  </p>
+                  {profileFavoriteGenres.some(
+                    (g) => !aiPrefs.genres.some((x) => x.name === g.name),
+                  ) && (
+                    <button
+                      type="button"
+                      onClick={addProfileGenres}
+                      className="app-chip px-2.5 py-1 text-[11px]"
+                      title="Add the favorite genres from your profile"
+                    >
+                      + From profile
+                    </button>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {AI_GENRES.map((g) => {
                     const active = aiPrefs.genres.some(
@@ -1000,15 +1042,45 @@ const OverviewPage = () => {
                   }
                   className="app-card app-card-hover app-stagger-item w-full p-3 text-left"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="text-sm font-bold text-gray-100">
-                      {(p.title || "").toUpperCase()}
+                  <div className="flex items-center gap-3">
+                    {p.posterPath ? (
+                      <img
+                        src={`${IMAGE_BASE_URL}${p.posterPath}`}
+                        alt=""
+                        loading="lazy"
+                        className="h-16 w-11 flex-shrink-0 rounded-md object-cover bg-gray-800"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-11 flex-shrink-0 items-center justify-center rounded-md bg-gray-800 text-gray-600">
+                        <FaFilm aria-hidden="true" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold text-gray-100">
+                        {(p.title || "").toUpperCase()}
+                      </div>
+                      {p.genres?.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {p.genres.map((g) => (
+                            <span
+                              key={g}
+                              className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-gray-400"
+                            >
+                              {g}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {p.reason && (
+                        <div className="mt-1 text-xs text-gray-300">
+                          {p.reason}
+                        </div>
+                      )}
                     </div>
-                    <div className="app-pill text-[10px]">#{idx + 1}</div>
+                    <div className="app-pill flex-shrink-0 text-[10px]">
+                      #{idx + 1}
+                    </div>
                   </div>
-                  {p.reason && (
-                    <div className="mt-1 text-xs text-gray-300">{p.reason}</div>
-                  )}
                 </button>
               ))}
             </div>

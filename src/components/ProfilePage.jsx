@@ -36,6 +36,7 @@ import {
   saveAppPreference,
   setOnboardingSeen,
 } from "../utils/appPreferences";
+import { AI_GENRES } from "../utils/aiPreferences";
 
 const DEFAULT_PROFILE_KEY = "__default__";
 const API_BASE = import.meta.env.VITE_AI_API_BASE || "/api";
@@ -47,6 +48,9 @@ const profileCoverKeyForUser = (user) =>
   user ? `profileCover_${user}` : "profileCover";
 
 const DEFAULT_COVER_URL = `${import.meta.env.BASE_URL}img/background.avif`;
+
+const BIO_MAX_LEN = 160;
+const MAX_FAVORITE_GENRES = 5;
 
 const imageFileToDataUrl = async (file, { maxSizePx, quality = 0.86 } = {}) => {
   if (!file) return "";
@@ -115,6 +119,8 @@ const ProfilePage = ({ onFullLogout }) => {
     avatarDataUrl: "",
     coverDataUrl: "",
     displayName: "",
+    bio: "",
+    favoriteGenres: [],
     birthYear: "",
     gender: "",
     country: "",
@@ -342,6 +348,10 @@ const ProfilePage = ({ onFullLogout }) => {
       displayName: String(
         profileDisplayNames?.[key] || activeUser || "Profile",
       ),
+      bio: info.bio ? String(info.bio) : "",
+      favoriteGenres: Array.isArray(info.favoriteGenres)
+        ? info.favoriteGenres.filter((g) => typeof g === "string")
+        : [],
       birthYear: info.birthYear ? String(info.birthYear) : "",
       gender: info.gender ? String(info.gender) : "",
       country: info.country ? String(info.country) : "",
@@ -428,6 +438,8 @@ const ProfilePage = ({ onFullLogout }) => {
       avatarDataUrl: "",
       coverDataUrl: "",
       displayName: "",
+      bio: "",
+      favoriteGenres: [],
       birthYear: "",
       gender: "",
       country: "",
@@ -453,6 +465,12 @@ const ProfilePage = ({ onFullLogout }) => {
     }
 
     const nextInfoForUser = {
+      bio: (editDraft.bio || "").trim().slice(0, BIO_MAX_LEN),
+      favoriteGenres: Array.isArray(editDraft.favoriteGenres)
+        ? editDraft.favoriteGenres
+            .filter((g) => typeof g === "string")
+            .slice(0, MAX_FAVORITE_GENRES)
+        : [],
       birthYear: (editDraft.birthYear || "").trim(),
       gender: (editDraft.gender || "").trim(),
       country: (editDraft.country || "").trim(),
@@ -933,6 +951,34 @@ const ProfilePage = ({ onFullLogout }) => {
             {activeUser ? "On this device" : "Local profile"}
           </div>
 
+          {(() => {
+            const info = profileInfo?.[storageKeyForUser(activeUser)] || {};
+            const bio = typeof info.bio === "string" ? info.bio.trim() : "";
+            const genres = Array.isArray(info.favoriteGenres)
+              ? info.favoriteGenres.filter((g) => typeof g === "string")
+              : [];
+            if (!bio && genres.length === 0) return null;
+            return (
+              <div className="flex flex-col items-center w-full max-w-xs mt-3">
+                {bio && (
+                  <p className="text-sm leading-relaxed text-gray-300">{bio}</p>
+                )}
+                {genres.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+                    {genres.map((g) => (
+                      <span
+                        key={g}
+                        className="px-2.5 py-0.5 text-xs font-semibold rounded-full text-yellow-300 border border-yellow-400/30 bg-yellow-400/10"
+                      >
+                        {g}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <button
             type="button"
             onClick={openEditProfile}
@@ -1386,6 +1432,80 @@ const ProfilePage = ({ onFullLogout }) => {
                     placeholder={activeUser || "Profile"}
                     className="w-full px-0 py-3 mt-2 text-base text-gray-100 bg-transparent border-b border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-4 focus-visible:ring-offset-gray-950"
                   />
+                </div>
+
+                <div className="mt-8">
+                  <div className="flex items-baseline justify-between">
+                    <div className="text-lg font-bold text-gray-100">Bio</div>
+                    <div className="text-xs text-gray-500">
+                      {(editDraft.bio || "").length}/{BIO_MAX_LEN}
+                    </div>
+                  </div>
+                  <textarea
+                    value={editDraft.bio}
+                    maxLength={BIO_MAX_LEN}
+                    rows={3}
+                    onChange={(e) =>
+                      setEditDraft((d) => ({
+                        ...d,
+                        bio: e.target.value,
+                      }))
+                    }
+                    placeholder="Say something about your taste in movies & shows…"
+                    className="w-full px-0 py-3 mt-2 text-base text-gray-100 bg-transparent border-b resize-none border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-4 focus-visible:ring-offset-gray-950"
+                  />
+                </div>
+
+                <div className="mt-8">
+                  <div className="flex items-baseline justify-between">
+                    <div className="text-lg font-bold text-gray-100">
+                      Favorite genres
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {(editDraft.favoriteGenres || []).length}/
+                      {MAX_FAVORITE_GENRES}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {AI_GENRES.map((g) => {
+                      const selected = (editDraft.favoriteGenres || []).includes(
+                        g.name,
+                      );
+                      const atLimit =
+                        (editDraft.favoriteGenres || []).length >=
+                        MAX_FAVORITE_GENRES;
+                      const disabled = !selected && atLimit;
+                      return (
+                        <button
+                          key={g.name}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() =>
+                            setEditDraft((d) => {
+                              const current = Array.isArray(d.favoriteGenres)
+                                ? d.favoriteGenres
+                                : [];
+                              const next = current.includes(g.name)
+                                ? current.filter((x) => x !== g.name)
+                                : current.length < MAX_FAVORITE_GENRES
+                                  ? [...current, g.name]
+                                  : current;
+                              return { ...d, favoriteGenres: next };
+                            })
+                          }
+                          className={`px-3 py-1.5 text-sm font-semibold rounded-full border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${
+                            selected
+                              ? "bg-yellow-500 text-gray-950 border-yellow-500"
+                              : disabled
+                                ? "text-gray-600 border-white/10 opacity-50"
+                                : "text-gray-200 border-white/15 hover:bg-white/5"
+                          }`}
+                        >
+                          {g.name}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="mt-10">

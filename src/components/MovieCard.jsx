@@ -1,27 +1,6 @@
 import React, { useState } from "react";
 import { IMAGE_BASE_URL } from "../config";
-
-const GENRE_MAP = {
-  28: "Action",
-  12: "Adventure",
-  16: "Animation",
-  35: "Comedy",
-  80: "Crime",
-  99: "Documentary",
-  18: "Drama",
-  10751: "Family",
-  14: "Fantasy",
-  36: "History",
-  27: "Horror",
-  10402: "Music",
-  9648: "Mystery",
-  10749: "Romance",
-  878: "Science Fiction",
-  10770: "TV Movie",
-  53: "Thriller",
-  10752: "War",
-  37: "Western",
-};
+import { genreNamesFromItem } from "../utils/genreMap";
 
 const MovieCard = ({
   item,
@@ -33,29 +12,7 @@ const MovieCard = ({
   const displayItem = item || {};
   const titleText = displayItem.title || displayItem.name || "Untitled";
 
-  // Förbättrad genre-hantering
-  const getGenres = () => {
-    // Om item.genres finns som objekt array (från detaljerad API-anrop)
-    if (item.genres && Array.isArray(item.genres) && item.genres.length > 0) {
-      return item.genres
-        .map((g) => (typeof g === "object" ? g.name : GENRE_MAP[g]))
-        .filter(Boolean);
-    }
-
-    // Om item.genre_ids finns (från sök-API)
-    if (
-      item.genre_ids &&
-      Array.isArray(item.genre_ids) &&
-      item.genre_ids.length > 0
-    ) {
-      return item.genre_ids.map((id) => GENRE_MAP[id]).filter(Boolean);
-    }
-
-    // Fallback - returnera tom array
-    return [];
-  };
-
-  const genres = getGenres();
+  const genres = genreNamesFromItem(item, Infinity);
   const ratingValue =
     typeof displayItem.userRating === "number" && displayItem.userRating > 0
       ? Math.max(1, Math.min(5, Math.round(displayItem.userRating)))

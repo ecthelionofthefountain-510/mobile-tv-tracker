@@ -17,7 +17,30 @@ export const AI_GENRES = [
   { name: "History", movieId: 36, tvId: null },
 ];
 
+import { getCurrentUser } from "./favoritesStorage";
+
 const KEY = "aiPreferences";
+
+// Map a list of genre names to full AI_GENRES objects ({ name, movieId, tvId }).
+export function genresFromNames(names) {
+  if (!Array.isArray(names)) return [];
+  return AI_GENRES.filter((g) => names.includes(g.name));
+}
+
+// Read the current profile's favorite genre names (set on the Edit profile page).
+export function loadProfileFavoriteGenreNames() {
+  try {
+    const user = getCurrentUser();
+    const key = typeof user === "string" && user.trim() ? user : "__default__";
+    const info = (JSON.parse(localStorage.getItem("profileInfo")) || {})[key];
+    const names = info?.favoriteGenres;
+    return Array.isArray(names)
+      ? names.filter((n) => typeof n === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
 
 // { genres: [{ name, movieId, tvId }], actors: [{ id, name }] }
 export function loadAiPreferences() {
