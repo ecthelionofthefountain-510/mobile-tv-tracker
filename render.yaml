@@ -1,0 +1,29 @@
+# Render blueprint for the widget/AI API server (server/index.js).
+# Deploy: render.com → New → Blueprint → connect this repo. Then set the
+# secret env vars (marked sync:false) in the dashboard.
+#
+# Note: the free plan spins down after ~15 min idle and cold-starts in ~30-60s,
+# which can time out the widget's first request. For an always-on backend use a
+# paid plan, or a host like Railway/Fly that keeps a small instance warm.
+services:
+  - type: web
+    name: mobile-tv-tracker-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: https://ecthelionofthefountain-510.github.io
+      - key: TMDB_API_KEY
+        sync: false
+      - key: WIDGET_SERVER_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
 import rateLimit from "express-rate-limit";
+import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -86,6 +87,20 @@ const WIDGET_PROFILE_STORE_PATH = resolve(
     ".widget-profiles/widget-profiles.json",
 );
 
+// Cloud-persistent profile store. When a Supabase service-role key is present
+// (production) we keep widget profiles in the `widget_profiles` table so the
+// server is stateless and deployable anywhere. Without it (local dev) we fall
+// back to the JSON file above.
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const WIDGET_PROFILE_TABLE = "widget_profiles";
+const widgetProfileDb =
+  SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+    : null;
+
 const tvDetailsCache = new Map();
 const tvDetailsInFlight = new Map();
 const tvSeasonDetailsCache = new Map();
@@ -150,9 +165,25 @@ async function writeWidgetProfileStore(store) {
 
 async function loadWidgetProfileSnapshot(token) {
   if (!token) return null;
+  const key = widgetProfileKey(token);
+
+  if (widgetProfileDb) {
+    const { data, error } = await widgetProfileDb
+      .from(WIDGET_PROFILE_TABLE)
+      .select("favorites,watched,updated_at")
+      .eq("token_hash", key)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      favorites: normalizeWidgetProfileArray(data.favorites),
+      watched: normalizeWidgetProfileArray(data.watched),
+      updatedAt: data.updated_at || null,
+    };
+  }
 
   const store = await readWidgetProfileStore();
-  const entry = store[widgetProfileKey(token)];
+  const entry = store[key];
   if (!entry || typeof entry !== "object") return null;
 
   return {
@@ -167,15 +198,33 @@ async function saveWidgetProfileSnapshot(token, favorites, watched) {
     throw new Error("Missing widget profile token");
   }
 
-  const store = await readWidgetProfileStore();
-  store[widgetProfileKey(token)] = {
+  const key = widgetProfileKey(token);
+  const entry = {
     favorites: normalizeWidgetProfileArray(favorites),
     watched: normalizeWidgetProfileArray(watched),
     updatedAt: new Date().toISOString(),
   };
 
+  if (widgetProfileDb) {
+    const { error } = await widgetProfileDb
+      .from(WIDGET_PROFILE_TABLE)
+      .upsert(
+        {
+          token_hash: key,
+          favorites: entry.favorites,
+          watched: entry.watched,
+          updated_at: entry.updatedAt,
+        },
+        { onConflict: "token_hash" },
+      );
+    if (error) throw error;
+    return entry;
+  }
+
+  const store = await readWidgetProfileStore();
+  store[key] = entry;
   await writeWidgetProfileStore(store);
-  return store[widgetProfileKey(token)];
+  return store[key];
 }
 
 function startOfDayUtc(dateLike) {
