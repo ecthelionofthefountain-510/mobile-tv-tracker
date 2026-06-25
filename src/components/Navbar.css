@@ -53,6 +53,7 @@
 .nav-icon {
   margin-bottom: 2px;
   font-size: 22px;
+  position: relative;
   transition:
     color 0.2s,
     filter 0.2s;
@@ -109,6 +110,59 @@
 
 .navbar-floating-icon svg {
   @apply text-yellow-300;
+}
+
+/* Added an item: the destination icon grows, shakes, holds, then settles. */
+.nav-icon-pulse {
+  animation: navIconShake 0.8s ease-in-out;
+}
+
+.nav-icon-pulse svg {
+  animation: navIconFlash 0.8s ease-in-out;
+}
+
+@keyframes navIconShake {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  12% {
+    transform: scale(1.8) rotate(-13deg);
+  }
+  24% {
+    transform: scale(1.8) rotate(13deg);
+  }
+  36% {
+    transform: scale(1.8) rotate(-7.8deg);
+  }
+  48% {
+    transform: scale(1.8) rotate(5.2deg);
+  }
+  68% {
+    transform: scale(1.8) rotate(0deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes navIconFlash {
+  0%,
+  100% {
+    color: inherit;
+  }
+  40% {
+    color: #fcd11d;
+  }
+}
+
+/* Respect reduced-motion: brief highlight only, no scale/shake. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-icon-pulse {
+    animation: none;
+  }
+  .nav-icon-pulse svg {
+    animation: navIconFlash 0.5s ease-out;
+  }
 }
 
 body.theme-light .nav-link {

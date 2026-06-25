@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FaSearch, FaTv, FaFilm, FaUser, FaChartPie } from "react-icons/fa";
 import { get as idbGet } from "idb-keyval";
 import { onProfileMediaUpdated } from "../utils/profileMediaEvents";
+import { onNavPulse } from "../utils/navPulseEvents";
 import "./Navbar.css";
 
 const profileAvatarKeyForUser = (user) =>
@@ -16,6 +17,10 @@ export default function Navbar() {
     () => JSON.parse(localStorage.getItem("profileImages")) || {},
   );
   const [currentAvatar, setCurrentAvatar] = useState("");
+  // Which nav route is currently pulsing (after an add), plus an id so the same
+  // target can re-trigger the animation.
+  const [pulse, setPulse] = useState({ target: null, id: 0 });
+  const pulseTimer = useRef(null);
 
   const refreshFromStorage = () => {
     setCurrentUser(JSON.parse(localStorage.getItem("currentUser")));
@@ -69,6 +74,22 @@ export default function Navbar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = onNavPulse((target) => {
+      if (!target) return;
+      setPulse((prev) => ({ target, id: prev.id + 1 }));
+      if (pulseTimer.current) clearTimeout(pulseTimer.current);
+      pulseTimer.current = setTimeout(() => {
+        setPulse((prev) => ({ ...prev, target: null }));
+      }, 900);
+    });
+
+    return () => {
+      unsubscribe();
+      if (pulseTimer.current) clearTimeout(pulseTimer.current);
+    };
+  }, []);
+
   const location = useLocation();
   const profileIcon = currentUser ? (
     <img
@@ -117,7 +138,18 @@ export default function Navbar() {
             } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900`}
             aria-current={index === activeIndex ? "page" : undefined}
           >
-            <div className="nav-icon">{item.icon}</div>
+            <div
+              className={`nav-icon ${
+                pulse.target === item.to ? "nav-icon-pulse" : ""
+              }`}
+              key={
+                pulse.target === item.to
+                  ? `pulse-${pulse.id}`
+                  : `icon-${item.label}`
+              }
+            >
+              {item.icon}
+            </div>
             <span className="nav-label">{item.label}</span>
           </Link>
         ))}

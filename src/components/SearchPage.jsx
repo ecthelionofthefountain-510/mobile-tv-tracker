@@ -8,6 +8,7 @@ import SearchIcon from "../icons/SearchIcon";
 
 import { createWatchedShow, createWatchedMovie } from "../utils/watchedMapper";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+import { emitNavPulse } from "../utils/navPulseEvents";
 import { cachedFetchJson } from "../utils/tmdbCache";
 import {
   loadFavorites,
@@ -622,6 +623,8 @@ const SearchPage = () => {
     await saveWatchedAll(updatedAll);
     setWatched(updatedAll);
     notify(`"${item.title || item.name}" added to watched.`);
+    const mt = item.mediaType || (item.first_air_date ? "tv" : "movie");
+    emitNavPulse(mt === "tv" ? "/shows" : "/movies");
   };
 
   const toggleFavorite = async (item, e) => {
@@ -657,6 +660,7 @@ const SearchPage = () => {
         ? `"${item.title || item.name}" removed from favorites.`
         : `"${item.title || item.name}" added to favorites.`,
     );
+    if (!isFavorited) emitNavPulse("/profile");
   };
 
   const getActionItem = () => {
