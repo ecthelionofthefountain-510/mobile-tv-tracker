@@ -7,6 +7,16 @@ import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { markRatingPromptHandled } from "../utils/ratingPromptTracker";
 import { cachedFetchJson } from "../utils/tmdbCache";
 
+// True if any season has at least one watched episode.
+function seasonsHaveProgress(seasonsObj) {
+  if (!seasonsObj || typeof seasonsObj !== "object" || Array.isArray(seasonsObj)) {
+    return false;
+  }
+  return Object.values(seasonsObj).some(
+    (season) => (season?.watchedEpisodes?.length || 0) > 0,
+  );
+}
+
 const ShowDetail = ({ show, onBack, onRemove }) => {
   const [seasons, setSeasons] = useState(() => {
     if (show?.seasons && !Array.isArray(show.seasons)) return show.seasons;
@@ -84,6 +94,19 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
       sameEntry(item, { id: show.id, mediaType: "tv" }),
     );
     let updatedAll;
+
+    // Data-loss guard: never overwrite a stored entry that has progress with an
+    // empty seasons state when the episode lists never loaded (a failed TMDb
+    // load leaves `seasons` empty). An intentional "Unwatch all" is fine because
+    // the episodes did load (totalFromEpisodesData > 0).
+    if (idx >= 0) {
+      const storedHasProgress = seasonsHaveProgress(allWatched[idx]?.seasons);
+      const nextHasProgress = seasonsHaveProgress(seasons);
+      if (storedHasProgress && !nextHasProgress && totalFromEpisodesData <= 0) {
+        setHasChanges(false);
+        return;
+      }
+    }
 
     if (idx >= 0) {
       updatedAll = allWatched.map((item) =>
