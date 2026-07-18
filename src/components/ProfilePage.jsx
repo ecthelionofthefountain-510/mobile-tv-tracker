@@ -5,31 +5,23 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import {
   FaCamera,
   FaChartPie,
   FaChevronRight,
-  FaPlus,
   FaRegCalendarAlt,
   FaTimes,
 } from "react-icons/fa";
-import { API_KEY, IMAGE_BASE_URL, TMDB_BASE_URL } from "../config";
 import {
-  favoriteIdentity,
   getCurrentUser,
   loadFavorites,
   recoverFavoritesFromDevice,
-  saveFavorites,
 } from "../utils/favoritesStorage";
 import { emitProfileMediaUpdated } from "../utils/profileMediaEvents";
-import { createWatchedMovie, createWatchedShow } from "../utils/watchedMapper";
-import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
-import { cachedFetchJson, clearCache } from "../utils/tmdbCache";
-import MovieDetailModal from "./MovieDetailModal";
-import ShowDetailModal from "./ShowDetailModal";
-import FavoritesTitlesModal from "./FavoritesTitlesModal";
+import { loadWatchedAll } from "../utils/watchedStorage";
+import { clearCache } from "../utils/tmdbCache";
 import BackupControls from "./BackupControls";
 import {
   loadAppPreference,
@@ -142,17 +134,6 @@ const ProfilePage = ({ onFullLogout }) => {
     },
     [toastDurationMs],
   );
-
-  const [favorites, setFavorites] = useState([]);
-  const [watched, setWatched] = useState([]);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [itemDetails, setItemDetails] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [detailsError, setDetailsError] = useState("");
-  const [profileLoadError, setProfileLoadError] = useState("");
-
-  const [favoritesTitlesModalType, setFavoritesTitlesModalType] =
-    useState(null);
 
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
@@ -281,34 +262,6 @@ const ProfilePage = ({ onFullLogout }) => {
         }
       } catch {
         // ignore
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeUser]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      setProfileLoadError("");
-      try {
-        const favs = await loadFavorites(activeUser);
-        const watched = await loadWatchedAll(activeUser);
-
-        if (!cancelled) {
-          setFavorites(Array.isArray(favs) ? favs : []);
-          setWatched(Array.isArray(watched) ? watched : []);
-        }
-      } catch (e) {
-        console.error(e);
-        if (!cancelled) {
-          setFavorites([]);
-          setWatched([]);
-          setProfileLoadError("Could not load profile data.");
-        }
       }
     })();
 
@@ -539,69 +492,6 @@ const ProfilePage = ({ onFullLogout }) => {
     };
   }, [isEditOpen]);
 
-  const sameEntry = (a, b) =>
-    String(a?.id) === String(b?.id) &&
-    (a?.mediaType || (a?.first_air_date ? "tv" : "movie")) ===
-      (b?.mediaType || (b?.first_air_date ? "tv" : "movie"));
-
-  const openDetails = async (item) => {
-    if (!item || item.id == null) return;
-    const mediaType = item.mediaType || (item.first_air_date ? "tv" : "movie");
-    const endpoint = mediaType === "tv" ? "tv" : "movie";
-
-    setSelectedItem({ ...item, mediaType });
-    setItemDetails(null);
-    setIsLoading(true);
-    setDetailsError("");
-
-    try {
-      const [details, credits, videos] = await Promise.all([
-        cachedFetchJson(
-          `${TMDB_BASE_URL}/${endpoint}/${item.id}?api_key=${API_KEY}`,
-          { ttlMs: 6 * 60 * 60 * 1000 },
-        ),
-        cachedFetchJson(
-          `${TMDB_BASE_URL}/${endpoint}/${item.id}/credits?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 },
-        ),
-        cachedFetchJson(
-          `${TMDB_BASE_URL}/${endpoint}/${item.id}/videos?api_key=${API_KEY}`,
-          { ttlMs: 24 * 60 * 60 * 1000 },
-        ),
-      ]);
-      setItemDetails({ ...details, credits, videos });
-    } catch (e) {
-      console.error(e);
-      setDetailsError("Could not load details.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const closeModal = () => {
-    setSelectedItem(null);
-    setItemDetails(null);
-    setIsLoading(false);
-    setDetailsError("");
-  };
-
-  const openFavoritesTitlesModal = (mediaType) => {
-    setFavoritesTitlesModalType(mediaType);
-  };
-
-  const closeFavoritesTitlesModal = () => {
-    setFavoritesTitlesModalType(null);
-  };
-
-  const refreshWatchedFromStorage = async () => {
-    try {
-      const next = await loadWatchedAll(activeUser);
-      setWatched(Array.isArray(next) ? next : []);
-    } catch {
-      // ignore
-    }
-  };
-
   const clearTmdbCache = () => {
     try {
       clearCache();
@@ -625,12 +515,10 @@ const ProfilePage = ({ onFullLogout }) => {
         return;
       }
       if (result.recovered > 0) {
-        const favs = await loadFavorites(activeUser);
-        setFavorites(Array.isArray(favs) ? favs : []);
         showToast(
           `Recovered ${result.recovered} favorite${
             result.recovered === 1 ? "" : "s"
-          }.`,
+          }. Open the Favorites tab to see them.`,
         );
       } else {
         showToast("No favorites found on this device.");
@@ -697,175 +585,6 @@ const ProfilePage = ({ onFullLogout }) => {
     emitProfileMediaUpdated({ kind: "user", user: null });
     if (onFullLogout) onFullLogout();
     navigate("/login");
-  };
-
-  const toggleFavorite = (item) => {
-    const normalizedItem = {
-      ...item,
-      mediaType: item?.mediaType || (item?.first_air_date ? "tv" : "movie"),
-    };
-
-    const prevFavorites = favorites;
-    const exists = favorites.some(
-      (f) => favoriteIdentity(f) === favoriteIdentity(normalizedItem),
-    );
-    const updated = exists
-      ? favorites.filter(
-          (f) => favoriteIdentity(f) !== favoriteIdentity(normalizedItem),
-        )
-      : [...favorites, normalizedItem];
-
-    setFavorites(updated);
-    (async () => {
-      const ok = await saveFavorites(updated, activeUser);
-      if (!ok) setFavorites(prevFavorites);
-    })();
-  };
-
-  const toggleWatched = async (item) => {
-    const mediaType =
-      item?.mediaType || (item?.first_air_date ? "tv" : "movie");
-    const existing = watched.some((w) => sameEntry(w, { ...item, mediaType }));
-
-    if (existing) {
-      const updated = watched.filter(
-        (w) => !sameEntry(w, { ...item, mediaType }),
-      );
-      setWatched(updated);
-      await saveWatchedAll(updated, activeUser);
-      return;
-    }
-
-    let base =
-      mediaType === "tv" ? createWatchedShow(item) : createWatchedMovie(item);
-
-    if (mediaType === "tv") {
-      try {
-        const needsDetails =
-          !base.number_of_seasons ||
-          typeof base.number_of_episodes !== "number" ||
-          base.number_of_episodes <= 0;
-        let tvDetails = null;
-        if (needsDetails) {
-          tvDetails = await cachedFetchJson(
-            `${TMDB_BASE_URL}/tv/${item.id}?api_key=${API_KEY}`,
-            { ttlMs: 6 * 60 * 60 * 1000 },
-          );
-        }
-
-        const seasonsCount =
-          base.number_of_seasons || tvDetails?.number_of_seasons || 0;
-        const episodesCount =
-          typeof base.number_of_episodes === "number" &&
-          base.number_of_episodes > 0
-            ? base.number_of_episodes
-            : tvDetails?.number_of_episodes;
-
-        const seasons = {};
-        for (let i = 1; i <= seasonsCount; i++) {
-          seasons[i] = { watchedEpisodes: [] };
-        }
-
-        base = {
-          ...base,
-          number_of_seasons: seasonsCount,
-          number_of_episodes:
-            typeof episodesCount === "number" && episodesCount > 0
-              ? episodesCount
-              : base.number_of_episodes,
-          seasons,
-        };
-      } catch (e) {
-        console.warn("Could not enrich TV watched item", e);
-      }
-    }
-
-    const updated = [...watched, base];
-    setWatched(updated);
-    await saveWatchedAll(updated, activeUser);
-  };
-
-  const favoritesShows = useMemo(
-    () =>
-      favorites
-        .filter(
-          (f) =>
-            (f?.mediaType || (f?.first_air_date ? "tv" : "movie")) === "tv",
-        )
-        .sort(
-          (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0),
-        ),
-    [favorites],
-  );
-  const favoritesMovies = useMemo(
-    () =>
-      favorites
-        .filter(
-          (f) =>
-            (f?.mediaType || (f?.first_air_date ? "tv" : "movie")) === "movie",
-        )
-        .sort(
-          (a, b) => new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0),
-        ),
-    [favorites],
-  );
-  const watchedShows = useMemo(
-    () =>
-      watched.filter(
-        (w) => (w?.mediaType || (w?.first_air_date ? "tv" : "movie")) === "tv",
-      ),
-    [watched],
-  );
-  const watchedMovies = useMemo(
-    () =>
-      watched.filter(
-        (w) =>
-          (w?.mediaType || (w?.first_air_date ? "tv" : "movie")) === "movie",
-      ),
-    [watched],
-  );
-
-  const primaryShows =
-    favoritesShows.length > 0 ? favoritesShows : watchedShows;
-  const primaryMovies =
-    favoritesMovies.length > 0 ? favoritesMovies : watchedMovies;
-
-  const PosterRow = ({ items, emptyCta }) => {
-    if (!items || items.length === 0) return emptyCta || null;
-    return (
-      <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {items.slice(0, 20).map((item) => {
-          const key =
-            favoriteIdentity(item) ||
-            `${item?.mediaType || "x"}:${String(item?.id)}`;
-          const title = item?.title || item?.name || "";
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => openDetails(item)}
-              className="flex-shrink-0 w-[94px] sm:w-[110px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-              aria-label={title ? `Open ${title}` : "Open item"}
-            >
-              <div className="app-card app-card-hover">
-                {item?.poster_path ? (
-                  <img
-                    src={`${IMAGE_BASE_URL}${item.poster_path}`}
-                    alt={title}
-                    className="object-cover w-full aspect-[2/3]"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center w-full text-xs text-gray-500 aspect-[2/3] bg-gray-800">
-                    No image
-                  </div>
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    );
   };
 
   return (
@@ -988,10 +707,6 @@ const ProfilePage = ({ onFullLogout }) => {
           </button>
         </div>
 
-        {profileLoadError && (
-          <div className="mt-3 text-xs text-red-300">{profileLoadError}</div>
-        )}
-
         {editStatus && (
           <div className="mt-3 text-xs text-red-300">{editStatus}</div>
         )}
@@ -1031,106 +746,6 @@ const ProfilePage = ({ onFullLogout }) => {
               aria-hidden="true"
             />
           </button>
-        </div>
-
-        {/* Stats section */}
-        {/* <div className="mt-8">
-          <Link
-            to="/overview"
-            className="flex items-center justify-between text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-            aria-label="Open overview"
-          >
-            <span>Stats</span>
-            <FaChevronRight className="text-gray-300" />
-          </Link>
-        </div> */}
-
-        {/* Lists section */}
-        {/* <div className="mt-8">
-          <div className="flex items-center justify-between text-2xl font-bold text-gray-100">
-            <span>Lists</span>
-            <FaChevronRight className="text-gray-300" aria-hidden="true" />
-          </div>
-
-          <Link
-            to="/search"
-            className="flex flex-col items-center justify-center w-full gap-2 p-6 mt-4 border border-white/10 rounded-2xl bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-            aria-label="Add favorites"
-          >
-            <div className="text-5xl text-gray-100">
-              <FaPlus />
-            </div>
-            <div className="text-sm font-bold tracking-wide text-gray-100 uppercase">
-              Add favorites
-            </div>
-            <div className="text-xs text-gray-400">
-              Search and heart what you like
-            </div>
-          </Link>
-        </div> */}
-
-        {/* Shows section */}
-        <div className="mt-10">
-          <button
-            type="button"
-            onClick={() => openFavoritesTitlesModal("tv")}
-            className="flex items-center justify-between w-full text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-            aria-label="Open favorite shows"
-          >
-            <span>Favorite Shows</span>
-            <FaChevronRight className="text-gray-300" />
-          </button>
-
-          <div className="mt-4">
-            <PosterRow
-              items={primaryShows}
-              emptyCta={
-                <Link
-                  to="/search"
-                  className="flex flex-col items-center justify-center w-full gap-2 p-6 border border-white/10 rounded-2xl bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-                >
-                  <div className="text-5xl text-gray-100">
-                    <FaPlus />
-                  </div>
-                  <div className="text-sm font-bold tracking-wide text-gray-100 uppercase">
-                    Add favorite shows
-                  </div>
-                </Link>
-              }
-            />
-          </div>
-        </div>
-
-        {/* Movies section */}
-        <div className="mt-10">
-          <button
-            type="button"
-            onClick={() => openFavoritesTitlesModal("movie")}
-            className="flex items-center justify-between w-full text-2xl font-bold text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-            aria-label="Open favorite movies"
-          >
-            <span>Favorite Movies</span>
-            <FaChevronRight className="text-gray-300" />
-          </button>
-
-          <div className="mt-4">
-            <PosterRow
-              items={primaryMovies}
-              emptyCta={
-                <Link
-                  to="/search"
-                  className="flex flex-col items-center justify-center w-full gap-2 p-6 border border-white/10 rounded-2xl bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-                >
-                  <div className="text-5xl text-gray-100">
-                    <FaPlus />
-                  </div>
-                  <div className="text-sm font-bold tracking-wide text-gray-100 uppercase">
-                    Add favorite movies
-                  </div>
-                </Link>
-              }
-            />
-          </div>
         </div>
 
         <div className="p-4 mt-8 app-panel">
@@ -1212,7 +827,7 @@ const ProfilePage = ({ onFullLogout }) => {
               Log out
             </button>
             <div className="pt-1">
-              <BackupControls compact onRestore={refreshWatchedFromStorage} />
+              <BackupControls compact />
             </div>
           </div>
         </div>
@@ -1224,73 +839,6 @@ const ProfilePage = ({ onFullLogout }) => {
           </div>
         )}
 
-        {favoritesTitlesModalType && (
-          <FavoritesTitlesModal
-            title={
-              favoritesTitlesModalType === "tv"
-                ? "Favorite Shows"
-                : "Favorite Movies"
-            }
-            items={
-              favoritesTitlesModalType === "tv"
-                ? favoritesShows
-                : favoritesMovies
-            }
-            onClose={closeFavoritesTitlesModal}
-          />
-        )}
-
-        {/* Details modal */}
-        {selectedItem &&
-          !isLoading &&
-          itemDetails &&
-          (selectedItem.mediaType === "tv" ||
-          itemDetails?.seasons ||
-          itemDetails?.number_of_seasons ? (
-            <ShowDetailModal
-              show={itemDetails}
-              onClose={closeModal}
-              showActions
-              isWatched={watched.some((w) => sameEntry(w, selectedItem))}
-              isFavorited={favorites.some(
-                (f) => favoriteIdentity(f) === favoriteIdentity(selectedItem),
-              )}
-              onAddToWatched={() => toggleWatched(selectedItem)}
-              onAddToFavorites={() => toggleFavorite(selectedItem)}
-            />
-          ) : (
-            <MovieDetailModal
-              movie={itemDetails}
-              onClose={closeModal}
-              showActions
-              isWatched={watched.some((w) => sameEntry(w, selectedItem))}
-              isFavorited={favorites.some(
-                (f) => favoriteIdentity(f) === favoriteIdentity(selectedItem),
-              )}
-              onAddToWatched={() => toggleWatched(selectedItem)}
-              onAddToFavorites={() => toggleFavorite(selectedItem)}
-            />
-          ))}
-
-        {selectedItem && isLoading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-            <div className="w-full max-w-sm p-6 app-panel-solid">
-              <div className="text-lg font-semibold text-yellow-400">
-                Loading…
-              </div>
-              {detailsError && (
-                <div className="mt-2 text-sm text-red-300">{detailsError}</div>
-              )}
-              <button
-                type="button"
-                onClick={closeModal}
-                className="px-4 py-2 mt-4 app-button-ghost"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Edit profile modal */}

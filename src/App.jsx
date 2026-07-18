@@ -7,8 +7,8 @@ import {
   useLocation,
 } from "react-router-dom";
 import SearchPage from "./components/SearchPage";
-import ShowsList from "./components/ShowsList";
-import MoviesList from "./components/MoviesList";
+import WatchedPage from "./components/WatchedPage";
+import FavoritesList from "./components/FavoritesList";
 import Navbar from "./components/Navbar";
 import LoginPage from "./components/LoginPage";
 import ProfilePage from "./components/ProfilePage";
@@ -195,15 +195,24 @@ function AppShell() {
           <Route
             path="/shows"
             element={
-              currentUser ? <ShowsList /> : <Navigate to="/login" replace />
+              currentUser ? (
+                <WatchedPage initialType="tv" />
+              ) : (
+                <Navigate to="/login" replace />
+              )
             }
           />
           <Route
             path="/movies"
             element={
-              currentUser ? <MoviesList /> : <Navigate to="/login" replace />
+              currentUser ? (
+                <WatchedPage initialType="movie" />
+              ) : (
+                <Navigate to="/login" replace />
+              )
             }
           />
+          <Route path="/watched" element={<Navigate to="/shows" replace />} />
           <Route
             path="/search"
             element={
@@ -212,7 +221,9 @@ function AppShell() {
           />
           <Route
             path="/favorites"
-            element={<Navigate to="/profile" replace />}
+            element={
+              currentUser ? <FavoritesList /> : <Navigate to="/login" replace />
+            }
           />
           <Route
             path="/overview"

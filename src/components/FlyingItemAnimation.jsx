@@ -43,12 +43,11 @@ const FlyingItemAnimation = ({
       // Bestäm målikonen baserat på typ
       let targetSelector;
 
-      if (targetType === "movie") {
-        targetSelector = 'a[href="/movies"]';
-      } else if (targetType === "tv") {
-        targetSelector = 'a[href="/shows"]';
+      if (targetType === "movie" || targetType === "tv") {
+        // Shows and Movies now share one "Watched" tab.
+        targetSelector = '[data-nav="watched"]';
       } else if (targetType === "favorite") {
-        targetSelector = 'a[href="/favorites"]';
+        targetSelector = '[data-nav="favorites"]';
       }
 
       const targetElement = document.querySelector(targetSelector);

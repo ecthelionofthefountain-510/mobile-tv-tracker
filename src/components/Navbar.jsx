@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FaSearch, FaTv, FaFilm, FaUser, FaChartPie } from "react-icons/fa";
+import {
+  FaSearch,
+  FaListUl,
+  FaHeart,
+  FaUser,
+  FaChartPie,
+} from "react-icons/fa";
 import { get as idbGet } from "idb-keyval";
 import { onProfileMediaUpdated } from "../utils/profileMediaEvents";
 import { onNavPulse } from "../utils/navPulseEvents";
@@ -108,14 +114,23 @@ export default function Navbar() {
   );
 
   const navItems = [
-    { to: "/shows", icon: <FaTv />, label: "Shows" },
-    { to: "/movies", icon: <FaFilm />, label: "Movies" },
+    {
+      to: "/shows",
+      icon: <FaListUl />,
+      label: "Watched",
+      dataNav: "watched",
+      // Shows and Movies are two routes behind one tab.
+      match: ["/shows", "/movies", "/watched"],
+    },
+    { to: "/favorites", icon: <FaHeart />, label: "Favorites", dataNav: "favorites" },
     { to: "/search", icon: <FaSearch />, label: "Explore" },
     { to: "/overview", icon: <FaChartPie />, label: "Overview" },
     { to: "/profile", icon: profileIcon, label: "Profile" },
   ];
-  const foundIndex = navItems.findIndex(
-    (item) => item.to === location.pathname,
+  const matchesItem = (item, path) =>
+    item.to === path || (item.match?.includes(path) ?? false);
+  const foundIndex = navItems.findIndex((item) =>
+    matchesItem(item, location.pathname),
   );
   const activeIndex = foundIndex >= 0 ? foundIndex : 0;
 
@@ -126,12 +141,9 @@ export default function Navbar() {
           <Link
             key={item.label}
             to={item.to}
+            data-nav={item.dataNav}
             data-onboarding={
-              item.to === "/shows"
-                ? "nav-shows"
-                : item.to === "/movies"
-                  ? "nav-movies"
-                  : undefined
+              item.to === "/shows" ? "nav-shows" : undefined
             }
             className={`nav-link ${
               index === activeIndex ? "nav-link-active" : ""
@@ -140,10 +152,10 @@ export default function Navbar() {
           >
             <div
               className={`nav-icon ${
-                pulse.target === item.to ? "nav-icon-pulse" : ""
+                matchesItem(item, pulse.target) ? "nav-icon-pulse" : ""
               }`}
               key={
-                pulse.target === item.to
+                matchesItem(item, pulse.target)
                   ? `pulse-${pulse.id}`
                   : `icon-${item.label}`
               }
