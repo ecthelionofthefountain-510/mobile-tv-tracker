@@ -660,7 +660,7 @@ const SearchPage = () => {
         ? `"${item.title || item.name}" removed from favorites.`
         : `"${item.title || item.name}" added to favorites.`,
     );
-    if (!isFavorited) emitNavPulse("/profile");
+    if (!isFavorited) emitNavPulse("/favorites");
   };
 
   const getActionItem = () => {
