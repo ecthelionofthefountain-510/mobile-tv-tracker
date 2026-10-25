@@ -586,7 +586,7 @@ function toWidgetPayload({ items, widgetState, ttlSeconds, stale = false }) {
 
 function sendWidgetResponse(req, res, payload) {
   const body = JSON.stringify(payload);
-  const etag = `W/\"${createHash("sha1").update(body).digest("hex")}\"`;
+  const etag = `W/"${createHash("sha1").update(body).digest("hex")}"`;
   if (req.get("if-none-match") === etag) {
     res.status(304).set("ETag", etag).end();
     return;

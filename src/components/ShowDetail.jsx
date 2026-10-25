@@ -64,9 +64,27 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           ? show.number_of_episodes
           : totalFromEpisodesData;
 
-      return totalEpisodes > 0 && watchedCount === totalEpisodes;
+      // Primary check. Use >= so a specials count (season 0) folded into
+      // number_of_episodes, or minor TMDb count drift, can't make 100%
+      // unreachable once every markable episode is watched.
+      if (totalEpisodes > 0 && watchedCount >= totalEpisodes) return true;
+
+      // Fallback for shows whose number_of_episodes includes episodes we can't
+      // mark (e.g. specials). Once every numbered season has loaded and all of
+      // their episodes are watched, treat the show as complete. Requires all
+      // seasons to be loaded so a partial load can't cause a false positive.
+      const expectedSeasons = Number(show?.number_of_seasons) || 0;
+      const loadedSeasons = Object.keys(episodesData).length;
+      const allSeasonsLoaded =
+        loadedSeasons > 0 && loadedSeasons >= expectedSeasons;
+
+      return (
+        allSeasonsLoaded &&
+        totalFromEpisodesData > 0 &&
+        watchedCount >= totalFromEpisodesData
+      );
     },
-    [episodesData, show?.number_of_episodes],
+    [episodesData, show?.number_of_episodes, show?.number_of_seasons],
   );
 
   // Function to save changes to storage (robust: upsert + id-typ-säker)
@@ -334,7 +352,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
 
       setEpisodesData((prev) => ({
         ...prev,
-        [seasonNumber]: data.episodes,
+        [seasonNumber]: data?.episodes || [],
       }));
 
       return data;
