@@ -1,6 +1,7 @@
 // src/components/BackupControls.jsx
 import React, { useRef, useState } from "react";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+import { loadFavorites, saveFavorites } from "../utils/favoritesStorage";
 
 export default function BackupControls({ onRestore, compact = false }) {
   const fileInputRef = useRef(null);
@@ -8,15 +9,24 @@ export default function BackupControls({ onRestore, compact = false }) {
 
   const handleExport = async () => {
     try {
-      const data = await loadWatchedAll();
-      const json = JSON.stringify(data, null, 2);
+      const [watched, favorites] = await Promise.all([
+        loadWatchedAll(),
+        loadFavorites(),
+      ]);
+      const payload = {
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        watched: Array.isArray(watched) ? watched : [],
+        favorites: Array.isArray(favorites) ? favorites : [],
+      };
+      const json = JSON.stringify(payload, null, 2);
 
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = `watched-backup-${new Date()
+      a.download = `tv-tracker-backup-${new Date()
         .toISOString()
         .slice(0, 10)}.json`;
       document.body.appendChild(a);
@@ -45,12 +55,27 @@ export default function BackupControls({ onRestore, compact = false }) {
         const text = event.target.result;
         const parsed = JSON.parse(text);
 
-        if (!Array.isArray(parsed)) {
-          setStatus("Invalid file: expected an array ×");
+        // v2 format: { watched, favorites }. Legacy format: a bare watched array.
+        let watched;
+        let favorites;
+        if (Array.isArray(parsed)) {
+          watched = parsed;
+          favorites = null;
+        } else if (parsed && typeof parsed === "object") {
+          watched = Array.isArray(parsed.watched) ? parsed.watched : null;
+          favorites = Array.isArray(parsed.favorites) ? parsed.favorites : null;
+        } else {
+          setStatus("Invalid file: unrecognized backup format ×");
           return;
         }
 
-        await saveWatchedAll(parsed);
+        if (!watched && !favorites) {
+          setStatus("Invalid file: no watched or favorites data ×");
+          return;
+        }
+
+        if (watched) await saveWatchedAll(watched);
+        if (favorites) await saveFavorites(favorites);
 
         if (onRestore) {
           await onRestore();
@@ -77,19 +102,9 @@ export default function BackupControls({ onRestore, compact = false }) {
         (compact ? "" : " mt-8")
       }
     >
-      <div
-        className={
-          compact
-            ? "font-semibold text-yellow-400"
-            : "font-semibold text-yellow-400"
-        }
-      >
-        Backup & restore
-      </div>
-      <p
-        className={compact ? "text-xs text-gray-400" : "text-xs text-gray-400"}
-      >
-        Exporterar / importerar hela din "watched"-lista som en JSON-fil.
+      <div className="font-semibold text-yellow-400">Backup & restore</div>
+      <p className="text-xs text-gray-400">
+        Exports / imports your entire watched list and favorites as a JSON file.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
@@ -122,15 +137,7 @@ export default function BackupControls({ onRestore, compact = false }) {
           onChange={handleImportFile}
         />
       </div>
-      {status && (
-        <div
-          className={
-            compact ? "text-xs text-gray-400" : "text-xs text-gray-400"
-          }
-        >
-          {status}
-        </div>
-      )}
+      {status && <div className="text-xs text-gray-400">{status}</div>}
     </div>
   );
 }

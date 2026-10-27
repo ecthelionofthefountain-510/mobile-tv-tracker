@@ -375,7 +375,7 @@ const FavoritesList = ({ embedded = false } = {}) => {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="app-select focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               >
-                <option value="title">A-\u00d6</option>
+                <option value="title">A-Z</option>
                 <option value="dateAdded">Most recent</option>
               </select>
             </div>
@@ -389,7 +389,7 @@ const FavoritesList = ({ embedded = false } = {}) => {
                 className="app-select focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                 aria-label="Sort favorites"
               >
-                <option value="title">A-\u00d6</option>
+                <option value="title">A-Z</option>
                 <option value="dateAdded">Most recent</option>
               </select>
             </div>

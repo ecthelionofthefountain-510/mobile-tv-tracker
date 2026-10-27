@@ -2,10 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { loadWatchedAll } from "../utils/watchedStorage";
 import { loadFavorites } from "../utils/favoritesStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
-import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL, APP_LOCALE } from "../config";
-
-// TMDb IDs for fallback shows — posters are fetched live so they're always correct.
-const FALLBACK_TMDB_IDS = [1399, 84773, 76479, 71912, 60735];
+import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 
 const FALLBACK_ITEMS = [
   {
@@ -349,10 +346,10 @@ export default function WidgetPreviewPage() {
           </h2>
           <p className="text-sm text-gray-300 mt-1">
             {loading
-              ? "Laddar din upcoming-data…"
+              ? "Loading your upcoming data…"
               : liveItems.length > 0
-                ? `Visar ${liveItems.length} kommande avsnitt från din lista.`
-                : "Inga kommande avsnitt hittades, visar exempeldata."}
+                ? `Showing ${liveItems.length} upcoming episodes from your list.`
+                : "No upcoming episodes found, showing sample data."}
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
