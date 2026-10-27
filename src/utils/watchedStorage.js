@@ -5,6 +5,15 @@ import { supabase, isSupabaseConfigured } from "./supabaseClient";
 const WATCHED_KEY_BASE = "watched";
 const WATCHED_TABLE = "watched";
 
+// Tracks whether the most recent cloud read in this session actually returned
+// the authoritative cloud state. It guards the destructive save path: a save
+// reconciles the cloud to match the list it is given (deleting rows not in it),
+// which is only safe when we have confirmed what the cloud currently holds. If
+// a cloud read failed and we fell back to a (possibly partial) local copy, we
+// must not delete — we upsert only (union), so a transient outage can never
+// wipe cloud rows we never saw. Flips back to true after a successful read.
+let cloudReadHealthy = false;
+
 function safeJsonParse(value, fallback) {
   if (value == null) return fallback;
   try {
@@ -363,6 +372,9 @@ export async function loadWatchedAll(user = getCurrentUser()) {
       // so the read below returns the union.
       await migrateLocalWatchedIfNeeded(uid, user);
       const items = await loadWatchedFromCloud(uid);
+      // We now know the authoritative cloud state, so later saves may reconcile
+      // (delete) safely.
+      cloudReadHealthy = true;
 
       // Safeguard: never let an empty cloud result shadow non-empty local
       // data. If the cloud is empty but this device still has items, push
@@ -383,6 +395,9 @@ export async function loadWatchedAll(user = getCurrentUser()) {
       }
       return items;
     } catch (e) {
+      // Cloud is unreachable: we don't know its true contents, so mark reads
+      // unhealthy to keep subsequent saves non-destructive (upsert only).
+      cloudReadHealthy = false;
       console.warn("Cloud watched load failed, using local copy", e);
     }
   }
@@ -400,7 +415,16 @@ export async function saveWatchedAll(items, user = getCurrentUser()) {
   const uid = await getAuthUserId();
   if (uid) {
     try {
-      await saveWatchedToCloud(uid, normalized);
+      if (cloudReadHealthy) {
+        // We have confirmed the cloud state this session, so reconcile fully
+        // (this is what propagates removals to the cloud).
+        await saveWatchedToCloud(uid, normalized);
+      } else {
+        // We never got an authoritative cloud read, so `normalized` may be a
+        // partial local snapshot. Union it in without deleting anything, so a
+        // transient cloud outage can't wipe rows we never saw.
+        await upsertWatchedToCloud(uid, normalized);
+      }
     } catch (e) {
       console.warn("Cloud watched save failed (kept local copy)", e);
     }
