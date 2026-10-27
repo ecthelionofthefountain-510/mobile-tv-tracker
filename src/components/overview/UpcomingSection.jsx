@@ -10,25 +10,34 @@ const UpcomingSection = ({
   fmtDate,
   imageBaseUrl,
 }) => {
-  if (!loading && !error && upcoming.length === 0) return null;
+  const isEmpty = !loading && !error && upcoming.length === 0;
 
   return (
     <div className="p-4 mb-6 app-panel">
       <div className="flex items-center justify-between gap-3 mb-2">
         <h2 className="text-lg font-semibold text-gray-100">Upcoming</h2>
-        <button
-          type="button"
-          onClick={onSeeAll}
-          className="px-3 py-2 text-xs app-button-ghost"
-        >
-          See all
-        </button>
+        {!isEmpty && (
+          <button
+            type="button"
+            onClick={onSeeAll}
+            className="px-3 py-2 text-xs app-button-ghost"
+          >
+            See all
+          </button>
+        )}
       </div>
 
       {loading && <div className="py-1 text-sm text-gray-400">Loading…</div>}
 
       {!loading && error && (
         <div className="py-1 text-sm text-red-300">{error}</div>
+      )}
+
+      {isEmpty && (
+        <div className="py-1 text-sm text-gray-400">
+          No upcoming episodes right now. New episodes of shows you&apos;re
+          watching or have favorited will show up here.
+        </div>
       )}
 
       {!loading && !error && upcoming.length > 0 && (
