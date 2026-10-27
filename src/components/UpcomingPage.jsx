@@ -5,6 +5,7 @@ import { loadWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
 import { loadFavorites } from "../utils/favoritesStorage";
 import ShowDetailModal from "./ShowDetailModal";
+import { FaRegCalendarAlt } from "react-icons/fa";
 
 const API_BASE = import.meta.env.VITE_AI_API_BASE || "/api";
 
@@ -318,24 +319,19 @@ const UpcomingPage = () => {
       <div className="app-container">
         <div className="sticky top-0 z-20 mb-4 app-panel">
           <div className="p-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={handleBack}
-                className="flex items-center text-yellow-400 hover:text-yellow-300"
+                className="flex flex-none items-center text-yellow-400 hover:text-yellow-300"
               >
                 <span className="mr-1">←</span> Back
               </button>
-              <h2 className="text-xl font-semibold text-yellow-400 truncate max-w-[60%]">
+              <h2 className="flex-1 truncate text-center text-xl font-semibold text-yellow-400">
                 Upcoming
               </h2>
-              <button
-                type="button"
-                onClick={() => navigate("/overview")}
-                className="app-button-ghost px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-              >
-                Overview
-              </button>
+              {/* Spacer balances the Back button so the title stays centered. */}
+              <div className="w-14 flex-none" aria-hidden="true" />
             </div>
           </div>
         </div>
@@ -376,11 +372,22 @@ const UpcomingPage = () => {
           </div>
         )}
         {!upcomingLoading && !upcomingError && upcoming.length === 0 && (
-          <div className="py-6 text-center">
-            <div className="text-gray-300">No upcoming episodes found.</div>
-            <div className="mt-1 text-sm text-gray-400">
-              Add some shows to watched or favorites.
+          <div className="flex flex-col items-center py-14 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5 text-2xl text-yellow-300/80">
+              <FaRegCalendarAlt aria-hidden="true" />
             </div>
+            <div className="text-gray-200">No upcoming episodes found.</div>
+            <div className="mt-1 max-w-xs text-sm text-gray-400">
+              Follow shows by adding them to your watched list or favorites and
+              their next episodes will appear here.
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/search")}
+              className="app-button-primary mt-5 px-4 py-2 text-sm"
+            >
+              Explore shows
+            </button>
           </div>
         )}
 
