@@ -19,6 +19,9 @@ export default [
     },
     rules: {
       ...js.configs.recommended.rules,
+      // Allow the `const { key, ...rest } = obj` idiom used to strip internal
+      // fields (e.g. `_airTime`) before returning widget items.
+      "no-unused-vars": ["error", { ignoreRestSiblings: true }],
     },
   },
   {
