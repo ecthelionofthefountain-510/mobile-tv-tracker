@@ -21,6 +21,7 @@ import {
 } from "../utils/favoritesStorage";
 import { emitProfileMediaUpdated } from "../utils/profileMediaEvents";
 import { loadWatchedAll } from "../utils/watchedStorage";
+import { buildWidgetSyncPayload } from "../utils/widgetSyncPayload";
 import { clearCache } from "../utils/tmdbCache";
 import BackupControls from "./BackupControls";
 import {
@@ -553,19 +554,26 @@ const ProfilePage = ({ onFullLogout }) => {
         loadWatchedAll(activeUser),
       ]);
 
+      // Send only the fields the widget server reads. The full objects (with
+      // overview/genres/posters) can exceed the server's 200kb body limit for
+      // large libraries, which would make the sync fail silently.
+      const body = JSON.stringify(
+        buildWidgetSyncPayload(nextFavorites, nextWatched),
+      );
+
       const res = await fetch(`${apiBase}/widget/profile-sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-widget-server-token": token,
         },
-        body: JSON.stringify({
-          favorites: Array.isArray(nextFavorites) ? nextFavorites : [],
-          watched: Array.isArray(nextWatched) ? nextWatched : [],
-        }),
+        body,
       });
 
       if (!res.ok) {
+        if (res.status === 413) {
+          throw new Error("Your library is too large to sync in one request.");
+        }
         throw new Error(`Sync failed: ${res.status}`);
       }
 
@@ -575,7 +583,7 @@ const ProfilePage = ({ onFullLogout }) => {
       );
     } catch (e) {
       console.error(e);
-      showToast("Could not sync widget profile.");
+      showToast(e?.message || "Could not sync widget profile.");
     } finally {
       setWidgetSyncLoading(false);
     }
