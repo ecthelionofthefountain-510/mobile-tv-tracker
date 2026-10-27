@@ -5,6 +5,7 @@ export default {
     extend: {
       fontFamily: {
         lotr: ["Cinzel", "serif"],
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
     },
   },

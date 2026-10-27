@@ -142,7 +142,7 @@ html {
 
 /* 🌍 Anpassa sidan för mobil */
 body {
-  @apply text-gray-100 bg-gray-950 font-lotr antialiased;
+  @apply text-gray-100 bg-gray-950 font-sans antialiased;
   background-image:
     linear-gradient(to bottom, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.96)),
     radial-gradient(circle at 50% 0%, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0)),
@@ -197,12 +197,17 @@ body.theme-light .border-white\/15 {
 }
 
 /* 📱 Säkra textstorlek för mobil */
+/* Headings keep the display face (Cinzel); body/UI text uses the sans above. */
 h1 {
-  @apply text-2xl font-bold text-gray-100 md:text-4xl;
+  @apply font-lotr text-2xl font-bold text-gray-100 md:text-4xl;
 }
 
 h2 {
-  @apply text-xl font-semibold text-gray-100/90 md:text-3xl;
+  @apply font-lotr text-xl font-semibold text-gray-100/90 md:text-3xl;
+}
+
+h3 {
+  @apply font-lotr;
 }
 
 p {

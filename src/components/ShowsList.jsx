@@ -510,7 +510,7 @@ const ShowsList = () => {
 
   const sortOptions = [
     { value: "dateAdded", label: "Most recent" },
-    { value: "title", label: "A-Ö" },
+    { value: "title", label: "A-Z" },
     { value: "incomplete", label: "Not finished" },
   ];
 

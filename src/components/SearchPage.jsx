@@ -757,11 +757,11 @@ const SearchPage = () => {
           </div>
 
           <div className="flex-1 min-w-0 ml-3 sm:ml-4">
-            <h3 className="mb-1 text-lg sm:text-xl font-bold text-yellow-400 truncate">
+            <h3 className="mb-1 text-lg sm:text-xl font-bold text-gray-100 truncate">
               {normalizedItem.title || normalizedItem.name}
             </h3>
 
-            <div className="mb-1 text-sm text-yellow-300/70">
+            <div className="mb-1 text-sm text-gray-400">
               {normalizedItem.mediaType === "tv" ? "TV SERIES" : "MOVIE"}
             </div>
 

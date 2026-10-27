@@ -294,7 +294,7 @@ const MoviesList = () => {
 
   const sortOptions = [
     { value: "dateAdded", label: "Most recent" },
-    { value: "title", label: "A-Ö" },
+    { value: "title", label: "A-Z" },
   ];
 
   const moviesCount = watchedMoviesRaw.length;

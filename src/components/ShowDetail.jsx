@@ -6,6 +6,7 @@ import RatingPrompt from "./RatingPrompt";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { markRatingPromptHandled } from "../utils/ratingPromptTracker";
 import { cachedFetchJson } from "../utils/tmdbCache";
+import { FaRegCalendarAlt } from "react-icons/fa";
 
 // True if any season has at least one watched episode.
 function seasonsHaveProgress(seasonsObj) {
@@ -36,7 +37,21 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [showCongrats, setShowCongrats] = useState(false);
   const [ratingPromptShow, setRatingPromptShow] = useState(null);
   const [needsMetadataBackfill, setNeedsMetadataBackfill] = useState(false);
+  const [details, setDetails] = useState(null);
   const prevCompletionRef = useRef(false);
+
+  const formatNextAirDate = (iso) => {
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString(APP_LOCALE, {
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return iso;
+    }
+  };
 
   const sameEntry = useCallback(
     (a, b) =>
@@ -334,6 +349,25 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
     }
   }, [show.id, show?.number_of_seasons]);
 
+  // Fetch show details (poster, synopsis, next episode) for the header hero.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await cachedFetchJson(
+          `${TMDB_BASE_URL}/tv/${show.id}?api_key=${API_KEY}`,
+          { ttlMs: 6 * 60 * 60 * 1000 },
+        );
+        if (!cancelled) setDetails(data);
+      } catch {
+        // The hero is optional — ignore failures.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [show.id]);
+
   // Close notification handler
   const closeNotification = () => {
     setNotification({
@@ -536,7 +570,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
               <button
                 type="button"
                 onClick={() => onRemove(show.id)}
-                className="app-button-danger px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                className="app-button-ghost px-3 py-1 text-sm text-red-400 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
               >
                 Remove
               </button>
@@ -590,6 +624,72 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           </div>
         </div>
 
+        {/* Show hero: poster, synopsis and next episode */}
+        {details && (
+          <div className="app-card mb-4 overflow-hidden">
+            {details.backdrop_path && (
+              <div className="relative h-24 w-full sm:h-28">
+                <img
+                  src={`${IMAGE_BASE_URL}${details.backdrop_path}`}
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-cover opacity-40"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent" />
+              </div>
+            )}
+            <div
+              className={
+                "flex gap-3 p-3 " +
+                (details.backdrop_path ? "relative -mt-12" : "")
+              }
+            >
+              {(details.poster_path || show.poster_path) && (
+                <img
+                  src={`${IMAGE_BASE_URL}${details.poster_path || show.poster_path}`}
+                  alt=""
+                  loading="lazy"
+                  className="h-28 w-20 flex-shrink-0 rounded-lg border border-white/10 object-cover shadow-md"
+                />
+              )}
+              <div className="min-w-0 flex-1 pt-1">
+                <div className="text-xs text-gray-400">
+                  {[
+                    details.first_air_date
+                      ? String(details.first_air_date).slice(0, 4)
+                      : null,
+                    Array.isArray(details.genres) && details.genres.length > 0
+                      ? details.genres
+                          .slice(0, 2)
+                          .map((g) => g.name)
+                          .join(", ")
+                      : null,
+                    typeof details.vote_average === "number" &&
+                    details.vote_average > 0
+                      ? `★ ${details.vote_average.toFixed(1)}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join("  ·  ")}
+                </div>
+                {details.overview && (
+                  <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-gray-300">
+                    {details.overview}
+                  </p>
+                )}
+                {details.next_episode_to_air?.air_date && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-yellow-400/25 bg-yellow-400/10 px-2.5 py-1 text-[11px] font-semibold text-yellow-200">
+                    <FaRegCalendarAlt aria-hidden="true" />
+                    Next: S{details.next_episode_to_air.season_number}E
+                    {details.next_episode_to_air.episode_number} ·{" "}
+                    {formatNextAirDate(details.next_episode_to_air.air_date)}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Seasons list */}
         <div className="space-y-4">
           {[...Array(show.number_of_seasons)].map((_, idx) => {
@@ -607,8 +707,16 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
               <div key={seasonNumber} className="app-card">
                 {/* Season header */}
                 <div
-                  onClick={() => toggleSeason(seasonNumber)}
-                  className="p-3 transition-colors cursor-pointer hover:bg-white/5"
+                  onClick={() => {
+                    if (totalEpisodes > 0 || isLoading)
+                      toggleSeason(seasonNumber);
+                  }}
+                  className={
+                    "p-3 transition-colors " +
+                    (totalEpisodes > 0 || isLoading
+                      ? "cursor-pointer hover:bg-white/5"
+                      : "")
+                  }
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
@@ -616,43 +724,49 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
                         Season {seasonNumber}
                       </span>
                       <span className="text-sm text-gray-400">
-                        {watchedCount}/{totalEpisodes} Episodes
+                        {!isLoading && totalEpisodes === 0
+                          ? "Not aired yet"
+                          : `${watchedCount}/${totalEpisodes} Episodes`}
                       </span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleAllEpisodesInSeason(seasonNumber, episodes);
-                        }}
-                        className={
-                          watchedCount === totalEpisodes && totalEpisodes > 0
-                            ? "app-button-success px-3 py-1.5 text-xs"
-                            : "app-button-ghost px-3 py-1.5 text-xs"
-                        }
-                      >
-                        {watchedCount === totalEpisodes && totalEpisodes > 0
-                          ? "Watched"
-                          : "Mark All"}
-                      </button>
-                      <span
-                        className={`text-gray-300 transition-transform duration-200 transform ${
-                          isExpanded ? "rotate-90" : ""
-                        }`}
-                      >
-                        ▶
-                      </span>
-                    </div>
+                    {(totalEpisodes > 0 || isLoading) && (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleAllEpisodesInSeason(seasonNumber, episodes);
+                          }}
+                          className={
+                            watchedCount === totalEpisodes && totalEpisodes > 0
+                              ? "app-button-success px-3 py-1.5 text-xs"
+                              : "app-button-ghost px-3 py-1.5 text-xs"
+                          }
+                        >
+                          {watchedCount === totalEpisodes && totalEpisodes > 0
+                            ? "Watched"
+                            : "Mark All"}
+                        </button>
+                        <span
+                          className={`text-gray-300 transition-transform duration-200 transform ${
+                            isExpanded ? "rotate-90" : ""
+                          }`}
+                        >
+                          ▶
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Progress bar */}
-                  <div className="w-full h-1.5 rounded-full bg-white/10">
-                    <div
-                      className="h-1.5 rounded-full bg-yellow-400 transition-all duration-500"
-                      style={{ width: `${progressPercent}%` }}
-                    ></div>
-                  </div>
+                  {(totalEpisodes > 0 || isLoading) && (
+                    <div className="w-full h-1.5 rounded-full bg-white/10">
+                      <div
+                        className="h-1.5 rounded-full bg-yellow-400 transition-all duration-500"
+                        style={{ width: `${progressPercent}%` }}
+                      ></div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Episodes list - only show when expanded */}

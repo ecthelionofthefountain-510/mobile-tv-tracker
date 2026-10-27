@@ -7,6 +7,7 @@ import SwipeableFavoriteCard from "./SwipeableFavoriteCard";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import { cachedFetchJson } from "../utils/tmdbCache";
 import SearchIcon from "../icons/SearchIcon";
+import { FaRegHeart } from "react-icons/fa";
 import {
   loadFavorites as loadFavoritesFromStorage,
   saveFavorites,
@@ -14,6 +15,12 @@ import {
 } from "../utils/favoritesStorage";
 import { loadAppPreference } from "../utils/appPreferences";
 // import SwipeInfoToast from "./SwipeInfoToast";
+
+// Chip-based sort, matching the Shows/Movies watched lists.
+const SORT_OPTIONS = [
+  { value: "dateAdded", label: "Most recent" },
+  { value: "title", label: "A-Z" },
+];
 
 const FavoritesList = ({ embedded = false } = {}) => {
   const initialSort = loadAppPreference("defaultSort", "dateAdded");
@@ -307,7 +314,8 @@ const FavoritesList = ({ embedded = false } = {}) => {
         {errorMessage && (
           <div className="mb-3 text-sm text-red-300">{errorMessage}</div>
         )}
-        {/* Header with search section - enhanced background */}
+        {/* Search section — hidden until there's something to search. */}
+        {favorites.length > 0 && (
         <div
           className={
             embedded ? "mb-4 app-panel" : "sticky top-0 z-20 mb-4 app-panel"
@@ -363,35 +371,43 @@ const FavoritesList = ({ embedded = false } = {}) => {
             )}
           </div>
         </div>
+        )}
 
         {/* Favorites List with updated styling to match Movies/Shows */}
         <div className="grid grid-cols-1 gap-4">
           {/* Header for favorites section */}
-          {!embedded && (
-            <div className="flex items-center justify-between mb-4">
-              <div className="font-semibold text-gray-100">Your Favorites</div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="app-select focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-              >
-                <option value="title">A-\u00d6</option>
-                <option value="dateAdded">Most recent</option>
-              </select>
-            </div>
-          )}
-
-          {embedded && (
-            <div className="flex items-center justify-end mb-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="app-select focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+          {favorites.length > 0 && (
+            <div
+              className={
+                "flex flex-wrap items-center gap-2 " +
+                (embedded ? "justify-end mb-2" : "justify-between mb-4")
+              }
+            >
+              {!embedded && (
+                <div className="font-semibold text-gray-100">
+                  Your Favorites
+                </div>
+              )}
+              <div
+                className="flex flex-wrap items-center justify-end gap-2"
                 aria-label="Sort favorites"
               >
-                <option value="title">A-\u00d6</option>
-                <option value="dateAdded">Most recent</option>
-              </select>
+                {SORT_OPTIONS.map((option) => {
+                  const isActive = sortBy === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setSortBy(option.value)}
+                      className={
+                        "app-chip " + (isActive ? "app-chip-active" : "")
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
           <div className="space-y-4">
@@ -410,13 +426,25 @@ const FavoritesList = ({ embedded = false } = {}) => {
 
           {/* Empty State */}
           {filteredFavorites.length === 0 && (
-            <div className="py-10 text-center">
+            <div className="flex flex-col items-center py-14 text-center">
               {favorites.length === 0 ? (
                 <>
-                  <p className="text-gray-400">No favorites added yet.</p>
-                  <p className="mt-2 text-gray-300">
-                    Start adding your favorite movies and shows!
-                  </p>
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5 text-2xl text-yellow-300/80">
+                    <FaRegHeart aria-hidden="true" />
+                  </div>
+                  <div className="text-gray-200">No favorites added yet.</div>
+                  <div className="mt-1 max-w-xs text-sm text-gray-400">
+                    Tap the heart on any movie or show to keep your favorites
+                    here.
+                  </div>
+                  {!embedded && (
+                    <a
+                      href="#/search"
+                      className="app-button-primary mt-5 px-4 py-2 text-sm"
+                    >
+                      Explore titles
+                    </a>
+                  )}
                 </>
               ) : (
                 <p className="text-gray-400">No favorites match your search</p>

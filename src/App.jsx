@@ -237,7 +237,10 @@ function AppShell() {
               currentUser ? <UpcomingPage /> : <Navigate to="/login" replace />
             }
           />
-          <Route path="/widget-preview" element={<WidgetPreviewPage />} />
+          {/* Developer-only preview of the Android widget states; not exposed in production builds. */}
+          {import.meta.env.DEV && (
+            <Route path="/widget-preview" element={<WidgetPreviewPage />} />
+          )}
           <Route
             path="/profile"
             element={
@@ -261,10 +264,9 @@ function AppShell() {
         <div className="fixed inset-x-4 bottom-4 z-50 rounded-2xl border border-white/10 bg-black/90 px-4 py-3 text-sm text-white shadow-2xl backdrop-blur">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="font-semibold">Installera appen</div>
+              <div className="font-semibold">Install the app</div>
               <div className="text-white/75">
-                Använd den riktiga installeringen för bättre stabilitet på
-                Android.
+                Use the proper installation for better stability on Android.
               </div>
             </div>
             <button
@@ -272,7 +274,7 @@ function AppShell() {
               onClick={handleInstallClick}
               className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
             >
-              Installera
+              Install
             </button>
           </div>
         </div>

@@ -7,13 +7,7 @@ import React, {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { get as idbGet, set as idbSet } from "idb-keyval";
-import {
-  FaCamera,
-  FaChartPie,
-  FaChevronRight,
-  FaRegCalendarAlt,
-  FaTimes,
-} from "react-icons/fa";
+import { FaCamera, FaChevronRight, FaTimes } from "react-icons/fa";
 import {
   getCurrentUser,
   loadFavorites,
@@ -589,6 +583,8 @@ const ProfilePage = ({ onFullLogout }) => {
     }
   }, [activeUser, showToast, widgetSyncApiBase, widgetSyncToken]);
 
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const handleFullLogout = () => {
     emitProfileMediaUpdated({ kind: "user", user: null });
     if (onFullLogout) onFullLogout();
@@ -719,44 +715,7 @@ const ProfilePage = ({ onFullLogout }) => {
           <div className="mt-3 text-xs text-red-300">{editStatus}</div>
         )}
 
-        {/* Actions list */}
-        <div className="p-0 mt-4 overflow-hidden divide-y app-panel divide-white/10">
-          <button
-            type="button"
-            onClick={() => navigate("/upcoming")}
-            className="flex items-center justify-between w-full px-3 py-3 text-sm font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-          >
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 text-yellow-300 border rounded-lg border-white/10 bg-black/25">
-                <FaRegCalendarAlt aria-hidden="true" />
-              </div>
-              <span>Upcoming</span>
-            </div>
-            <FaChevronRight
-              className="text-xs text-gray-300"
-              aria-hidden="true"
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate("/overview")}
-            className="flex items-center justify-between w-full px-3 py-3 text-sm font-semibold text-gray-100 bg-transparent hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-          >
-            <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 text-yellow-300 border rounded-lg border-white/10 bg-black/25">
-                <FaChartPie aria-hidden="true" />
-              </div>
-              <span>Overview</span>
-            </div>
-            <FaChevronRight
-              className="text-xs text-gray-300"
-              aria-hidden="true"
-            />
-          </button>
-        </div>
-
-        <div className="p-4 mt-8 app-panel">
+        <div className="p-4 mt-6 app-panel">
           <h2 className="text-lg font-semibold tracking-wide text-gray-100 uppercase">
             App settings
           </h2>
@@ -779,66 +738,91 @@ const ProfilePage = ({ onFullLogout }) => {
             >
               Clear cache
             </button>
-            <button
-              type="button"
-              onClick={recoverFavorites}
-              className="w-full px-4 py-3 app-button-ghost"
-            >
-              Recover favorites from this device
-            </button>
-            <div className="pt-4 mt-2 border-t border-white/10">
-              <div className="text-sm font-semibold tracking-wide text-gray-100 uppercase">
-                Widget Sync
-              </div>
-              <p className="mt-1 text-xs text-gray-400">
-                Use the same API base and token as your Android widget app.
-              </p>
+            <BackupControls compact />
 
-              <div className="mt-3 space-y-3">
-                <input
-                  type="text"
-                  value={widgetSyncApiBase}
-                  onChange={(e) => setWidgetSyncApiBase(e.target.value)}
-                  placeholder="http://192.168.x.x:5174/api"
-                  className="w-full app-input"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
+            {/* Advanced power tools, collapsed by default. */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                aria-expanded={showAdvanced}
+                className="flex items-center justify-between w-full px-4 py-3 app-button-ghost"
+              >
+                <span>Advanced</span>
+                <FaChevronRight
+                  className={
+                    "text-xs text-gray-300 transition-transform " +
+                    (showAdvanced ? "rotate-90" : "")
+                  }
+                  aria-hidden="true"
                 />
-                <input
-                  type="text"
-                  value={widgetSyncToken}
-                  onChange={(e) => setWidgetSyncToken(e.target.value)}
-                  placeholder="same token as Android widget"
-                  className="w-full app-input"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-                <button
-                  type="button"
-                  onClick={syncWidgetProfile}
-                  disabled={widgetSyncLoading}
-                  className="w-full px-4 py-3 app-button-ghost disabled:opacity-60"
-                >
-                  {widgetSyncLoading
-                    ? "Syncing widget..."
-                    : "Sync widget data now"}
-                </button>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleFullLogout}
-              className="w-full px-4 py-3 text-red-500 app-button-ghost hover:text-red-600"
-            >
-              Log out
-            </button>
-            <div className="pt-1">
-              <BackupControls compact />
+              </button>
+
+              {showAdvanced && (
+                <div className="pt-4 mt-3 space-y-3 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={recoverFavorites}
+                    className="w-full px-4 py-3 app-button-ghost"
+                  >
+                    Recover favorites from this device
+                  </button>
+
+                  <div className="pt-2">
+                    <div className="text-sm font-semibold tracking-wide text-gray-100 uppercase">
+                      Widget Sync
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Use the same API base and token as your Android widget
+                      app.
+                    </p>
+                    <div className="mt-3 space-y-3">
+                      <input
+                        type="text"
+                        value={widgetSyncApiBase}
+                        onChange={(e) => setWidgetSyncApiBase(e.target.value)}
+                        placeholder="http://192.168.x.x:5174/api"
+                        className="w-full app-input"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                      />
+                      <input
+                        type="text"
+                        value={widgetSyncToken}
+                        onChange={(e) => setWidgetSyncToken(e.target.value)}
+                        placeholder="same token as Android widget"
+                        className="w-full app-input"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                      />
+                      <button
+                        type="button"
+                        onClick={syncWidgetProfile}
+                        disabled={widgetSyncLoading}
+                        className="w-full px-4 py-3 app-button-ghost disabled:opacity-60"
+                      >
+                        {widgetSyncLoading
+                          ? "Syncing widget..."
+                          : "Sync widget data now"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Log out — kept at the very bottom, away from the settings. */}
+        <button
+          type="button"
+          onClick={handleFullLogout}
+          className="w-full px-4 py-3 mt-6 text-red-500 app-button-ghost hover:text-red-600"
+        >
+          Log out
+        </button>
 
         {/* Cache-cleared toast */}
         {toastMsg && (

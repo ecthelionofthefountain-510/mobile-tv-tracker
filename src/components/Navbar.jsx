@@ -124,7 +124,8 @@ export default function Navbar() {
     },
     { to: "/favorites", icon: <FaHeart />, label: "Favorites", dataNav: "favorites" },
     { to: "/search", icon: <FaSearch />, label: "Explore" },
-    { to: "/overview", icon: <FaChartPie />, label: "Overview" },
+    // Upcoming is a sub-page reached from Overview, so keep the Overview tab active there.
+    { to: "/overview", icon: <FaChartPie />, label: "Overview", match: ["/overview", "/upcoming"] },
     { to: "/profile", icon: profileIcon, label: "Profile" },
   ];
   const matchesItem = (item, path) =>
