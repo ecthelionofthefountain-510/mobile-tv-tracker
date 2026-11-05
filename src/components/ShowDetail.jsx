@@ -8,11 +8,16 @@ import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
 import {
   normalizeRating10,
   normalizeComment,
+  formatRating10,
   RATING_SCALE,
 } from "../utils/rating";
 import { markRatingPromptHandled } from "../utils/ratingPromptTracker";
 import { cachedFetchJson } from "../utils/tmdbCache";
-import { FaRegCalendarAlt } from "react-icons/fa";
+import {
+  FaRegCalendarAlt,
+  FaRegCommentDots,
+  FaChevronRight,
+} from "react-icons/fa";
 
 // True if any season has at least one watched episode.
 function seasonsHaveProgress(seasonsObj) {
@@ -49,6 +54,7 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   );
   const [userComment, setUserComment] = useState(() => show?.userComment || "");
   const [noteStatus, setNoteStatus] = useState("");
+  const [showRatingPanel, setShowRatingPanel] = useState(false);
   const prevCompletionRef = useRef(false);
 
   const formatNextAirDate = (iso) => {
@@ -750,43 +756,6 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           </div>
         )}
 
-        {/* Your rating & note */}
-        <div className="app-card mb-4 p-4">
-          <RatingInput
-            value={userRating}
-            onChange={setUserRating}
-            idBase={`show-${show.id}`}
-          />
-          <div className="mt-4">
-            <label
-              htmlFor={`show-${show.id}-note`}
-              className="text-xs font-semibold uppercase tracking-wide text-gray-400"
-            >
-              Your note
-            </label>
-            <textarea
-              id={`show-${show.id}-note`}
-              value={userComment}
-              onChange={(e) => setUserComment(e.target.value)}
-              placeholder="Why you stopped, or a quick verdict after finishing…"
-              rows={3}
-              className="app-input mt-2 w-full resize-none"
-            />
-          </div>
-          <div className="mt-3 flex items-center justify-end gap-3">
-            {noteStatus && (
-              <span className="text-xs text-gray-400">{noteStatus}</span>
-            )}
-            <button
-              type="button"
-              onClick={saveRatingAndNote}
-              className="app-button-primary px-4 py-2 text-sm"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-
         {/* Seasons list */}
         <div className="space-y-4">
           {[...Array(show.number_of_seasons)].map((_, idx) => {
@@ -980,6 +949,78 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
               </div>
             );
           })}
+        </div>
+
+        {/* Your rating & note — collapsed so the episodes stay the focus */}
+        <div className="app-card mt-4 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowRatingPanel((v) => !v)}
+            aria-expanded={showRatingPanel}
+            className="flex w-full items-center justify-between gap-3 p-4 text-left"
+          >
+            <span className="text-sm font-semibold text-gray-100">
+              Your rating &amp; note
+            </span>
+            <span className="flex items-center gap-2">
+              {userRating > 0 && (
+                <span className="rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200">
+                  ★ {formatRating10(userRating)}
+                </span>
+              )}
+              {userComment.trim() && (
+                <FaRegCommentDots
+                  className="text-yellow-300/70"
+                  aria-hidden="true"
+                />
+              )}
+              <FaChevronRight
+                className={
+                  "text-xs text-gray-300 transition-transform " +
+                  (showRatingPanel ? "rotate-90" : "")
+                }
+                aria-hidden="true"
+              />
+            </span>
+          </button>
+
+          {showRatingPanel && (
+            <div className="border-t border-white/10 p-4">
+              <RatingInput
+                value={userRating}
+                onChange={setUserRating}
+                idBase={`show-${show.id}`}
+              />
+              <div className="mt-4">
+                <label
+                  htmlFor={`show-${show.id}-note`}
+                  className="text-xs font-semibold uppercase tracking-wide text-gray-400"
+                >
+                  Your note
+                </label>
+                <textarea
+                  id={`show-${show.id}-note`}
+                  value={userComment}
+                  onChange={(e) => setUserComment(e.target.value)}
+                  placeholder="Why you stopped, or a quick verdict after finishing…"
+                  rows={3}
+                  className="app-input mt-2 w-full resize-none"
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-end gap-3">
+                {noteStatus && (
+                  <span className="text-xs text-gray-400">{noteStatus}</span>
+                )}
+                <button
+                  type="button"
+                  onClick={saveRatingAndNote}
+                  className="app-button-primary px-4 py-2 text-sm"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Loading Indicator */}
