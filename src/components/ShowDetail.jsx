@@ -3,7 +3,13 @@ import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL, APP_LOCALE } from "../config";
 import NotificationModal from "./NotificationModal";
 import CongratsToast from "./CongratsToast";
 import RatingPrompt from "./RatingPrompt";
+import RatingInput from "./RatingInput";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+import {
+  normalizeRating10,
+  normalizeComment,
+  RATING_SCALE,
+} from "../utils/rating";
 import { markRatingPromptHandled } from "../utils/ratingPromptTracker";
 import { cachedFetchJson } from "../utils/tmdbCache";
 import { FaRegCalendarAlt } from "react-icons/fa";
@@ -38,6 +44,11 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   const [ratingPromptShow, setRatingPromptShow] = useState(null);
   const [needsMetadataBackfill, setNeedsMetadataBackfill] = useState(false);
   const [details, setDetails] = useState(null);
+  const [userRating, setUserRating] = useState(
+    () => normalizeRating10(show?.userRating) ?? 0,
+  );
+  const [userComment, setUserComment] = useState(() => show?.userComment || "");
+  const [noteStatus, setNoteStatus] = useState("");
   const prevCompletionRef = useRef(false);
 
   const formatNextAirDate = (iso) => {
@@ -272,26 +283,75 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
   }, [show]);
 
   const submitDetailRating = useCallback(
-    async (rating) => {
+    async (rating, comment) => {
       const id = ratingPromptShow?.id;
       setRatingPromptShow(null);
       if (id == null) return;
 
-      const normalized = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
+      const normalized = normalizeRating10(rating);
+      const normalizedComment = normalizeComment(comment);
       try {
         const all = (await loadWatchedAll()) || [];
         const updated = all.map((entry) =>
           String(entry?.id) === String(id) && entry?.mediaType === "tv"
-            ? { ...entry, userRating: normalized > 0 ? normalized : undefined }
+            ? {
+                ...entry,
+                userRating: normalized,
+                ratingScale: normalized != null ? RATING_SCALE : undefined,
+                ...(comment !== undefined
+                  ? { userComment: normalizedComment }
+                  : {}),
+              }
             : entry,
         );
         await saveWatchedAll(updated);
+        setUserRating(normalized ?? 0);
+        if (comment !== undefined) setUserComment(normalizedComment || "");
       } catch (err) {
         console.error("Could not save show rating", err);
       }
     },
     [ratingPromptShow],
   );
+
+  // Persist the rating + note from the detail-page editor. Upserts the show so
+  // you can note a show you've started even before it's marked complete.
+  const saveRatingAndNote = useCallback(async () => {
+    const rating = normalizeRating10(userRating);
+    const comment = normalizeComment(userComment);
+    try {
+      const all = (await loadWatchedAll()) || [];
+      const matches = (entry) =>
+        sameEntry(entry, { id: show.id, mediaType: "tv" });
+      const exists = all.some(matches);
+      const patch = {
+        userRating: rating,
+        ratingScale: rating != null ? RATING_SCALE : undefined,
+        userComment: comment,
+      };
+      const updated = exists
+        ? all.map((entry) => (matches(entry) ? { ...entry, ...patch } : entry))
+        : [
+            ...all,
+            {
+              id: show.id,
+              mediaType: "tv",
+              title: show.title || show.name || "",
+              name: show.name,
+              poster_path: show.poster_path ?? null,
+              posterPath: show.poster_path ?? null,
+              dateAdded: new Date().toISOString(),
+              ...patch,
+            },
+          ];
+      await saveWatchedAll(updated);
+      setNoteStatus("Saved ✓");
+      setTimeout(() => setNoteStatus(""), 2000);
+    } catch (err) {
+      console.error("Could not save rating/note", err);
+      setNoteStatus("Could not save");
+    }
+  }, [userRating, userComment, show, sameEntry]);
 
   // Modified onBack handler to ensure changes are saved
   const handleBack = async () => {
@@ -690,6 +750,43 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
           </div>
         )}
 
+        {/* Your rating & note */}
+        <div className="app-card mb-4 p-4">
+          <RatingInput
+            value={userRating}
+            onChange={setUserRating}
+            idBase={`show-${show.id}`}
+          />
+          <div className="mt-4">
+            <label
+              htmlFor={`show-${show.id}-note`}
+              className="text-xs font-semibold uppercase tracking-wide text-gray-400"
+            >
+              Your note
+            </label>
+            <textarea
+              id={`show-${show.id}-note`}
+              value={userComment}
+              onChange={(e) => setUserComment(e.target.value)}
+              placeholder="Why you stopped, or a quick verdict after finishing…"
+              rows={3}
+              className="app-input mt-2 w-full resize-none"
+            />
+          </div>
+          <div className="mt-3 flex items-center justify-end gap-3">
+            {noteStatus && (
+              <span className="text-xs text-gray-400">{noteStatus}</span>
+            )}
+            <button
+              type="button"
+              onClick={saveRatingAndNote}
+              className="app-button-primary px-4 py-2 text-sm"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+
         {/* Seasons list */}
         <div className="space-y-4">
           {[...Array(show.number_of_seasons)].map((_, idx) => {
@@ -967,8 +1064,10 @@ const ShowDetail = ({ show, onBack, onRemove }) => {
         {ratingPromptShow && (
           <RatingPrompt
             title={ratingPromptShow?.name || ratingPromptShow?.title}
-            onRate={(star) => {
-              void submitDetailRating(star);
+            initialRating={userRating}
+            initialComment={userComment}
+            onRate={(rating, comment) => {
+              void submitDetailRating(rating, comment);
             }}
             onLater={() => setRatingPromptShow(null)}
           />

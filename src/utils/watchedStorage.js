@@ -1,6 +1,7 @@
 // src/utils/watchedStorage.js
 import { get, set } from "idb-keyval";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
+import { toRating10, normalizeComment, RATING_SCALE } from "./rating";
 
 const WATCHED_KEY_BASE = "watched";
 const WATCHED_TABLE = "watched";
@@ -62,6 +63,8 @@ const ALLOWED_BASE_KEYS = [
   "seasons",
   "completed",
   "userRating",
+  "ratingScale",
+  "userComment",
   "dateAdded",
 ];
 
@@ -151,6 +154,13 @@ function normalizeWatchedItems(items) {
           seasons: progress,
         };
       }
+
+      // Ratings: migrate legacy 1–5 values to the 0–10 scale (idempotent via
+      // the ratingScale marker). Comments: trim/cap, drop when empty.
+      const rating10 = toRating10(it.userRating, it.ratingScale);
+      normalizedItem.userRating = rating10;
+      normalizedItem.ratingScale = rating10 != null ? RATING_SCALE : undefined;
+      normalizedItem.userComment = normalizeComment(it.userComment);
 
       return normalizedItem;
     });
