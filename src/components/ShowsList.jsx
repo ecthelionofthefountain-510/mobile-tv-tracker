@@ -10,6 +10,11 @@ import { wasRatingPromptHandled } from "../utils/ratingPromptTracker";
 import { useWatchedList } from "../hooks/useWatchedList";
 import { cachedFetchJson } from "../utils/tmdbCache";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+import {
+  normalizeRating10,
+  normalizeComment,
+  RATING_SCALE,
+} from "../utils/rating";
 import SearchIcon from "../icons/SearchIcon";
 import {
   loadFavorites,
@@ -410,7 +415,7 @@ const ShowsList = () => {
   );
 
   const handleShowRate = useCallback(
-    async (show, rating) => {
+    async (show, rating, comment) => {
       if (!show?.id) return;
 
       const mainContent =
@@ -421,10 +426,7 @@ const ShowsList = () => {
       const savedWindowScrollY =
         typeof window !== "undefined" ? window.scrollY : 0;
 
-      const normalizedRating = Math.max(
-        0,
-        Math.min(5, Math.round(Number(rating) || 0)),
-      );
+      const normalizedRating = normalizeRating10(rating);
 
       try {
         const all = (await loadWatchedAll()) || [];
@@ -434,7 +436,12 @@ const ShowsList = () => {
           }
           return {
             ...entry,
-            userRating: normalizedRating > 0 ? normalizedRating : undefined,
+            userRating: normalizedRating,
+            ratingScale: normalizedRating != null ? RATING_SCALE : undefined,
+            // Only touch the note when the caller passed one (the prompt does).
+            ...(comment !== undefined
+              ? { userComment: normalizeComment(comment) }
+              : {}),
           };
         });
 
@@ -463,9 +470,9 @@ const ShowsList = () => {
   }, []);
 
   const submitRatingFromPrompt = useCallback(
-    async (rating) => {
+    async (rating, comment) => {
       if (!activeRatingPrompt?.id) return;
-      await handleShowRate(activeRatingPrompt, rating);
+      await handleShowRate(activeRatingPrompt, rating, comment);
       setActiveRatingPrompt(null);
     },
     [activeRatingPrompt, handleShowRate],
@@ -727,8 +734,10 @@ const ShowsList = () => {
         {activeRatingPrompt && (
           <RatingPrompt
             title={activeRatingPrompt?.title || activeRatingPrompt?.name}
-            onRate={(star) => {
-              void submitRatingFromPrompt(star);
+            initialRating={normalizeRating10(activeRatingPrompt?.userRating) ?? 0}
+            initialComment={activeRatingPrompt?.userComment || ""}
+            onRate={(rating, comment) => {
+              void submitRatingFromPrompt(rating, comment);
             }}
             onLater={dismissRatingPrompt}
           />

@@ -9,6 +9,11 @@ import SwipeableMovieCard from "./SwipeableMovieCard";
 import { useWatchedList } from "../hooks/useWatchedList";
 import { cachedFetchJson } from "../utils/tmdbCache";
 import { loadWatchedAll, saveWatchedAll } from "../utils/watchedStorage";
+import {
+  normalizeRating10,
+  normalizeComment,
+  RATING_SCALE,
+} from "../utils/rating";
 import SearchIcon from "../icons/SearchIcon";
 import {
   loadFavorites,
@@ -244,7 +249,7 @@ const MoviesList = () => {
   );
 
   const handleMovieRate = useCallback(
-    async (movie, rating) => {
+    async (movie, rating, comment) => {
       if (!movie?.id) return;
 
       const mainContent =
@@ -255,10 +260,8 @@ const MoviesList = () => {
       const savedWindowScrollY =
         typeof window !== "undefined" ? window.scrollY : 0;
 
-      const normalizedRating = Math.max(
-        0,
-        Math.min(5, Math.round(Number(rating) || 0)),
-      );
+      const normalizedRating = normalizeRating10(rating);
+      const normalizedComment = normalizeComment(comment);
 
       try {
         const all = (await loadWatchedAll()) || [];
@@ -268,7 +271,9 @@ const MoviesList = () => {
           }
           return {
             ...entry,
-            userRating: normalizedRating > 0 ? normalizedRating : undefined,
+            userRating: normalizedRating,
+            ratingScale: normalizedRating != null ? RATING_SCALE : undefined,
+            userComment: normalizedComment,
           };
         });
 

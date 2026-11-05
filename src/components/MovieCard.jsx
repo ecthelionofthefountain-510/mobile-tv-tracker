@@ -1,6 +1,9 @@
 import React, { useState } from "react";
+import { FaRegCommentDots } from "react-icons/fa";
 import { IMAGE_BASE_URL } from "../config";
 import { genreNamesFromItem } from "../utils/genreMap";
+import { normalizeRating10, formatRating10 } from "../utils/rating";
+import RatingInput from "./RatingInput";
 
 const MovieCard = ({
   item,
@@ -13,15 +16,34 @@ const MovieCard = ({
   const titleText = displayItem.title || displayItem.name || "Untitled";
 
   const genres = genreNamesFromItem(item, Infinity);
-  const ratingValue =
-    typeof displayItem.userRating === "number" && displayItem.userRating > 0
-      ? Math.max(1, Math.min(5, Math.round(displayItem.userRating)))
-      : 0;
+  const ratingValue = normalizeRating10(displayItem.userRating) ?? 0;
+  const ratingLabel =
+    ratingValue > 0 ? `★ ${formatRating10(ratingValue)}` : "Rate";
+  const noteText =
+    typeof displayItem.userComment === "string"
+      ? displayItem.userComment.trim()
+      : "";
   const canRate = typeof onRate === "function";
-  const [isEditingRating, setIsEditingRating] = useState(false);
-  const showRatingPicker = canRate && (ratingValue === 0 || isEditingRating);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftRating, setDraftRating] = useState(ratingValue);
+  const [draftComment, setDraftComment] = useState(noteText);
 
   const isSelectable = typeof onSelect === "function";
+
+  const openEditor = (e) => {
+    e?.stopPropagation();
+    if (!canRate) return;
+    setDraftRating(ratingValue);
+    setDraftComment(noteText);
+    setIsEditing(true);
+  };
+
+  const saveEditor = (e) => {
+    e?.stopPropagation();
+    onRate?.(displayItem, draftRating, draftComment);
+    setIsEditing(false);
+  };
 
   const handleCardKeyDown = (e) => {
     if (!isSelectable) return;
@@ -33,29 +55,27 @@ const MovieCard = ({
 
   return (
     <div className="relative mb-4 sm:mr-2">
-      {ratingValue > 0 && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!canRate) return;
-            setIsEditingRating((prev) => !prev);
-          }}
-          className={
-            "absolute right-1 top-1 z-20 rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-[0_6px_18px_rgba(0,0,0,0.35)] sm:-right-2 sm:top-2 " +
-            (canRate
-              ? "cursor-pointer transition-colors hover:bg-gray-800/90"
-              : "pointer-events-none")
-          }
-          aria-label={
-            canRate
-              ? `Current rating ${ratingValue} of 5. Tap to edit rating`
-              : `Current rating ${ratingValue} of 5`
-          }
-        >
-          {ratingValue}/5
-        </button>
-      )}
+      {(ratingValue > 0 || canRate) &&
+        (canRate ? (
+          <button
+            type="button"
+            onClick={openEditor}
+            className="absolute right-1 top-1 z-20 rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors hover:bg-gray-800/90 sm:-right-2 sm:top-2"
+            aria-label={
+              ratingValue > 0
+                ? `Current rating ${formatRating10(ratingValue)} of 10. Tap to update rating and note`
+                : "Rate this movie"
+            }
+          >
+            {ratingLabel}
+          </button>
+        ) : (
+          ratingValue > 0 && (
+            <div className="pointer-events-none absolute right-1 top-1 z-20 rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-[0_6px_18px_rgba(0,0,0,0.35)] sm:-right-2 sm:top-2">
+              {ratingLabel}
+            </div>
+          )
+        ))}
 
       <div
         className={`app-card app-card-hover relative ring-1 ring-inset ring-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
@@ -100,56 +120,57 @@ const MovieCard = ({
                 <div className="mt-1 text-sm text-gray-200">
                   {genres.slice(0, 3).join(", ")}
                   {genres.length > 3 && (
-                    <span className="text-gray-300">
-                      {" "}
-                      +{genres.length - 3} more
-                    </span>
+                    <span className="text-gray-300"> +{genres.length - 3} more</span>
                   )}
                 </div>
               )}
 
-              {/* Extra info för TV-serier */}
-              {displayItem.mediaType === "tv" &&
-                displayItem.number_of_seasons && (
-                  <div className="mt-1 text-sm text-gray-300">
-                    {displayItem.number_of_seasons}{" "}
-                    {displayItem.number_of_seasons === 1 ? "Season" : "Seasons"}
+              {noteText && !isEditing && (
+                <div className="mt-1.5 flex items-start gap-1.5 text-xs text-gray-400">
+                  <FaRegCommentDots
+                    className="mt-0.5 flex-shrink-0 text-yellow-300/70"
+                    aria-hidden="true"
+                  />
+                  <span className="line-clamp-2 italic">{noteText}</span>
+                </div>
+              )}
+
+              {isEditing && (
+                <div
+                  className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <RatingInput
+                    value={draftRating}
+                    onChange={setDraftRating}
+                    idBase={`movie-${displayItem.id}`}
+                  />
+                  <textarea
+                    value={draftComment}
+                    onChange={(e) => setDraftComment(e.target.value)}
+                    placeholder="A quick note — e.g. why you stopped, or a verdict…"
+                    rows={2}
+                    className="app-input mt-3 w-full resize-none text-sm"
+                  />
+                  <div className="mt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditing(false);
+                      }}
+                      className="app-button-ghost px-3 py-1.5 text-xs"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={saveEditor}
+                      className="app-button-primary px-3 py-1.5 text-xs"
+                    >
+                      Save
+                    </button>
                   </div>
-                )}
-
-              {showRatingPicker && (
-                <div className="mt-1.5 flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => {
-                    const active = star <= ratingValue;
-                    const label =
-                      star === ratingValue
-                        ? `Set movie rating to ${star} of 5 (tap again to clear)`
-                        : `Set movie rating to ${star} of 5`;
-
-                    return (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRate(displayItem, star === ratingValue ? 0 : star);
-                          setIsEditingRating(false);
-                        }}
-                        className={
-                          "text-sm leading-none transition-colors " +
-                          (active
-                            ? "text-yellow-300 hover:text-yellow-200"
-                            : "text-gray-600 hover:text-gray-400")
-                        }
-                        aria-label={label}
-                      >
-                        ★
-                      </button>
-                    );
-                  })}
-                  <span className="ml-1 text-[11px] text-gray-400">
-                    {ratingValue > 0 ? "Update" : "Rate"}
-                  </span>
                 </div>
               )}
             </div>

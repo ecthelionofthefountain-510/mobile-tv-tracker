@@ -1,6 +1,8 @@
 import React from "react";
+import { FaRegCommentDots } from "react-icons/fa";
 import { IMAGE_BASE_URL } from "../config";
 import { genreNamesFromItem } from "../utils/genreMap";
+import { normalizeRating10, formatRating10 } from "../utils/rating";
 
 const ShowCard = ({
   item,
@@ -43,10 +45,13 @@ const ShowCard = ({
 
   const progressPercent =
     progressRatio === null ? null : Math.round(progressRatio * 100);
-  const ratingValue =
-    typeof displayItem.userRating === "number" && displayItem.userRating > 0
-      ? Math.max(1, Math.min(5, Math.round(displayItem.userRating)))
-      : 0;
+  const ratingValue = normalizeRating10(displayItem.userRating) ?? 0;
+  const ratingLabel =
+    ratingValue > 0 ? `★ ${formatRating10(ratingValue)}` : "Rate";
+  const noteText =
+    typeof displayItem.userComment === "string"
+      ? displayItem.userComment.trim()
+      : "";
   const showRatingBadge = !!displayItem?.completed || ratingValue > 0;
   const canRequestRating = typeof onRequestRating === "function";
 
@@ -73,15 +78,15 @@ const ShowCard = ({
             className="absolute right-1 top-1 z-20 rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors hover:bg-gray-800/90 sm:-right-2 sm:top-2"
             aria-label={
               ratingValue > 0
-                ? `Current rating ${ratingValue} of 5. Tap to update rating`
+                ? `Current rating ${formatRating10(ratingValue)} of 10. Tap to update rating`
                 : "Rate this show"
             }
           >
-            {ratingValue > 0 ? `${ratingValue}/5` : "Rate"}
+            {ratingLabel}
           </button>
         ) : (
           <div className="pointer-events-none absolute right-1 top-1 z-20 rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-[0_6px_18px_rgba(0,0,0,0.35)] sm:-right-2 sm:top-2">
-            {ratingValue > 0 ? `${ratingValue}/5` : "Rate"}
+            {ratingLabel}
           </div>
         ))}
 
@@ -157,6 +162,16 @@ const ShowCard = ({
                     Episodes watched: {watchedEpisodes}
                   </div>
                 ) : null}
+
+                {noteText && (
+                  <div className="mt-1.5 flex items-start gap-1.5 text-xs text-gray-400">
+                    <FaRegCommentDots
+                      className="mt-0.5 flex-shrink-0 text-yellow-300/70"
+                      aria-hidden="true"
+                    />
+                    <span className="line-clamp-2 italic">{noteText}</span>
+                  </div>
+                )}
               </div>
               {showRemoveButton && (
                 <div className="flex justify-end mt-2">

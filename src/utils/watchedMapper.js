@@ -24,12 +24,11 @@ export function createWatchedMovie(movie) {
 
     dateAdded: movie.dateAdded || new Date().toISOString(),
     completed: !!movie.completed,
-    userRating:
-      typeof movie.userRating === "number" &&
-      movie.userRating >= 1 &&
-      movie.userRating <= 5
-        ? Math.round(movie.userRating)
-        : undefined,
+    // Rating/comment pass through raw; normalizeWatchedItems migrates and
+    // clamps them (0–10 scale) when the list is saved.
+    userRating: movie.userRating,
+    ratingScale: movie.ratingScale,
+    userComment: movie.userComment,
   };
 }
 
@@ -56,12 +55,11 @@ export function createWatchedShow(show) {
 
     dateAdded: show.dateAdded || new Date().toISOString(),
     completed: !!show.completed,
-    userRating:
-      typeof show.userRating === "number" &&
-      show.userRating >= 1 &&
-      show.userRating <= 5
-        ? Math.round(show.userRating)
-        : undefined,
+    // Rating/comment pass through raw; normalizeWatchedItems migrates and
+    // clamps them (0–10 scale) when the list is saved.
+    userRating: show.userRating,
+    ratingScale: show.ratingScale,
+    userComment: show.userComment,
 
     seasons: show.seasons || undefined,
     number_of_seasons: show.number_of_seasons,
