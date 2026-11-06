@@ -23,6 +23,12 @@ const MovieCard = ({
     typeof displayItem.userComment === "string"
       ? displayItem.userComment.trim()
       : "";
+  const tmdbRating =
+    typeof displayItem.vote_average === "number" && displayItem.vote_average > 0
+      ? displayItem.vote_average.toFixed(1)
+      : null;
+  const overview =
+    typeof displayItem.overview === "string" ? displayItem.overview.trim() : "";
   const canRate = typeof onRate === "function";
 
   const [isEditing, setIsEditing] = useState(false);
@@ -125,15 +131,31 @@ const MovieCard = ({
                 </div>
               )}
 
-              {noteText && !isEditing && (
-                <div className="mt-1.5 flex items-start gap-1.5 text-xs text-gray-400">
-                  <FaRegCommentDots
-                    className="mt-0.5 flex-shrink-0 text-yellow-300/70"
-                    aria-hidden="true"
-                  />
-                  <span className="line-clamp-2 italic">{noteText}</span>
+              {tmdbRating && (
+                <div className="mt-1 flex items-center gap-1 text-sm text-gray-300">
+                  <span className="text-yellow-300/80" aria-hidden="true">
+                    ★
+                  </span>
+                  <span>TMDb {tmdbRating}</span>
                 </div>
               )}
+
+              {/* Your note takes priority; otherwise show the synopsis so the
+                  card isn't empty. */}
+              {!isEditing &&
+                (noteText ? (
+                  <div className="mt-1.5 flex items-start gap-1.5 text-xs text-gray-400">
+                    <FaRegCommentDots
+                      className="mt-0.5 flex-shrink-0 text-yellow-300/70"
+                      aria-hidden="true"
+                    />
+                    <span className="line-clamp-2 italic">{noteText}</span>
+                  </div>
+                ) : overview ? (
+                  <p className="mt-1.5 line-clamp-2 text-xs text-gray-400">
+                    {overview}
+                  </p>
+                ) : null)}
 
               {isEditing && (
                 <div
