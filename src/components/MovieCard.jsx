@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FaRegCommentDots } from "react-icons/fa";
+import { FaRegCommentDots, FaRegClock } from "react-icons/fa";
 import { IMAGE_BASE_URL } from "../config";
 import { genreNamesFromItem } from "../utils/genreMap";
 import { normalizeRating10, formatRating10 } from "../utils/rating";
@@ -27,8 +27,13 @@ const MovieCard = ({
     typeof displayItem.vote_average === "number" && displayItem.vote_average > 0
       ? displayItem.vote_average.toFixed(1)
       : null;
-  const overview =
-    typeof displayItem.overview === "string" ? displayItem.overview.trim() : "";
+  const runtimeLabel = (() => {
+    const mins = displayItem.runtime;
+    if (typeof mins !== "number" || mins <= 0) return null;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  })();
   const canRate = typeof onRate === "function";
 
   const [isEditing, setIsEditing] = useState(false);
@@ -140,22 +145,25 @@ const MovieCard = ({
                 </div>
               )}
 
-              {/* Your note takes priority; otherwise show the synopsis so the
-                  card isn't empty. */}
-              {!isEditing &&
-                (noteText ? (
-                  <div className="mt-1.5 flex items-start gap-1.5 text-xs text-gray-400">
-                    <FaRegCommentDots
-                      className="mt-0.5 flex-shrink-0 text-yellow-300/70"
-                      aria-hidden="true"
-                    />
-                    <span className="line-clamp-2 italic">{noteText}</span>
-                  </div>
-                ) : overview ? (
-                  <p className="mt-1.5 line-clamp-2 text-xs text-gray-400">
-                    {overview}
-                  </p>
-                ) : null)}
+              {runtimeLabel && (
+                <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-300">
+                  <FaRegClock
+                    className="text-gray-400"
+                    aria-hidden="true"
+                  />
+                  <span>{runtimeLabel}</span>
+                </div>
+              )}
+
+              {noteText && !isEditing && (
+                <div className="mt-1.5 flex items-start gap-1.5 text-xs text-gray-400">
+                  <FaRegCommentDots
+                    className="mt-0.5 flex-shrink-0 text-yellow-300/70"
+                    aria-hidden="true"
+                  />
+                  <span className="line-clamp-2 italic">{noteText}</span>
+                </div>
+              )}
 
               {isEditing && (
                 <div

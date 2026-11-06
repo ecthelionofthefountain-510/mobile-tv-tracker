@@ -60,6 +60,7 @@ const ALLOWED_BASE_KEYS = [
   "first_air_date",
   "number_of_seasons",
   "number_of_episodes",
+  "runtime",
   "seasons",
   "completed",
   "userRating",

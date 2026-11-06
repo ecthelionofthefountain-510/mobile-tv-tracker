@@ -64,6 +64,66 @@ const MoviesList = () => {
     await refresh();
   }, [refresh]);
 
+  // Backfill runtime for watched movies (list/search endpoints don't include it,
+  // and legacy entries predate it). Fetched once per movie, then stored — a 0
+  // marks "looked up, none available" so it never re-fetches.
+  const runtimeBackfillRef = useRef(false);
+  useEffect(() => {
+    if (loading || runtimeBackfillRef.current) return;
+    const missing = watchedMoviesRaw.filter(
+      (m) => m && m.id != null && typeof m.runtime !== "number",
+    );
+    if (missing.length === 0) return;
+
+    runtimeBackfillRef.current = true;
+    (async () => {
+      try {
+        const results = await Promise.all(
+          missing.map(async (m) => {
+            try {
+              const data = await cachedFetchJson(
+                `${TMDB_BASE_URL}/movie/${m.id}?api_key=${API_KEY}`,
+                { ttlMs: 7 * 24 * 60 * 60 * 1000 },
+              );
+              return [
+                String(m.id),
+                typeof data?.runtime === "number" ? data.runtime : 0,
+              ];
+            } catch {
+              return [String(m.id), 0];
+            }
+          }),
+        );
+
+        const runtimeById = new Map(results);
+        const all = (await loadWatchedAll()) || [];
+        let changed = false;
+        const updated = all.map((entry) => {
+          const mediaType =
+            entry?.mediaType || (entry?.first_air_date ? "tv" : "movie");
+          if (mediaType !== "movie" || typeof entry.runtime === "number") {
+            return entry;
+          }
+          const rt = runtimeById.get(String(entry.id));
+          if (rt == null) return entry;
+          changed = true;
+          return { ...entry, runtime: rt };
+        });
+
+        // The write is idempotent, so run it to completion even if the
+        // component re-rendered while we were fetching.
+        if (changed) {
+          await saveWatchedAll(updated);
+          await refresh();
+        }
+      } catch (err) {
+        console.error("Runtime backfill failed", err);
+      } finally {
+        runtimeBackfillRef.current = false;
+      }
+    })();
+  }, [watchedMoviesRaw, loading, refresh]);
+
   // Sorteringsfunktion
   const sortMovies = (movies, sortBy) => {
     if (sortBy === "title") {
