@@ -56,6 +56,19 @@ const FavoriteCard = ({
   };
 
   const genres = genreNamesFromItem(item, Infinity);
+  const typeLabel = item.mediaType === "tv" ? "TV Series" : "Movie";
+  const year = (() => {
+    const d = item.release_date || item.first_air_date;
+    if (!d) return null;
+    const y = new Date(d).getFullYear();
+    return Number.isFinite(y) ? y : null;
+  })();
+  const tmdbRating =
+    typeof item.vote_average === "number" && item.vote_average > 0
+      ? item.vote_average.toFixed(1)
+      : null;
+  const overview =
+    typeof item.overview === "string" ? item.overview.trim() : "";
 
   return (
     <div
@@ -86,11 +99,14 @@ const FavoriteCard = ({
         <div className="flex flex-col justify-between flex-1 min-w-0 p-3">
           <div>
             <h3 className="text-lg font-semibold text-gray-100 sm:text-xl line-clamp-1">
-              {item.title}
+              {item.title || item.name}
             </h3>
-            <span className="app-badge mt-1">
-              {item.mediaType === "tv" ? "TV Series" : "Movie"}
-            </span>
+
+            <div className="mt-1 text-sm text-gray-300">
+              {typeLabel}
+              {year && <span className="ml-2">• {year}</span>}
+            </div>
+
             {/* Genre-visning */}
             {genres.length > 0 && (
               <div className="mt-1 text-sm text-gray-300">
@@ -102,6 +118,21 @@ const FavoriteCard = ({
                   </span>
                 )}
               </div>
+            )}
+
+            {tmdbRating && (
+              <div className="mt-1 flex items-center gap-1 text-sm text-gray-300">
+                <span className="text-yellow-300/80" aria-hidden="true">
+                  ★
+                </span>
+                <span>TMDb {tmdbRating}</span>
+              </div>
+            )}
+
+            {overview && (
+              <p className="mt-2 text-xs leading-relaxed text-gray-400 line-clamp-3">
+                {overview}
+              </p>
             )}
           </div>
           {/* Visa knappar bara om showButtons är true */}
