@@ -17,8 +17,6 @@ const MovieCard = ({
 
   const genres = genreNamesFromItem(item, Infinity);
   const ratingValue = normalizeRating10(displayItem.userRating) ?? 0;
-  const ratingLabel =
-    ratingValue > 0 ? `★ ${formatRating10(ratingValue)}` : "Rate";
   const noteText =
     typeof displayItem.userComment === "string"
       ? displayItem.userComment.trim()
@@ -66,28 +64,6 @@ const MovieCard = ({
 
   return (
     <div className="relative mb-4 sm:mr-2">
-      {(ratingValue > 0 || canRate) &&
-        (canRate ? (
-          <button
-            type="button"
-            onClick={openEditor}
-            className="absolute right-1 top-1 z-20 rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors hover:bg-gray-800/90 sm:-right-2 sm:top-2"
-            aria-label={
-              ratingValue > 0
-                ? `Current rating ${formatRating10(ratingValue)} of 10. Tap to update rating and note`
-                : "Rate this movie"
-            }
-          >
-            {ratingLabel}
-          </button>
-        ) : (
-          ratingValue > 0 && (
-            <div className="pointer-events-none absolute right-1 top-1 z-20 rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-[0_6px_18px_rgba(0,0,0,0.35)] sm:-right-2 sm:top-2">
-              {ratingLabel}
-            </div>
-          )
-        ))}
-
       <div
         className={`app-card app-card-hover relative ring-1 ring-inset ring-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
           isSelectable ? "cursor-pointer" : ""
@@ -99,7 +75,7 @@ const MovieCard = ({
         aria-label={isSelectable ? `Open details for ${titleText}` : undefined}
       >
         <div className="flex p-3">
-          <div className="flex-shrink-0 w-24 h-36 sm:w-28 sm:h-40">
+          <div className="relative flex-shrink-0 w-24 h-36 sm:w-28 sm:h-40">
             <img
               src={
                 displayItem.poster_path
@@ -109,6 +85,43 @@ const MovieCard = ({
               alt={titleText}
               className="object-cover w-full h-full app-poster"
             />
+            {canRate ? (
+              <button
+                type="button"
+                onClick={openEditor}
+                className={`absolute bottom-1.5 left-1.5 z-20 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold shadow-[0_4px_12px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-colors ${
+                  ratingValue > 0
+                    ? "border border-yellow-300/50 bg-gray-950/85 text-yellow-200 hover:bg-gray-900/90"
+                    : "border border-white/20 bg-gray-950/80 text-gray-100 hover:bg-gray-900/85"
+                }`}
+                aria-label={
+                  ratingValue > 0
+                    ? `Current rating ${formatRating10(ratingValue)} of 10. Tap to update rating and note`
+                    : "Rate this movie"
+                }
+              >
+                {ratingValue > 0 ? (
+                  <>
+                    <span aria-hidden="true">★</span>
+                    <span>{formatRating10(ratingValue)}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-yellow-300/80" aria-hidden="true">
+                      ☆
+                    </span>
+                    <span>Rate</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              ratingValue > 0 && (
+                <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-20 inline-flex items-center gap-1 rounded-md border border-yellow-300/50 bg-gray-950/85 px-2 py-0.5 text-xs font-bold text-yellow-200 shadow-[0_4px_12px_rgba(0,0,0,0.5)] backdrop-blur-sm">
+                  <span aria-hidden="true">★</span>
+                  <span>{formatRating10(ratingValue)}</span>
+                </div>
+              )
+            )}
           </div>
 
           <div className="ml-4 flex min-w-0 flex-1 flex-col justify-between">

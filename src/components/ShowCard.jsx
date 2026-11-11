@@ -46,8 +46,6 @@ const ShowCard = ({
   const progressPercent =
     progressRatio === null ? null : Math.round(progressRatio * 100);
   const ratingValue = normalizeRating10(displayItem.userRating) ?? 0;
-  const ratingLabel =
-    ratingValue > 0 ? `★ ${formatRating10(ratingValue)}` : "Rate";
   const noteText =
     typeof displayItem.userComment === "string"
       ? displayItem.userComment.trim()
@@ -67,29 +65,6 @@ const ShowCard = ({
 
   return (
     <div className="relative mb-4">
-      {showRatingBadge &&
-        (canRequestRating ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRequestRating(displayItem);
-            }}
-            className="absolute right-1 top-1 z-20 rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors hover:bg-gray-800/90 sm:-right-2 sm:top-2"
-            aria-label={
-              ratingValue > 0
-                ? `Current rating ${formatRating10(ratingValue)} of 10. Tap to update rating`
-                : "Rate this show"
-            }
-          >
-            {ratingLabel}
-          </button>
-        ) : (
-          <div className="pointer-events-none absolute right-1 top-1 z-20 rounded-full border border-yellow-300/45 bg-gray-900/95 px-2.5 py-0.5 text-[11px] font-semibold text-yellow-200 shadow-[0_6px_18px_rgba(0,0,0,0.35)] sm:-right-2 sm:top-2">
-            {ratingLabel}
-          </div>
-        ))}
-
       <div
         className={`app-card app-card-hover relative ring-1 ring-inset ring-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${
           isSelectable ? "cursor-pointer" : ""
@@ -102,25 +77,68 @@ const ShowCard = ({
       >
         <div className="flex flex-col">
           <div className="flex p-3">
-            <button
-              type="button"
-              className="flex-shrink-0 w-24 h-36 sm:w-28 sm:h-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onShowInfo) onShowInfo(displayItem);
-              }}
-              aria-label={`Show info for ${displayItem.name}`}
-            >
-              <img
-                src={
-                  displayItem.poster_path
-                    ? `${IMAGE_BASE_URL}${displayItem.poster_path}`
-                    : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='168' viewBox='0 0 112 168'%3E%3Crect width='112' height='168' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='0.3em' fill='%236B7280' font-family='Arial' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E"
-                }
-                alt={nameText}
-                className="object-cover w-full h-full app-poster"
-              />
-            </button>
+            <div className="relative flex-shrink-0 w-24 h-36 sm:w-28 sm:h-40">
+              <button
+                type="button"
+                className="w-full h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onShowInfo) onShowInfo(displayItem);
+                }}
+                aria-label={`Show info for ${displayItem.name}`}
+              >
+                <img
+                  src={
+                    displayItem.poster_path
+                      ? `${IMAGE_BASE_URL}${displayItem.poster_path}`
+                      : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='112' height='168' viewBox='0 0 112 168'%3E%3Crect width='112' height='168' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='0.3em' fill='%236B7280' font-family='Arial' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E"
+                  }
+                  alt={nameText}
+                  className="object-cover w-full h-full app-poster"
+                />
+              </button>
+              {showRatingBadge &&
+                (canRequestRating ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRequestRating(displayItem);
+                    }}
+                    className={`absolute bottom-1.5 left-1.5 z-20 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold shadow-[0_4px_12px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-colors ${
+                      ratingValue > 0
+                        ? "border border-yellow-300/50 bg-gray-950/85 text-yellow-200 hover:bg-gray-900/90"
+                        : "border border-white/20 bg-gray-950/80 text-gray-100 hover:bg-gray-900/85"
+                    }`}
+                    aria-label={
+                      ratingValue > 0
+                        ? `Current rating ${formatRating10(ratingValue)} of 10. Tap to update rating`
+                        : "Rate this show"
+                    }
+                  >
+                    {ratingValue > 0 ? (
+                      <>
+                        <span aria-hidden="true">★</span>
+                        <span>{formatRating10(ratingValue)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-yellow-300/80" aria-hidden="true">
+                          ☆
+                        </span>
+                        <span>Rate</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  ratingValue > 0 && (
+                    <div className="pointer-events-none absolute bottom-1.5 left-1.5 z-20 inline-flex items-center gap-1 rounded-md border border-yellow-300/50 bg-gray-950/85 px-2 py-0.5 text-xs font-bold text-yellow-200 shadow-[0_4px_12px_rgba(0,0,0,0.5)] backdrop-blur-sm">
+                      <span aria-hidden="true">★</span>
+                      <span>{formatRating10(ratingValue)}</span>
+                    </div>
+                  )
+                ))}
+            </div>
             <div className="flex flex-col justify-between flex-1 min-w-0 pr-4 ml-4">
               <div>
                 <h3 className="text-xl font-bold text-gray-100 truncate">
