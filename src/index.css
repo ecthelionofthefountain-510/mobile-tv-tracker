@@ -147,10 +147,17 @@ body {
      glow up top and a faint ember in the lower corner — no literal brick. */
   background-color: #15100b;
   background-image:
-    radial-gradient(120% 90% at 50% -12%, rgba(203, 138, 76, 0.1), transparent 55%),
-    radial-gradient(90% 70% at 88% 112%, rgba(140, 84, 32, 0.08), transparent 60%),
-    linear-gradient(180deg, #1b140d 0%, #15100b 48%, #100c07 100%);
-  background-size: cover;
+    radial-gradient(120% 90% at 50% -12%, rgba(203, 138, 76, 0.12), transparent 55%),
+    radial-gradient(90% 70% at 88% 112%, rgba(140, 84, 32, 0.1), transparent 60%),
+    linear-gradient(
+      180deg,
+      rgba(23, 17, 11, 0.92) 0%,
+      rgba(21, 16, 11, 0.62) 42%,
+      rgba(16, 12, 7, 0.95) 100%
+    ),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='60' viewBox='0 0 90 60'%3E%3Cg fill='none' stroke='%23b98a5a' stroke-width='1' stroke-opacity='0.5'%3E%3Cpath d='M0 .5H90M0 30.5H90M.5 0V30M45.5 30V60'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: cover, cover, cover, 90px 60px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
   background-attachment: fixed;
   background-position: center;
   max-width: 100vw;
