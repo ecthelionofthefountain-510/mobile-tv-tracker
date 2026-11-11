@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { API_KEY, TMDB_BASE_URL, IMAGE_BASE_URL } from "../config";
 import MovieDetailModal from "./MovieDetailModal";
 import ShowDetailModal from "./ShowDetailModal";
+import PersonModal from "./PersonModal";
 import SearchIcon from "../icons/SearchIcon";
 
 import { createWatchedShow, createWatchedMovie } from "../utils/watchedMapper";
@@ -92,6 +93,7 @@ const SearchPage = () => {
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
+  const [selectedPerson, setSelectedPerson] = useState(null);
 
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
@@ -712,7 +714,17 @@ const SearchPage = () => {
   const closeModal = () => {
     setSelectedItem(null);
     setItemDetails(null);
+    setSelectedPerson(null);
     setErrorMessage("");
+  };
+
+  // From the person view: jump to one of that person's titles. We reuse the
+  // normal detail flow so the new title's cast is clickable again.
+  const openTitleFromPerson = (title) => {
+    if (!title?.id) return;
+    const mediaType = title.mediaType === "tv" ? "tv" : "movie";
+    setSelectedPerson(null);
+    viewDetails({ ...title, mediaType });
   };
 
   const handleResultKeyDown = (e, item) => {
@@ -1063,6 +1075,7 @@ const SearchPage = () => {
             <ShowDetailModal
               show={itemDetails}
               onClose={closeModal}
+              onSelectPerson={setSelectedPerson}
               showActions
               isWatched={watched.some(
                 (w) => identityOf(w) === identityOf(selectedItem),
@@ -1088,6 +1101,7 @@ const SearchPage = () => {
             <MovieDetailModal
               movie={itemDetails}
               onClose={closeModal}
+              onSelectPerson={setSelectedPerson}
               showActions
               isWatched={watched.some(
                 (w) => identityOf(w) === identityOf(selectedItem),
@@ -1110,6 +1124,14 @@ const SearchPage = () => {
               }}
             />
           ))}
+
+        {selectedPerson && (
+          <PersonModal
+            person={selectedPerson}
+            onClose={() => setSelectedPerson(null)}
+            onSelectTitle={openTitleFromPerson}
+          />
+        )}
 
         {!isSearching && results.length === 0 && query && (
           <div className="py-10">

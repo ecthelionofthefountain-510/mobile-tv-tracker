@@ -11,6 +11,7 @@ const MovieDetailModal = ({
   isFavorited = false,
   onAddToWatched,
   onAddToFavorites,
+  onSelectPerson,
 }) => {
   // Swipe to close
   const touchStartY = useRef(null);
@@ -397,24 +398,53 @@ const MovieDetailModal = ({
                 Cast
               </h3>
               <div className="grid grid-cols-5 gap-4 py-2 sm:gap-6 md:gap-4 lg:gap-6">
-                {displayMovie.credits.cast.slice(0, 10).map((actor) => (
-                  <div key={actor.id} className="flex flex-col items-center">
-                    <div className="relative flex-shrink-0 w-16 h-16 mb-2 overflow-hidden rounded-full border border-white/10 bg-gray-950/40">
-                      <img
-                        src={
-                          actor.profile_path
-                            ? `${IMAGE_BASE_URL}${actor.profile_path}`
-                            : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23374151'/%3E%3Cpath d='M32 20c-4.4 0-8 3.6-8 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm0 20c-8.8 0-16 7.2-16 16v8h32v-8c0-8.8-7.2-16-16-16z' fill='%236B7280'/%3E%3C/svg%3E"
-                        }
-                        alt={actor.name}
-                        className="object-cover w-full h-full"
-                      />
+                {displayMovie.credits.cast.slice(0, 10).map((actor) => {
+                  const avatar = (
+                    <>
+                      <div
+                        className={`relative flex-shrink-0 w-16 h-16 mb-2 overflow-hidden rounded-full border border-white/10 bg-gray-950/40 ${
+                          onSelectPerson
+                            ? "transition-all duration-150 group-hover:border-yellow-400/60 group-focus-visible:border-yellow-400/70"
+                            : ""
+                        }`}
+                      >
+                        <img
+                          src={
+                            actor.profile_path
+                              ? `${IMAGE_BASE_URL}${actor.profile_path}`
+                              : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23374151'/%3E%3Cpath d='M32 20c-4.4 0-8 3.6-8 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm0 20c-8.8 0-16 7.2-16 16v8h32v-8c0-8.8-7.2-16-16-16z' fill='%236B7280'/%3E%3C/svg%3E"
+                          }
+                          alt={actor.name}
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                      <span className="max-w-full text-xs leading-tight text-center text-gray-300 break-words">
+                        {actor.name}
+                      </span>
+                      {actor.character && (
+                        <span className="max-w-full text-[10px] leading-tight text-center text-gray-500 break-words line-clamp-1">
+                          {actor.character}
+                        </span>
+                      )}
+                    </>
+                  );
+
+                  return onSelectPerson ? (
+                    <button
+                      key={actor.id}
+                      type="button"
+                      onClick={() => onSelectPerson(actor)}
+                      className="group flex flex-col items-center focus-visible:outline-none"
+                      aria-label={`See more titles with ${actor.name}`}
+                    >
+                      {avatar}
+                    </button>
+                  ) : (
+                    <div key={actor.id} className="flex flex-col items-center">
+                      {avatar}
                     </div>
-                    <span className="max-w-full text-xs leading-tight text-center text-gray-300 break-words">
-                      {actor.name}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
