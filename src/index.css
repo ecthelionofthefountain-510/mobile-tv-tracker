@@ -149,14 +149,14 @@ body {
      wall clean. */
   background-color: #140f09;
   background-image:
-    radial-gradient(120% 90% at 50% -12%, rgba(212, 150, 86, 0.16), transparent 55%),
-    radial-gradient(135% 118% at 50% 26%, transparent 30%, rgba(12, 8, 5, 0.72) 100%),
-    linear-gradient(0deg, rgba(16, 11, 6, 0.42), rgba(16, 11, 6, 0.42)),
-    url("/img/loft-brick.svg");
+    radial-gradient(120% 85% at 50% -8%, rgba(212, 150, 86, 0.14), transparent 55%),
+    radial-gradient(130% 115% at 50% 24%, transparent 40%, rgba(9, 6, 4, 0.7) 100%),
+    linear-gradient(0deg, rgba(14, 10, 6, 0.28), rgba(14, 10, 6, 0.28)),
+    url("/img/brick-photo.webp");
   background-size: cover;
   background-repeat: no-repeat;
   background-attachment: fixed;
-  background-position: center;
+  background-position: center top;
   max-width: 100vw;
   overflow-x: hidden; /* Förhindra horisontell scroll */
 }
