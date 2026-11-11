@@ -150,8 +150,8 @@ body {
   background-color: #140f09;
   background-image:
     radial-gradient(120% 90% at 50% -12%, rgba(212, 150, 86, 0.16), transparent 55%),
-    radial-gradient(85% 70% at 88% 112%, rgba(150, 90, 40, 0.12), transparent 60%),
-    radial-gradient(135% 118% at 50% 26%, transparent 32%, rgba(14, 10, 6, 0.66) 100%),
+    radial-gradient(135% 118% at 50% 26%, transparent 30%, rgba(12, 8, 5, 0.72) 100%),
+    linear-gradient(0deg, rgba(16, 11, 6, 0.42), rgba(16, 11, 6, 0.42)),
     url("/img/loft-brick.svg");
   background-size: cover;
   background-repeat: no-repeat;
